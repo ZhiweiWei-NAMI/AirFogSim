@@ -1,1 +1,9 @@
-# AirFogSim
+# AirFogSim: A Light-Weight and Modular Simulator for Secure, Sustainable, Collaborative, and Efficient Computation in UAV-Assisted VFC
+Vehicular Fog Computing (VFC) is significantly enhancing the efficiency, safety, and computational capabilities of Intelligent Transportation Systems (ITSs), and the integration of Unmanned Aerial Vehicles (UAVs) into terrestrial networks further elevates these advantages by introducing flexible and auxiliary services. This evolving UAV-assisted VFC paradigm opens new doors while presenting unique complexities in computation offloading, which increasingly gains focus in academia. Despite the burgeoning research in this topic, modeling the intricate dynamics of aerial-ground interactive computing networks is a significant endeavor, and the absence of a comprehensive and flexible simulation platform may impede the optimal exploration of this field. Inspired by the pressing need for a versatile tool, we introduce a light-weight and modular aerial-ground collaborative vehicular fog computing simulator, termed AirFogSim. To clarify the motivation, we conduct a systematic summary of current literature, analyzing their joint desire for a secure, sustainable, collaborative, and efficient computation framework, and evaluate current simulators' capabilities to these requirements. As a pivotal tool for advancing research and proposition validation, AirFogSim is envisioned to set a new precedent in the UAV-assisted VFC simulation, bridge the gap between theoretical design and practical validation, and pave the way for future intelligent transportation domains.
+
+![image](https://github.com/ZhiweiWei-NAMI/AirFogSim/assets/153070550/0e28ce03-8eed-40e7-8f9d-a85e067df575)
+
+![image](https://github.com/ZhiweiWei-NAMI/AirFogSim/assets/153070550/2f059041-9bbc-4dbe-9450-74f656920a14)
+![image](https://github.com/ZhiweiWei-NAMI/AirFogSim/assets/153070550/7990e3d3-ccc7-4de3-8dab-f8ac8015e3dc)
+
+This paper is submitted to IEEE Transactions on Intelligent Transportation Systems, the code will be uploaded soon ...
