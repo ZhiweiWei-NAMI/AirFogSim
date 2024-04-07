@@ -6,4 +6,3 @@ Vehicular Fog Computing (VFC) is significantly enhancing the efficiency, safety,
 ![image](https://github.com/ZhiweiWei-NAMI/AirFogSim/assets/153070550/2f059041-9bbc-4dbe-9450-74f656920a14)
 ![image](https://github.com/ZhiweiWei-NAMI/AirFogSim/assets/153070550/7990e3d3-ccc7-4de3-8dab-f8ac8015e3dc)
 
-This paper is submitted to IEEE Transactions on Intelligent Transportation Systems, the code will be uploaded soon ...
