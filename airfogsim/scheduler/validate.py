@@ -6,7 +6,8 @@ class ValidateStaticMethods(type):
     def __new__(cls, name, bases, attrs):
         for key, value in attrs.items():
             if isfunction(value):  # 检查是否为函数
-                if not isinstance(value, staticmethod):
+                # 检查是否为静态方法
+                if not hasattr(value, '__self__') or value.__self__ is not None:
                     raise TypeError(f"Method {key} must be a static method")
                 
                 # 检查第一个参数是否为 AirFogSimEnv 类的实例
