@@ -4,7 +4,19 @@ from airfogsim import AirFogSimEnv, AirFogSimScheduler, AirFogSimEnvVisualizer
 import numpy as np
 import yaml
 import sys
+import torch.nn.functional as F
 
+class DQN(torch.nn.Module):
+    def __init__(self):
+        super(DQN, self).__init__()
+        self.fc1 = torch.nn.Linear(4, 128)
+        self.fc2 = torch.nn.Linear(128, 128)
+        self.fc3 = torch.nn.Linear(128, 2)
+
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        return self.fc3(x)
 def load_config(path):
     with open(path, 'r') as file:
         return yaml.safe_load(file)
@@ -14,6 +26,7 @@ config = load_config('config.yaml')
 config_path = sys.argv[1] if len(sys.argv) > 1 else 'config.yaml'
 config = load_config(config_path)
 env = AirFogSimEnv(config)
+env2 = AirFogSimEnv(config) # 两个env，用于测试多个env的情况
 env_wrapper = AirFogSimEnvVisualizer(env, config) # 可视化
 
 # 接下来，测试AirFogSimEnv的API
@@ -35,7 +48,7 @@ commSched.setV2VShadowingModel(env, 'LogNormal')
 blockchainSched = AirFogSimScheduler.getBlockchainScheduler()
 blockchainSched.setBlockchainModel(env, 'PoW')
 
-# 任务调度器
+# 任务调度器，如果没有By，默认全局生效
 taskSched = AirFogSimScheduler.getTaskScheduler()
 taskSched.setTaskArrivalModel(env, 'Poisson') # Poisson, random, etc.
 taskSched.setTaskArrivalRate(env, 0.5) # 任务到达率, per second per task node
@@ -52,16 +65,57 @@ rewardSched.setRewardModel(env, '1/log(1+delay)')
 
 # Agent调度器，为FogNode或者TaskNode设置Agent
 agentSched = AirFogSimScheduler.getAgentScheduler()
-agentSched.setAgentModel(env, 'DQN', node_type='FogNode', state_space=4, action_space=2)
+agentSched.addAgentModelByNodeName(env, model_name='DQN', model=DQN(), node_name='Vehicle-1')
+
+# 实体调度器，设置实体的位置，速度等信息。实体包括车辆、UAV、RSU、CloudServer, Channel等。还设置traffic信息，包括车辆生成、车辆移动等
+entitySched = AirFogSimScheduler.getEntityScheduler()
+entitySched.setVehicleTrafficModel(env, 'Poisson') # Poisson, random, etc. 车辆到达模型
+entitySched.setVehicleArrivalRate(env, 0.5) # 车辆到达率, per second，-1表示一下子生成所有车辆
+entitySched.setVehicleSpeedModel(env, 'Uniform') # Uniform, normal, etc.
+entitySched.setMaxVehicleNumber(env, 200) # 最大车辆数，是类变量，所有env共享
+entitySched.setVehicleDisappearAfterArrival(env, True) # 车辆到达后是否消失，如果False，车辆会一直存在，停留在最后的位置
+
+
+# Region调度器，设置区域的信息，包括最大限制速度、最大限制车辆数等
+regionSched = AirFogSimScheduler.getRegionScheduler()
+regionSched.setMaxSpeedByRegion(env, 'Region-1', 10)
+regionSched.setMaxVehicleByRegion(env, 'Region-1', 10)
 
 while True:
+
+    # 先获取一些信息，所有Names都可以直接通过env获取，因为不需要额外的处理；复杂的处理都在scheduler中完成
+    vehicleNames = entitySched.getVehicleNames(env)
+    uavNames = entitySched.getUAVNames(env)
+    rsuNames = entitySched.getRSUNames(env)
+    cloudServerNames = entitySched.getCloudServerNames(env)
+    regionNames = entitySched.getRegionNames(env)
+
+    V2VChannelNames = entitySched.getV2VChannelNames(env)
+    for channelName in V2VChannelNames:
+        commSched.getCSIByChannelName(channelName) # 获取信道状态信息
+    V2UChannelNames = entitySched.getV2UChannelNames(env) # 此外还有U2R, U2U, R2R, R2U等信道
     
     # 在每一步之前，都可以通过AirFogSimEnvScheduler调整策略，即state -> action
-    compSched.setCPUbyFogNodeName(env, 'Fog-V_1' [0.5, 0.5])
-    commSched.setBandwidthbyChannelType(env, 'V2V', [0.5, 0.5])
+    # 1. 通信资源调度
+    n_RB = commSched.getAvailableNumberOfRB(env)
+    flag = commSched.setRBByChannelName(env, 'V2V-1', 5)
+    if not flag:
+        print('Set RB failed!')
+    # 2. 任务调度
+    taskSched.setTaskArrivalRateByNodeName(env, 'Vehicle-1', 0.5) # 修改车辆的任务到达率
+    taskSched.setTaskArrivalRateByRegion(env, 'Region-1', 0.5) # 修改区域的任务到达率
+
+    # 3. 计算资源调度
+    task_list = compSched.getComputingTaskByNodeName(env, 'Fog-V_1')
+    compSched.setCPUByNodeName(env, 'Fog-V_1' [0.5, 0.5])
+
+
+
     # 此外的一系列调度操作，需要丰富，并且可以通过算法进行优化
 
     
+    dqnModel = agentSched.getAgentModelByNodeName(env, 'Vehicle-1')
+    rew = rewardSched.getRewardByNodeName(env, 'Vehicle-1')
     done = env.step()
     if done:
         break

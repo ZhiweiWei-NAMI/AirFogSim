@@ -5,13 +5,13 @@ class CommunicationScheduler(BaseScheduler):
     """
 
     @staticmethod
-    def setBandwidthbyChannelType(env: AirFogSimEnv, channel_type: str, resource_allocation: list):
-        """Schedule the bandwidth of the channel.
+    def setRBByChannelName(env: AirFogSimEnv, channel_type: str, n_RB: int):
+        """Schedule the resource blocks of the channel by the channel name.
 
         Args:
             env (AirFogSimEnv): The environment.
             channel_type (str): The channel type.
-            resource_allocation (list): The resource allocation list. Each element is the resource allocation ratio for the bandwidth. Guarantee the sum of the resource allocation ratio is 1.
+            n_RB (int): The number of resource blocks.
 
         Returns:
             bool: The flag to indicate whether the bandwidth is scheduled successfully.
