@@ -5,7 +5,7 @@ class CommunicationScheduler(BaseScheduler):
     """
 
     @staticmethod
-    def scheduleBandwidthbyChannelType(env: AirFogSimEnv, channel_type: str, resource_allocation: list):
+    def setBandwidthbyChannelType(env: AirFogSimEnv, channel_type: str, resource_allocation: list):
         """Schedule the bandwidth of the channel.
 
         Args:
