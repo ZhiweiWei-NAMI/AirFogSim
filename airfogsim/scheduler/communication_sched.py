@@ -1,5 +1,6 @@
 from ..airfogsim_env import AirFogSimEnv
-class CommunicationScheduler:
+from .base_sched import BaseScheduler
+class CommunicationScheduler(BaseScheduler):
     """The communication scheduler for channels.
     """
 
