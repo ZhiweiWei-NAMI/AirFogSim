@@ -1,0 +1,4 @@
+simulation:
+  vehicle_count: 100
+  map_file: "path/to/map.file"
+  sumo_path: "/usr/local/bin/sumo"
