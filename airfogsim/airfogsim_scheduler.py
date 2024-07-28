@@ -60,3 +60,14 @@ class AirFogSimScheduler:
             if inspect.ismethod(method) and name.startswith('get') and name.endswith('Scheduler'):
                 method_list.append(name)
         return method_list
+    
+
+    @staticmethod
+    def add_methods_from_scheduler():
+        scheduler_method_list = AirFogSimScheduler.getSchedulerMethodList()
+        # 从scheduler_method_list中获取方法名，然后调用后获取每一个scheduler的实例，然后将实例的方法添加到AirFogSimScheduler中
+        for scheduler_method in scheduler_method_list:
+            scheduler_instance = getattr(AirFogSimScheduler, scheduler_method)()
+            for name, method in inspect.getmembers(scheduler_instance):
+                if inspect.ismethod(method):
+                    setattr(AirFogSimScheduler, name, method)
