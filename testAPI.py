@@ -23,36 +23,36 @@ env_wrapper = AirFogSimEnvVisualizer(env, config) # 可视化
 # ----------------------------------------------------------------------------------------------------------
 # 计算资源调度器，包括初始化和运行中的调度
 compSched = AirFogSimScheduler.getComputationScheduler()
-compSched.setComputationModel('M/M/1')
+compSched.setComputationModel(env, 'M/M/1')
 
 # 通信资源调度器
 commSched = AirFogSimScheduler.getCommunicationScheduler()
-commSched.setV2VFadingModel('Rayleigh')
-commSched.setV2VPathLossModel('LogDistance')
-commSched.setV2VShadowingModel('LogNormal')
+commSched.setV2VFadingModel(env, 'Rayleigh')
+commSched.setV2VPathLossModel(env, 'LogDistance')
+commSched.setV2VShadowingModel(env, 'LogNormal')
 
 # 区块链资源调度器
 blockchainSched = AirFogSimScheduler.getBlockchainScheduler()
-blockchainSched.setBlockchainModel('PoW')
+blockchainSched.setBlockchainModel(env, 'PoW')
 
 # 任务调度器
 taskSched = AirFogSimScheduler.getTaskScheduler()
-taskSched.setTaskArrivalModel('Poisson') # Poisson, random, etc.
-taskSched.setTaskArrivalRate(0.5) # 任务到达率, per second per task node
-taskSched.setTaskSizeModel('Exponential') # Exponential, uniform, etc.
-taskSched.setTaskSizeRange([0.5, 1.5]) # 任务大小范围, in MB
-taskSched.setTaskCPUModel('Exponential') # Exponential, uniform, etc.
-taskSched.setTaskCPURange([0.5, 1.5]) # 任务CPU需求范围, in MIPS
-taskSched.setTaskDeadlineModel('Exponential') # Exponential, uniform, etc.
-taskSched.setTaskDeadlineRange([0.5, 1.5]) # 任务截止时间范围, in seconds
+taskSched.setTaskArrivalModel(env, 'Poisson') # Poisson, random, etc.
+taskSched.setTaskArrivalRate(env, 0.5) # 任务到达率, per second per task node
+taskSched.setTaskSizeModel(env, 'Exponential') # Exponential, uniform, etc.
+taskSched.setTaskSizeRange(env, [0.5, 1.5]) # 任务大小范围, in MB
+taskSched.setTaskCPUModel(env, 'Exponential') # Exponential, uniform, etc.
+taskSched.setTaskCPURange(env, [0.5, 1.5]) # 任务CPU需求范围, in MIPS
+taskSched.setTaskDeadlineModel(env, 'Exponential') # Exponential, uniform, etc.
+taskSched.setTaskDeadlineRange(env, [0.5, 1.5]) # 任务截止时间范围, in seconds
 
 #奖励调度器，设置每一个任务的奖励，解析数学公式来进行设置
 rewardSched = AirFogSimScheduler.getRewardScheduler()
-rewardSched.setRewardModel('1/log(1+delay)')
+rewardSched.setRewardModel(env, '1/log(1+delay)')
 
 # Agent调度器，为FogNode或者TaskNode设置Agent
 agentSched = AirFogSimScheduler.getAgentScheduler()
-agentSched.setAgentModel('DQN')
+agentSched.setAgentModel(env, 'DQN', node_type='FogNode', state_space=4, action_space=2)
 
 while True:
     
