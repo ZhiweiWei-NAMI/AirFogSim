@@ -57,8 +57,8 @@ agentSched.setAgentModel(env, 'DQN', node_type='FogNode', state_space=4, action_
 while True:
     
     # 在每一步之前，都可以通过AirFogSimEnvScheduler调整策略，即state -> action
-    compSched.scheduleCPUbyFogNodeName(env, 'Fog-V_1' [0.5, 0.5])
-    commSched.scheduleBandwidthbyChannelType(env, 'V2V', [0.5, 0.5])
+    compSched.setCPUbyFogNodeName(env, 'Fog-V_1' [0.5, 0.5])
+    commSched.setBandwidthbyChannelType(env, 'V2V', [0.5, 0.5])
     # 此外的一系列调度操作，需要丰富，并且可以通过算法进行优化
 
     
