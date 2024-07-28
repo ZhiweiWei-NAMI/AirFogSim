@@ -7,7 +7,7 @@ class RewardScheduler(BaseScheduler):
     """The reward scheduler for the reinforcement learning agents. Provide static methods to compute the reward for the reinforcement learning agents. Use sympy to parse the reward expression and compute the reward for each task node. According to test, the efficiency of evalf is similar to direct symbolic computation.
     """
     REWARD_MODEL = None
-    SYMOBOLS = {}
+    SYMOBOLS = None
     ACCEPTED_SYMBOLS = ['task_delay', 'energy', 'task_ratio']
 
     @staticmethod
@@ -27,9 +27,9 @@ class RewardScheduler(BaseScheduler):
         """
         try:
             # 使用sympify来将字符串表达式转换为可计算的表达式
-            RewardScheduler.REWARD_MODEL = sympify(expression)
+            RewardScheduler.REWARD_MODEL = {env: sympify(expression)}
             # 自动检测表达式中使用的变量，并创建符号
-            RewardScheduler.SYMOBOLS = {str(sym): symbols(str(sym)) for sym in RewardScheduler.REWARD_MODEL.free_symbols}
+            RewardScheduler.SYMOBOLS = {env: {str(sym): symbols(str(sym)) for sym in RewardScheduler.REWARD_MODEL.free_symbols}}
             # 检查是否所有符号都是有效的
             for sym in RewardScheduler.SYMOBOLS:
                 if sym not in RewardScheduler.ACCEPTED_SYMBOLS:
@@ -38,23 +38,29 @@ class RewardScheduler(BaseScheduler):
             raise ValueError(f"Invalid expression: {e}")
 
     @staticmethod
-    def getRewardByTaskNodeName(env:AirFogSimEnv, task_node_name:str):
-        """Compute the reward for the reinforcement learning agents. Here, the reward is computed for each task node only.
+    def getRewardByNodeName(env:AirFogSimEnv, node_name:str):
+        """Compute the reward of the node by the node name.
 
         Args:
             env (AirFogSimEnv): The environment.
         """
+        if RewardScheduler.REWARD_MODEL is None:
+            raise ValueError("Reward model is not set, please set the reward model first.")
+        if RewardScheduler.SYMOBOLS is None:
+            raise ValueError("Symbols are not set, please set the reward model first.")
+        if env not in RewardScheduler.REWARD_MODEL or env not in RewardScheduler.SYMOBOLS:
+            raise ValueError(f"Reward model is not set for {env}, please set the reward model first.")
         # 从env中获取任务节点的信息
-        task_node = env.getTaskNodeByName(task_node_name)
+        task_node = env.getNodeByName(node_name)
         # 从RewardScheduler.SYMOBOLS中获取任务节点的信息，用task_node.getXXX()来获取
-        kwargs = {key: getattr(task_node, key) for key in RewardScheduler.SYMOBOLS}
+        kwargs = {key: getattr(task_node, key) for key in RewardScheduler.SYMOBOLS[env]}
 
         # 获取任务信息，需要是还没有
-        if not all(param in kwargs for param in RewardScheduler.SYMOBOLS):
-            missing = list(set(RewardScheduler.SYMOBOLS) - set(kwargs))
+        if not all(param in kwargs for param in RewardScheduler.SYMOBOLS[env]):
+            missing = list(set(RewardScheduler.SYMOBOLS[env]) - set(kwargs))
             raise ValueError(f"Missing parameters for reward computation: {missing}")
 
         # 替换表达式中的符号为实际的参数值
-        subs = {RewardScheduler.SYMOBOLS[key]: kwargs[key] for key in RewardScheduler.SYMOBOLS}
-        return RewardScheduler.REWARD_MODEL.evalf(subs=subs)
+        subs = {RewardScheduler.SYMOBOLS[env][key]: kwargs[key] for key in RewardScheduler.SYMOBOLS[env]}
+        return RewardScheduler.REWARD_MODEL[env].evalf(subs=subs)
     

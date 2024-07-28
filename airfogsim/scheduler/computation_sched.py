@@ -6,7 +6,7 @@ class ComputationScheduler(BaseScheduler):
     """
 
     @staticmethod
-    def setCPUbyFogNodeName(env:AirFogSimEnv, fog_node_name: str, resource_allocation: list):
+    def setCPUByNodeName(env:AirFogSimEnv, node_name: str, resource_allocation: list):
         """Schedule the computation resources of the fog node (e.g., fog vehicle, edge server, cloud server) by the fog node name.
 
         Args:

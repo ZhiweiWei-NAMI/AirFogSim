@@ -13,9 +13,9 @@ class ValidateStaticMethods(type):
                 if len(args) == 0 or args[0] != 'env' or not hasattr(value.__func__, '__annotations__') or value.__func__.__annotations__.get('env') != AirFogSimEnv:
                     raise TypeError(f"The first argument of method {key} must be 'env: AirFogSimEnv'")
                 
-                # 检查是否以{set, get, add, delete}开头，代表增删改查。只能是这四个动词
-                if not key.startswith(('set', 'get', 'add', 'delete')):
-                    raise ValueError(f"Method {key} must start with 'set', 'get', 'add', or 'delete'")
+                # 检查是否以{set, get, add, is, delete}开头，代表增删改查和判断
+                if not key.startswith(('set', 'get', 'add', 'delete', 'is')):
+                    raise ValueError(f"Method {key} must start with 'is', 'set', 'get', 'add', or 'delete'")
                 
         
         return super().__new__(cls, name, bases, attrs)
