@@ -38,6 +38,8 @@ env_wrapper = AirFogSimEnvVisualizer(env, config) # 可视化
 
 method_list = AirFogSimScheduler.getSchedulerMethodList()
 print(method_list)
+# 可以通过AirFogSimScheduler的静态方法，AirFogSimScheduler.addMethodsFromSchedulers()，使得所有的调度器方法都可以通过AirFogSimScheduler来调用
+AirFogSimScheduler.addMethodsFromSchedulers()
 
 # 计算资源调度器，包括初始化和运行中的调度。实际上直接通过ComputationScheduler来调用就行了
 compSched = AirFogSimScheduler.getComputationScheduler()
@@ -85,10 +87,10 @@ entitySched.setMaxVehicleNumber(env, 200) # 最大车辆数，是类变量，所
 entitySched.setVehicleDisappearAfterArrival(env, True) # 车辆到达后是否消失，如果False，车辆会一直存在，停留在最后的位置
 
 
-# Region调度器，设置区域的信息，包括最大限制速度、最大限制车辆数等
-regionSched = AirFogSimScheduler.getRegionScheduler()
-regionSched.setMaxSpeedByRegion(env, 'Region-1', 10)
-regionSched.setMaxVehicleByRegion(env, 'Region-1', 10)
+# Topology调度器，设置区域/道路的信息，包括最大限制速度、最大限制车辆数等
+topoSched = AirFogSimScheduler.getTopologyScheduler()
+topoSched.setMaxSpeedByLaneName(env, 'Lane-1', 10) # 设置Lane-1的最大速度为10m/s
+topoSched.setMaxVehicleByLaneName(env, 'Lane-1', 10) # 设置Lane-1的最大车辆数为10
 
 while True:
 

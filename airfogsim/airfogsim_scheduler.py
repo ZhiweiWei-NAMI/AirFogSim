@@ -57,17 +57,25 @@ class AirFogSimScheduler:
         """
         method_list = []
         for name, method in inspect.getmembers(AirFogSimScheduler):
-            if inspect.ismethod(method) and name.startswith('get') and name.endswith('Scheduler'):
+            if inspect.isfunction(method) and name.startswith('get') and name.endswith('Scheduler'):
                 method_list.append(name)
         return method_list
     
 
     @staticmethod
-    def add_methods_from_scheduler():
+    def addMethodsFromSchedulers():
+        """Add the methods from all scheduler classes to AirFogSimScheduler. By using this method, the agent can call the methods from all scheduler classes by calling the methods from AirFogSimScheduler.
+
+        Examples:
+            AirFogSimScheduler.addMethodsFromSchedulers()
+            compSched = AirFogSimScheduler.getComputationScheduler()
+            compSched.setComputationModel(env, 'M/M/1')
+            AirFogSimScheduler.setComputationModel(env, 'M/M/1')
+        """
         scheduler_method_list = AirFogSimScheduler.getSchedulerMethodList()
         # 从scheduler_method_list中获取方法名，然后调用后获取每一个scheduler的实例，然后将实例的方法添加到AirFogSimScheduler中
         for scheduler_method in scheduler_method_list:
             scheduler_instance = getattr(AirFogSimScheduler, scheduler_method)()
             for name, method in inspect.getmembers(scheduler_instance):
-                if inspect.ismethod(method):
+                if inspect.isfunction(method):
                     setattr(AirFogSimScheduler, name, method)
