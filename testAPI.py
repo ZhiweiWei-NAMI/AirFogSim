@@ -5,6 +5,7 @@ import numpy as np
 import yaml
 import sys
 import torch.nn.functional as F
+import torch
 
 class DQN(torch.nn.Module):
     def __init__(self):
@@ -106,9 +107,9 @@ while True:
         commSched.getCSIByChannelName(channelName) # 获取信道状态信息
     V2UChannelNames = entitySched.getV2UChannelNames(env) # 此外还有U2R, U2U, R2R, R2U等信道
     
-    entitySched.getNeighborVehicleNamesByNodeName(env, 'RSU-1', distance = 100) # 获取distance距离内的邻居车辆
-    entitySched.getNeighborRSUNamesByNodeName(env, 'Vehicle-1', distance = 100) # 获取distance距离内的邻居RSU
-    entitySched.getNeighborUAVNamesByNodeName(env, 'Vehicle-1', distance = 100) # 获取distance距离内的邻居UAV
+    entitySched.getNeighborVehiclesByNodeName(env, 'RSU-1', distance = 100) # 获取distance距离内的邻居车辆
+    entitySched.getNeighborRSUsByNodeName(env, 'Vehicle-1', distance = 100) # 获取distance距离内的邻居RSU
+    entitySched.getNeighborUAVsByNodeName(env, 'Vehicle-1', distance = 100) # 获取distance距离内的邻居UAV
 
     # 在每一步之前，都可以通过AirFogSimEnvScheduler调整策略，即state -> action
     # 1. 通信资源调度
