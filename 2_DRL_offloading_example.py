@@ -74,6 +74,8 @@ while not done:
             # 5.5 Offload the task to the fog node
             taskSched.offloadTaskToNode(env, task_node['name'], selected_fog_node['name'], task['name'])
     done = env.step()
-    reward = rewardSched.getRewardByNodeName(env, 'task_1')
+    reward = 0
+    for task_node in taskNodes:
+        reward += rewardSched.getReward(env, task_node['name'])
     env_wrapper.render()
     print(f"Reward: {reward}")
