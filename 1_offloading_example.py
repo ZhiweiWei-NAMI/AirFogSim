@@ -45,3 +45,4 @@ while not done:
         reward += rewardSched.getReward(env, task_node['name'])
     env_wrapper.render()
     print(f"Reward: {reward}")
+env_wrapper.close()

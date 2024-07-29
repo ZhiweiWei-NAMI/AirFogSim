@@ -119,7 +119,7 @@ while True:
         print('Set RB failed!')
     # 2. 任务调度
     taskSched.setTaskArrivalRateByNodeName(env, 'Vehicle-1', 0.5) # 修改车辆的任务到达率
-    taskSched.setTaskArrivalRateByRegion(env, 'Region-1', 0.5) # 修改区域的任务到达率
+    taskSched.setTaskArrivalRateByRegion(env, 'Region-1', 0.5) # 修改区域的任务到达率. Region是和RSU对应的
 
     # 3. 计算资源调度
     task_list = compSched.getComputingTaskByNodeName(env, 'Fog-V_1')
@@ -135,3 +135,5 @@ while True:
     done = env.step()
     if done:
         break
+
+env_wrapper.close()
