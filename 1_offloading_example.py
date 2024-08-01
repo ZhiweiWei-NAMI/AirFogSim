@@ -20,8 +20,8 @@ env_wrapper = AirFogSimEnvVisualizer(env, config)
 
 # 4. Get Schedulers
 compSched = AirFogSimScheduler.getComputationScheduler()
-compSched.setComputationModel(env, 'M/M/1')
 taskSched = AirFogSimScheduler.getTaskScheduler() # task settings are in the config file
+taskSched.setTaskGenerationModel(env, 'Poisson', max_predictable_task_num=10) # max_predictable_task_num: always maintain 10 task info (generation time, cpu, ddl, priority, etc.) for future generation
 rewardSched = AirFogSimScheduler.getRewardScheduler()
 rewardSched.setRewardModel(env, '1/delay')
 entitySched = AirFogSimScheduler.getEntityScheduler()
