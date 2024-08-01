@@ -1,4 +1,19 @@
 simulation:
   vehicle_count: 100
+  max_simulation_time: 3600
+  simulation_interval: 0.01 # in seconds, for transmission, computation, task generation and assignment, etc.
+  
+
+sumo:
   map_file: "path/to/map.file"
   sumo_path: "/usr/local/bin/sumo"
+  sumo_files_path: "path/to/sumo_files" # also decide the interval of the traffic simulation
+
+
+traffic:
+  vehicle_mode: "real" # "real" or "SUMO"
+  vehicle_traffic_file: "path/to/vehicle_traffic_file.csv" # Only required if mode is "real". The format should be in accordance with the SUMO vehicle file format
+  require_uav_traffic: true # true or false, if true, UAV traffic file is required
+  uav_traffic_file: "path/to/uav_traffic_file.csv" # UAV traffic file
+  n_vehicles: 100 # Number of vehicles to simulate
+

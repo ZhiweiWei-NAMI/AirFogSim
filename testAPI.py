@@ -77,61 +77,59 @@ rewardSched.setRewardModel(env, '1/log(1+delay)')
 
 # Agent调度器，为FogNode或者TaskNode设置Agent
 agentSched = AirFogSimScheduler.getAgentScheduler()
-agentSched.addAgentModelByNodeName(env, model_name='DQN', model=DQN(), node_name='Vehicle-1')
+agentSched.addAgentModelByNodeId(env, model_id='DQN_1', model=DQN(), node_id='Vehicle-1')
 
 # 实体调度器，设置实体的位置，速度等信息。实体包括车辆、UAV、RSU、CloudServer, Channel等。还设置traffic信息，包括车辆生成、车辆移动等
 entitySched = AirFogSimScheduler.getEntityScheduler()
 entitySched.setVehicleTrafficModel(env, 'Poisson') # Poisson, random, etc. 车辆到达模型
 entitySched.setVehicleArrivalRate(env, 0.5) # 车辆到达率, per second，-1表示一下子生成所有车辆
-entitySched.setVehicleSpeedModel(env, 'Uniform') # Uniform, normal, etc.
 entitySched.setMaxVehicleNumber(env, 200) # 最大车辆数，是类变量，所有env共享
-entitySched.setVehicleDisappearAfterArrival(env, True) # 车辆到达后是否消失，如果False，车辆会一直存在，停留在最后的位置
 
 
 # Topology调度器，设置区域/道路的信息，包括最大限制速度、最大限制车辆数等
 topoSched = AirFogSimScheduler.getTopologyScheduler()
-topoSched.setMaxSpeedByLaneName(env, 'Lane-1', 10) # 设置Lane-1的最大速度为10m/s
-topoSched.setMaxVehicleByLaneName(env, 'Lane-1', 10) # 设置Lane-1的最大车辆数为10
+topoSched.setMaxSpeedByLaneId(env, 'Lane-1', 10) # 设置Lane-1的最大速度为10m/s
+topoSched.setMaxVehicleByLaneId(env, 'Lane-1', 10) # 设置Lane-1的最大车辆数为10
 
 while True:
 
-    # 先获取一些信息，所有Names都可以直接通过env获取，因为不需要额外的处理；复杂的处理都在scheduler中完成
-    vehicleNames = entitySched.getVehicleNames(env)
-    uavNames = entitySched.getUAVNames(env)
-    rsuNames = entitySched.getRSUNames(env)
-    cloudServerNames = entitySched.getCloudServerNames(env)
-    regionNames = entitySched.getRegionNames(env)
+    # 先获取一些信息，所有Ids都可以直接通过env获取，因为不需要额外的处理；复杂的处理都在scheduler中完成
+    vehicleIds = entitySched.getVehicleIds(env)
+    uavIds = entitySched.getUAVIds(env)
+    rsuIds = entitySched.getRSUIds(env)
+    cloudServerIds = entitySched.getCloudServerIds(env)
+    regionIds = entitySched.getRegionIds(env)
 
-    V2VChannelNames = entitySched.getV2VChannelNames(env)
-    for channelName in V2VChannelNames:
-        commSched.getCSIByChannelName(channelName) # 获取信道状态信息
-    V2UChannelNames = entitySched.getV2UChannelNames(env) # 此外还有U2R, U2U, R2R, R2U等信道
+    V2VChannelIds = entitySched.getV2VChannelIds(env)
+    for channelId in V2VChannelIds:
+        commSched.getCSIByChannelId(channelId) # 获取信道状态信息
+    V2UChannelIds = entitySched.getV2UChannelIds(env) # 此外还有U2R, U2U, R2R, R2U等信道
     
-    entitySched.getNeighborVehiclesByNodeName(env, 'RSU-1', distance = 100) # 获取distance距离内的邻居车辆
-    entitySched.getNeighborRSUsByNodeName(env, 'Vehicle-1', distance = 100) # 获取distance距离内的邻居RSU
-    entitySched.getNeighborUAVsByNodeName(env, 'Vehicle-1', distance = 100) # 获取distance距离内的邻居UAV
+    entitySched.getNeighborVehiclesByNodeId(env, 'RSU-1', distance = 100) # 获取distance距离内的邻居车辆
+    entitySched.getNeighborRSUsByNodeId(env, 'Vehicle-1', distance = 100) # 获取distance距离内的邻居RSU
+    entitySched.getNeighborUAVsByNodeId(env, 'Vehicle-1', distance = 100) # 获取distance距离内的邻居UAV
 
     # 在每一步之前，都可以通过AirFogSimEnvScheduler调整策略，即state -> action
     # 1. 通信资源调度
     n_RB = commSched.getAvailableNumberOfRB(env)
-    flag = commSched.setRBByChannelName(env, 'V2V-1', 5)
+    flag = commSched.setRBByChannelId(env, 'V2V-1', 5)
     if not flag:
         print('Set RB failed!')
     # 2. 任务调度
-    taskSched.setTaskArrivalRateByNodeName(env, 'Vehicle-1', 0.5) # 修改车辆的任务到达率
+    taskSched.setTaskArrivalRateByNodeId(env, 'Vehicle-1', 0.5) # 修改车辆的任务到达率
     taskSched.setTaskArrivalRateByRegion(env, 'Region-1', 0.5) # 修改区域的任务到达率. Region是和RSU对应的
 
     # 3. 计算资源调度
-    task_list = compSched.getComputingTaskByNodeName(env, 'Fog-V_1')
-    compSched.setCPUByNodeName(env, 'Fog-V_1' [0.5, 0.5])
+    task_list = compSched.getComputingTaskByNodeId(env, 'Fog-V_1')
+    compSched.setCPUByNodeId(env, 'Fog-V_1' [0.5, 0.5])
 
 
 
     # 此外的一系列调度操作，需要丰富，并且可以通过算法进行优化
 
     
-    dqnModel = agentSched.getAgentModelByNodeName(env, 'Vehicle-1')
-    rew = rewardSched.getRewardByNodeName(env, 'Vehicle-1')
+    dqnModel = agentSched.getAgentModelByNodeId(env, 'Vehicle-1')
+    rew = rewardSched.getRewardByNodeId(env, 'Vehicle-1')
     done = env.step()
     if done:
         break
