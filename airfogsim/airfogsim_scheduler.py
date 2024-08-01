@@ -79,3 +79,12 @@ class AirFogSimScheduler:
             for name, method in inspect.getmembers(scheduler_instance):
                 if inspect.isfunction(method):
                     setattr(AirFogSimScheduler, name, method)
+
+    @staticmethod
+    def getEntityScheduler():
+        """Get the entity scheduler for the environment. It schedules the entities in the environment.
+
+        Returns: 
+            EntityScheduler: The entity scheduler.
+        """
+        return EntityScheduler()

@@ -62,21 +62,19 @@ class AirFogSimEnv():
         self._updateAuthPrivacy()
         # 4. Update the AI models (e.g., enter a new region) for mobile entities. Neglect communication and computation for it.
         self._updateAIModels()
-        # 5. Generate the task
-        self._generateTask()
-        # 6. Update the communication (wireless, V2V, V2I, V2U, etc.) for fog computing nodes.
+        # 5. Update the communication (wireless, V2V, V2I, V2U, etc.) for fog computing nodes.
         self._updateWirelessCommunication()
-        # 7. Update the communication (wired, backhaul, fronthaul, etc.) for cloud computing network nodes.
+        # 6. Update the communication (wired, backhaul, fronthaul, etc.) for cloud computing network nodes.
         self._updateWiredCommunication()
-        # 8. Update the computation
+        # 7. Update the computation
         self._updateComputation()
-        # 9. Update the storage (cache, memory, etc.)
+        # 8. Update the storage (cache, memory, etc.)
         self._updateStorage()
-        # 10. Update the task
+        # 9. Update the task
         self._updateTask()
-        # 11. Update the battery
+        # 10. Update the battery
         self._updateBattery()
-        # 12. Update the blockchain
+        # 11. Update the blockchain
         self._updateBlockchain()
         return self.isDone()
     
@@ -92,11 +90,6 @@ class AirFogSimEnv():
 
     def _updateAIModels(self):
         """Update the AI models for the moving entities. Not training the AI models, just updating the AI models when the entities enter a new region.
-        """
-        pass
-
-    def _generateTask(self):
-        """Generate the task for the entities.
         """
         pass
 
