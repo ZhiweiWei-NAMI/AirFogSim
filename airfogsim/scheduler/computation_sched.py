@@ -1,4 +1,3 @@
-from ..entities.fog_node import FogNode
 from ..airfogsim_env import AirFogSimEnv
 from .base_sched import BaseScheduler
 class ComputationScheduler(BaseScheduler):

@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>airfogsim package &#8212; airfogsim-demo 0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=c058f7c8" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=2709fde1"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="airfogsim.entities package" href="airfogsim.entities.html" />
+    <link rel="prev" title="airfogsim" href="modules.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="airfogsim-package">
+<h1>airfogsim package<a class="headerlink" href="#airfogsim-package" title="Link to this heading">¶</a></h1>
+<section id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Link to this heading">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="airfogsim.entities.html">airfogsim.entities package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="airfogsim.entities.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="airfogsim.entities.html#module-airfogsim.entities.cloud_server">airfogsim.entities.cloud_server module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="airfogsim.entities.html#airfogsim.entities.cloud_server.CloudServer"><code class="docutils literal notranslate"><span class="pre">CloudServer</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="airfogsim.entities.html#module-airfogsim.entities.rsu">airfogsim.entities.rsu module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="airfogsim.entities.html#airfogsim.entities.rsu.RSU"><code class="docutils literal notranslate"><span class="pre">RSU</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="airfogsim.entities.html#module-airfogsim.entities.uav">airfogsim.entities.uav module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="airfogsim.entities.html#airfogsim.entities.uav.UAV"><code class="docutils literal notranslate"><span class="pre">UAV</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="airfogsim.entities.html#module-airfogsim.entities.vehicle">airfogsim.entities.vehicle module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="airfogsim.entities.html#airfogsim.entities.vehicle.Vehicle"><code class="docutils literal notranslate"><span class="pre">Vehicle</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="airfogsim.entities.html#module-airfogsim.entities">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="airfogsim.scheduler.html">airfogsim.scheduler package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="airfogsim.scheduler.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="airfogsim.scheduler.html#module-airfogsim.scheduler.base_sched">airfogsim.scheduler.base_sched module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.base_sched.BaseScheduler"><code class="docutils literal notranslate"><span class="pre">BaseScheduler</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="airfogsim.scheduler.html#module-airfogsim.scheduler.blockchain_sched">airfogsim.scheduler.blockchain_sched module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.blockchain_sched.BlockchainScheduler"><code class="docutils literal notranslate"><span class="pre">BlockchainScheduler</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="airfogsim.scheduler.html#module-airfogsim.scheduler.communication_sched">airfogsim.scheduler.communication_sched module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.communication_sched.CommunicationScheduler"><code class="docutils literal notranslate"><span class="pre">CommunicationScheduler</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.communication_sched.CommunicationScheduler.setRBByChannelName"><code class="docutils literal notranslate"><span class="pre">CommunicationScheduler.setRBByChannelName()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="airfogsim.scheduler.html#module-airfogsim.scheduler.computation_sched">airfogsim.scheduler.computation_sched module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.computation_sched.ComputationScheduler"><code class="docutils literal notranslate"><span class="pre">ComputationScheduler</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.computation_sched.ComputationScheduler.setCPUByNodeName"><code class="docutils literal notranslate"><span class="pre">ComputationScheduler.setCPUByNodeName()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="airfogsim.scheduler.html#module-airfogsim.scheduler.entity_sched">airfogsim.scheduler.entity_sched module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.entity_sched.EntityScheduler"><code class="docutils literal notranslate"><span class="pre">EntityScheduler</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.entity_sched.EntityScheduler.getCloudServerIds"><code class="docutils literal notranslate"><span class="pre">EntityScheduler.getCloudServerIds()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.entity_sched.EntityScheduler.getNeighborRSUsByNodeId"><code class="docutils literal notranslate"><span class="pre">EntityScheduler.getNeighborRSUsByNodeId()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.entity_sched.EntityScheduler.getNeighborUAVsByNodeId"><code class="docutils literal notranslate"><span class="pre">EntityScheduler.getNeighborUAVsByNodeId()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.entity_sched.EntityScheduler.getNeighborVehiclesByNodeId"><code class="docutils literal notranslate"><span class="pre">EntityScheduler.getNeighborVehiclesByNodeId()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.entity_sched.EntityScheduler.getR2RChannelIds"><code class="docutils literal notranslate"><span class="pre">EntityScheduler.getR2RChannelIds()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.entity_sched.EntityScheduler.getRSUIds"><code class="docutils literal notranslate"><span class="pre">EntityScheduler.getRSUIds()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.entity_sched.EntityScheduler.getRegionIds"><code class="docutils literal notranslate"><span class="pre">EntityScheduler.getRegionIds()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.entity_sched.EntityScheduler.getU2RChannelIds"><code class="docutils literal notranslate"><span class="pre">EntityScheduler.getU2RChannelIds()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.entity_sched.EntityScheduler.getU2UChannelIds"><code class="docutils literal notranslate"><span class="pre">EntityScheduler.getU2UChannelIds()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.entity_sched.EntityScheduler.getUAVIds"><code class="docutils literal notranslate"><span class="pre">EntityScheduler.getUAVIds()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.entity_sched.EntityScheduler.getV2RChannelIds"><code class="docutils literal notranslate"><span class="pre">EntityScheduler.getV2RChannelIds()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.entity_sched.EntityScheduler.getV2UChannelIds"><code class="docutils literal notranslate"><span class="pre">EntityScheduler.getV2UChannelIds()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.entity_sched.EntityScheduler.getV2VChannelIds"><code class="docutils literal notranslate"><span class="pre">EntityScheduler.getV2VChannelIds()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.entity_sched.EntityScheduler.getVehicleIds"><code class="docutils literal notranslate"><span class="pre">EntityScheduler.getVehicleIds()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.entity_sched.EntityScheduler.setMaxVehicleNumber"><code class="docutils literal notranslate"><span class="pre">EntityScheduler.setMaxVehicleNumber()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.entity_sched.EntityScheduler.setVehicleArrivalRate"><code class="docutils literal notranslate"><span class="pre">EntityScheduler.setVehicleArrivalRate()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.entity_sched.EntityScheduler.setVehicleDisappearAfterArrival"><code class="docutils literal notranslate"><span class="pre">EntityScheduler.setVehicleDisappearAfterArrival()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.entity_sched.EntityScheduler.setVehicleTrafficModel"><code class="docutils literal notranslate"><span class="pre">EntityScheduler.setVehicleTrafficModel()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="airfogsim.scheduler.html#module-airfogsim.scheduler.reward_sched">airfogsim.scheduler.reward_sched module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.reward_sched.RewardScheduler"><code class="docutils literal notranslate"><span class="pre">RewardScheduler</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.reward_sched.RewardScheduler.ACCEPTED_SYMBOLS"><code class="docutils literal notranslate"><span class="pre">RewardScheduler.ACCEPTED_SYMBOLS</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.reward_sched.RewardScheduler.REWARD_MODEL"><code class="docutils literal notranslate"><span class="pre">RewardScheduler.REWARD_MODEL</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.reward_sched.RewardScheduler.SYMOBOLS"><code class="docutils literal notranslate"><span class="pre">RewardScheduler.SYMOBOLS</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.reward_sched.RewardScheduler.getRewardByNodeName"><code class="docutils literal notranslate"><span class="pre">RewardScheduler.getRewardByNodeName()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.reward_sched.RewardScheduler.setRewardModel"><code class="docutils literal notranslate"><span class="pre">RewardScheduler.setRewardModel()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="airfogsim.scheduler.html#module-airfogsim.scheduler.task_sched">airfogsim.scheduler.task_sched module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.task_sched.TaskScheduler"><code class="docutils literal notranslate"><span class="pre">TaskScheduler</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="airfogsim.scheduler.html#module-airfogsim.scheduler.test_compute">airfogsim.scheduler.test_compute module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.test_compute.direct_symbolic_computation"><code class="docutils literal notranslate"><span class="pre">direct_symbolic_computation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.test_compute.sympify_computation"><code class="docutils literal notranslate"><span class="pre">sympify_computation()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="airfogsim.scheduler.html#module-airfogsim.scheduler.topo_sched">airfogsim.scheduler.topo_sched module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.topo_sched.TopologyScheduler"><code class="docutils literal notranslate"><span class="pre">TopologyScheduler</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.topo_sched.TopologyScheduler.setTopologyByNodeName"><code class="docutils literal notranslate"><span class="pre">TopologyScheduler.setTopologyByNodeName()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="airfogsim.scheduler.html#module-airfogsim.scheduler.validate">airfogsim.scheduler.validate module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.validate.ValidateStaticMethods"><code class="docutils literal notranslate"><span class="pre">ValidateStaticMethods</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="airfogsim.scheduler.html#module-airfogsim.scheduler">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading">¶</a></h2>
+</section>
+<section id="module-airfogsim.airfogsim_analyzer">
+<span id="airfogsim-airfogsim-analyzer-module"></span><h2>airfogsim.airfogsim_analyzer module<a class="headerlink" href="#module-airfogsim.airfogsim_analyzer" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_analyzer.AirFogSimAnalyzer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">airfogsim.airfogsim_analyzer.</span></span><span class="sig-name descname"><span class="pre">AirFogSimAnalyzer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_analyzer.AirFogSimAnalyzer" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_analyzer.AirFogSimAnalyzer.getAvgFogNodeRepuation">
+<span class="sig-name descname"><span class="pre">getAvgFogNodeRepuation</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_analyzer.AirFogSimAnalyzer.getAvgFogNodeRepuation" title="Link to this definition">¶</a></dt>
+<dd><p>Get the reputation score of the fog nodes in the environment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The reputation score of the fog nodes.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_analyzer.AirFogSimAnalyzer.getAvgFogNodeResourceUtilization">
+<span class="sig-name descname"><span class="pre">getAvgFogNodeResourceUtilization</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_analyzer.AirFogSimAnalyzer.getAvgFogNodeResourceUtilization" title="Link to this definition">¶</a></dt>
+<dd><p>Get the resource utilization of the fog nodes in the environment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The resource utilization of the fog nodes.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_analyzer.AirFogSimAnalyzer.getAvgTaskCompletionRate">
+<span class="sig-name descname"><span class="pre">getAvgTaskCompletionRate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_analyzer.AirFogSimAnalyzer.getAvgTaskCompletionRate" title="Link to this definition">¶</a></dt>
+<dd><p>Get the task completion rate of the environment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The task completion rate, ranging from 0 to 1.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_analyzer.AirFogSimAnalyzer.getAvgTaskLatency">
+<span class="sig-name descname"><span class="pre">getAvgTaskLatency</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_analyzer.AirFogSimAnalyzer.getAvgTaskLatency" title="Link to this definition">¶</a></dt>
+<dd><p>Get the task latency of the environment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The task latency.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_analyzer.AirFogSimAnalyzer.getAvgTaskUtility">
+<span class="sig-name descname"><span class="pre">getAvgTaskUtility</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_analyzer.AirFogSimAnalyzer.getAvgTaskUtility" title="Link to this definition">¶</a></dt>
+<dd><p>Get the task utility of the environment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The task utility.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-airfogsim.airfogsim_env">
+<span id="airfogsim-airfogsim-env-module"></span><h2>airfogsim.airfogsim_env module<a class="headerlink" href="#module-airfogsim.airfogsim_env" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_env.AirFogSimEnv">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">airfogsim.airfogsim_env.</span></span><span class="sig-name descname"><span class="pre">AirFogSimEnv</span></span><a class="headerlink" href="#airfogsim.airfogsim_env.AirFogSimEnv" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>AirFogSimEnv is the main class for the airfogsim environment. It provides the simulation of communication, computation, storage, battery, vehicle/UAV trajectory, cloud/cloudlet nodes, AI models for entities, blockchain, authentication, and privacy. It also provides the APIs for the agent to interact with the environment. The agent can be a DRL agent, a rule-based agent, or a human player.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_env.AirFogSimEnv.getCloudServerById">
+<span class="sig-name descname"><span class="pre">getCloudServerById</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_env.AirFogSimEnv.getCloudServerById" title="Link to this definition">¶</a></dt>
+<dd><p>Get the cloud server by the given id.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>id</strong> (<em>str</em>) – The id of the cloud server.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The cloud server.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="airfogsim.entities.html#airfogsim.entities.cloud_server.CloudServer" title="airfogsim.entities.cloud_server.CloudServer">CloudServer</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_env.AirFogSimEnv.getCloudServerIds">
+<span class="sig-name descname"><span class="pre">getCloudServerIds</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_env.AirFogSimEnv.getCloudServerIds" title="Link to this definition">¶</a></dt>
+<dd><p>Get the cloud server ids.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The cloud server ids.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_env.AirFogSimEnv.getNodeById">
+<span class="sig-name descname"><span class="pre">getNodeById</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_env.AirFogSimEnv.getNodeById" title="Link to this definition">¶</a></dt>
+<dd><p>Get the node by the given id.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>id</strong> (<em>str</em>) – The id of the node. Unique in the environment.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The node.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Node</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_env.AirFogSimEnv.getRSUById">
+<span class="sig-name descname"><span class="pre">getRSUById</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_env.AirFogSimEnv.getRSUById" title="Link to this definition">¶</a></dt>
+<dd><p>Get the RSU by the given id.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>id</strong> (<em>str</em>) – The id of the RSU.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The RSU.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="airfogsim.entities.html#airfogsim.entities.rsu.RSU" title="airfogsim.entities.rsu.RSU">RSU</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_env.AirFogSimEnv.getRSUIds">
+<span class="sig-name descname"><span class="pre">getRSUIds</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_env.AirFogSimEnv.getRSUIds" title="Link to this definition">¶</a></dt>
+<dd><p>Get the RSU ids.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The RSU ids.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_env.AirFogSimEnv.getUAVById">
+<span class="sig-name descname"><span class="pre">getUAVById</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_env.AirFogSimEnv.getUAVById" title="Link to this definition">¶</a></dt>
+<dd><p>Get the UAV by the given id.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>id</strong> (<em>str</em>) – The id of the UAV.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The UAV.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="airfogsim.entities.html#airfogsim.entities.uav.UAV" title="airfogsim.entities.uav.UAV">UAV</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_env.AirFogSimEnv.getUAVIds">
+<span class="sig-name descname"><span class="pre">getUAVIds</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_env.AirFogSimEnv.getUAVIds" title="Link to this definition">¶</a></dt>
+<dd><p>Get the UAV ids.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The UAV ids.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_env.AirFogSimEnv.getVehicleById">
+<span class="sig-name descname"><span class="pre">getVehicleById</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_env.AirFogSimEnv.getVehicleById" title="Link to this definition">¶</a></dt>
+<dd><p>Get the vehicle by the given id.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>id</strong> (<em>str</em>) – The id of the vehicle.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The vehicle.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="airfogsim.entities.html#airfogsim.entities.vehicle.Vehicle" title="airfogsim.entities.vehicle.Vehicle">Vehicle</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_env.AirFogSimEnv.getVehicleIds">
+<span class="sig-name descname"><span class="pre">getVehicleIds</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_env.AirFogSimEnv.getVehicleIds" title="Link to this definition">¶</a></dt>
+<dd><p>Get the vehicle ids.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The vehicle ids.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_env.AirFogSimEnv.isDone">
+<span class="sig-name descname"><span class="pre">isDone</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_env.AirFogSimEnv.isDone" title="Link to this definition">¶</a></dt>
+<dd><p>Check whether the environment is done.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The done signal. True if the episode is done, False otherwise.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_env.AirFogSimEnv.step">
+<span class="sig-name descname"><span class="pre">step</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_env.AirFogSimEnv.step" title="Link to this definition">¶</a></dt>
+<dd><p>The step function of the environment. It simulates the environment for one time step.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The done signal. True if the episode is done, False otherwise.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-airfogsim.airfogsim_scheduler">
+<span id="airfogsim-airfogsim-scheduler-module"></span><h2>airfogsim.airfogsim_scheduler module<a class="headerlink" href="#module-airfogsim.airfogsim_scheduler" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_scheduler.AirFogSimScheduler">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">airfogsim.airfogsim_scheduler.</span></span><span class="sig-name descname"><span class="pre">AirFogSimScheduler</span></span><a class="headerlink" href="#airfogsim.airfogsim_scheduler.AirFogSimScheduler" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>The scheduler for AirFogSimEnv. It provides communication, computation, task generation, blockchain scheduler. Agent interacts with this class to get the state, reward, and done signal.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_scheduler.AirFogSimScheduler.addMethodsFromSchedulers">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">addMethodsFromSchedulers</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_scheduler.AirFogSimScheduler.addMethodsFromSchedulers" title="Link to this definition">¶</a></dt>
+<dd><p>Add the methods from all scheduler classes to AirFogSimScheduler. By using this method, the agent can call the methods from all scheduler classes by calling the methods from AirFogSimScheduler.</p>
+<p class="rubric">Examples</p>
+<p>AirFogSimScheduler.addMethodsFromSchedulers()
+compSched = AirFogSimScheduler.getComputationScheduler()
+compSched.setComputationModel(env, ‘M/M/1’)
+AirFogSimScheduler.setComputationModel(env, ‘M/M/1’)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_scheduler.AirFogSimScheduler.getBlockchainScheduler">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">getBlockchainScheduler</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_scheduler.AirFogSimScheduler.getBlockchainScheduler" title="Link to this definition">¶</a></dt>
+<dd><p>Get the blockchain scheduler for the environment. It schedules the blockchain tasks for the blockchain nodes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The blockchain scheduler.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.blockchain_sched.BlockchainScheduler" title="airfogsim.scheduler.blockchain_sched.BlockchainScheduler">BlockchainScheduler</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_scheduler.AirFogSimScheduler.getCommunicationScheduler">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">getCommunicationScheduler</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_scheduler.AirFogSimScheduler.getCommunicationScheduler" title="Link to this definition">¶</a></dt>
+<dd><p>Get the communication scheduler for the environment. It schedules the communication tasks for the fog nodes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The communication scheduler.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.communication_sched.CommunicationScheduler" title="airfogsim.scheduler.communication_sched.CommunicationScheduler">CommunicationScheduler</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_scheduler.AirFogSimScheduler.getComputationScheduler">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">getComputationScheduler</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_scheduler.AirFogSimScheduler.getComputationScheduler" title="Link to this definition">¶</a></dt>
+<dd><p>Get the computation scheduler for the environment. It schedules the computation tasks for the fog nodes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The computation scheduler.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.computation_sched.ComputationScheduler" title="airfogsim.scheduler.computation_sched.ComputationScheduler">ComputationScheduler</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_scheduler.AirFogSimScheduler.getRewardScheduler">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">getRewardScheduler</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_scheduler.AirFogSimScheduler.getRewardScheduler" title="Link to this definition">¶</a></dt>
+<dd><p>Get the reward scheduler for the environment. It calculates the reward for the agent.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The reward scheduler.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.reward_sched.RewardScheduler" title="airfogsim.scheduler.reward_sched.RewardScheduler">RewardScheduler</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_scheduler.AirFogSimScheduler.getSchedulerMethodList">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">getSchedulerMethodList</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_scheduler.AirFogSimScheduler.getSchedulerMethodList" title="Link to this definition">¶</a></dt>
+<dd><p>Get the list of all scheduler methods. Use inspect module to get the list of all static methods in this class. The method name should start with ‘get’ and end with ‘Scheduler’.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The list of all scheduler method names.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_scheduler.AirFogSimScheduler.getTaskScheduler">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">getTaskScheduler</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_scheduler.AirFogSimScheduler.getTaskScheduler" title="Link to this definition">¶</a></dt>
+<dd><p>Get the task scheduler for the environment. It schedules the tasks for the task nodes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The task scheduler.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="airfogsim.scheduler.html#airfogsim.scheduler.task_sched.TaskScheduler" title="airfogsim.scheduler.task_sched.TaskScheduler">TaskScheduler</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-airfogsim.airfogsim_visual">
+<span id="airfogsim-airfogsim-visual-module"></span><h2>airfogsim.airfogsim_visual module<a class="headerlink" href="#module-airfogsim.airfogsim_visual" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_visual.AirFogSimEnvVisualizer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">airfogsim.airfogsim_visual.</span></span><span class="sig-name descname"><span class="pre">AirFogSimEnvVisualizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_visual.AirFogSimEnvVisualizer" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+</section>
+<section id="module-airfogsim.airfogsim_wrapper">
+<span id="airfogsim-airfogsim-wrapper-module"></span><h2>airfogsim.airfogsim_wrapper module<a class="headerlink" href="#module-airfogsim.airfogsim_wrapper" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="airfogsim.airfogsim_wrapper.AirFogSimEnvWrapper">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">airfogsim.airfogsim_wrapper.</span></span><span class="sig-name descname"><span class="pre">AirFogSimEnvWrapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.airfogsim_wrapper.AirFogSimEnvWrapper" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Visual wrapper for the environment. This wrapper will render the environment and provide the visual feedback to the agent.</p>
+</dd></dl>
+
+</section>
+<section id="module-airfogsim">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-airfogsim" title="Link to this heading">¶</a></h2>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">airfogsim-demo</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">airfogsim</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">airfogsim package</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">airfogsim</a><ul>
+      <li>Previous: <a href="modules.html" title="previous chapter">airfogsim</a></li>
+      <li>Next: <a href="airfogsim.entities.html" title="next chapter">airfogsim.entities package</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, NaMI-Lab.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.0.2</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/airfogsim.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

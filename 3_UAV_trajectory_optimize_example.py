@@ -45,6 +45,9 @@ while not done:
     sorted_regions = [x for _, x in sorted(zip(sinr, regions))]
     for i, uav_name in enumerate(uav_names):
         entitySched.moveUAVToRegion(env, uav_name, sorted_regions[i%len(sorted_regions)])
+        # or, use region center
+        region_center = entitySched.getRegionCenter(env, sorted_regions[i%len(sorted_regions)])
+        entitySched.moveUAVToLocation(env, uav_name, region_center)
     done = env.step()
     env_wrapper.render()
 env_wrapper.close()

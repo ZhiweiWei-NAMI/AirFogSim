@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>airfogsim.scheduler package &#8212; airfogsim-demo 0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=c058f7c8" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=2709fde1"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="airfogsim.entities package" href="airfogsim.entities.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="airfogsim-scheduler-package">
+<h1>airfogsim.scheduler package<a class="headerlink" href="#airfogsim-scheduler-package" title="Link to this heading">¶</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading">¶</a></h2>
+</section>
+<section id="module-airfogsim.scheduler.base_sched">
+<span id="airfogsim-scheduler-base-sched-module"></span><h2>airfogsim.scheduler.base_sched module<a class="headerlink" href="#module-airfogsim.scheduler.base_sched" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="airfogsim.scheduler.base_sched.BaseScheduler">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">airfogsim.scheduler.base_sched.</span></span><span class="sig-name descname"><span class="pre">BaseScheduler</span></span><a class="headerlink" href="#airfogsim.scheduler.base_sched.BaseScheduler" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+</section>
+<section id="module-airfogsim.scheduler.blockchain_sched">
+<span id="airfogsim-scheduler-blockchain-sched-module"></span><h2>airfogsim.scheduler.blockchain_sched module<a class="headerlink" href="#module-airfogsim.scheduler.blockchain_sched" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="airfogsim.scheduler.blockchain_sched.BlockchainScheduler">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">airfogsim.scheduler.blockchain_sched.</span></span><span class="sig-name descname"><span class="pre">BlockchainScheduler</span></span><a class="headerlink" href="#airfogsim.scheduler.blockchain_sched.BlockchainScheduler" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#airfogsim.scheduler.base_sched.BaseScheduler" title="airfogsim.scheduler.base_sched.BaseScheduler"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseScheduler</span></code></a></p>
+</dd></dl>
+
+</section>
+<section id="module-airfogsim.scheduler.communication_sched">
+<span id="airfogsim-scheduler-communication-sched-module"></span><h2>airfogsim.scheduler.communication_sched module<a class="headerlink" href="#module-airfogsim.scheduler.communication_sched" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="airfogsim.scheduler.communication_sched.CommunicationScheduler">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">airfogsim.scheduler.communication_sched.</span></span><span class="sig-name descname"><span class="pre">CommunicationScheduler</span></span><a class="headerlink" href="#airfogsim.scheduler.communication_sched.CommunicationScheduler" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#airfogsim.scheduler.base_sched.BaseScheduler" title="airfogsim.scheduler.base_sched.BaseScheduler"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseScheduler</span></code></a></p>
+<p>The communication scheduler for channels.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.scheduler.communication_sched.CommunicationScheduler.setRBByChannelName">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">setRBByChannelName</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_RB</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.communication_sched.CommunicationScheduler.setRBByChannelName" title="Link to this definition">¶</a></dt>
+<dd><p>Schedule the resource blocks of the channel by the channel name.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>env</strong> (<a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><em>AirFogSimEnv</em></a>) – The environment.</p></li>
+<li><p><strong>channel_type</strong> (<em>str</em>) – The channel type.</p></li>
+<li><p><strong>n_RB</strong> (<em>int</em>) – The number of resource blocks.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The flag to indicate whether the bandwidth is scheduled successfully.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-airfogsim.scheduler.computation_sched">
+<span id="airfogsim-scheduler-computation-sched-module"></span><h2>airfogsim.scheduler.computation_sched module<a class="headerlink" href="#module-airfogsim.scheduler.computation_sched" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="airfogsim.scheduler.computation_sched.ComputationScheduler">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">airfogsim.scheduler.computation_sched.</span></span><span class="sig-name descname"><span class="pre">ComputationScheduler</span></span><a class="headerlink" href="#airfogsim.scheduler.computation_sched.ComputationScheduler" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#airfogsim.scheduler.base_sched.BaseScheduler" title="airfogsim.scheduler.base_sched.BaseScheduler"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseScheduler</span></code></a></p>
+<p>The computation scheduler for the fog nodes. Provide static methods to schedule the computation tasks for the fog nodes.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.scheduler.computation_sched.ComputationScheduler.setCPUByNodeName">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">setCPUByNodeName</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resource_allocation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.computation_sched.ComputationScheduler.setCPUByNodeName" title="Link to this definition">¶</a></dt>
+<dd><p>Schedule the computation resources of the fog node (e.g., fog vehicle, edge server, cloud server) by the fog node name.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>env</strong> (<a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><em>AirFogSimEnv</em></a>) – The environment.</p></li>
+<li><p><strong>fog_node_name</strong> (<em>str</em>) – The fog node name.</p></li>
+<li><p><strong>resource_allocation</strong> (<em>list</em>) – The resource allocation list. Each element is the resource allocation ratio for the computation tasks. Guarantee the sum of the resource allocation ratio is 1.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The flag to indicate whether the computation resources are scheduled successfully.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-airfogsim.scheduler.entity_sched">
+<span id="airfogsim-scheduler-entity-sched-module"></span><h2>airfogsim.scheduler.entity_sched module<a class="headerlink" href="#module-airfogsim.scheduler.entity_sched" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="airfogsim.scheduler.entity_sched.EntityScheduler">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">airfogsim.scheduler.entity_sched.</span></span><span class="sig-name descname"><span class="pre">EntityScheduler</span></span><a class="headerlink" href="#airfogsim.scheduler.entity_sched.EntityScheduler" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#airfogsim.scheduler.base_sched.BaseScheduler" title="airfogsim.scheduler.base_sched.BaseScheduler"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseScheduler</span></code></a></p>
+<p>The entity scheduler for entities.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.scheduler.entity_sched.EntityScheduler.getCloudServerIds">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">getCloudServerIds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.entity_sched.EntityScheduler.getCloudServerIds" title="Link to this definition">¶</a></dt>
+<dd><p>Get the cloud server ids.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>env</strong> (<a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><em>AirFogSimEnv</em></a>) – The environment.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The cloud server ids.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.scheduler.entity_sched.EntityScheduler.getNeighborRSUsByNodeId">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">getNeighborRSUsByNodeId</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.entity_sched.EntityScheduler.getNeighborRSUsByNodeId" title="Link to this definition">¶</a></dt>
+<dd><p>Get the neighbor RSUs by the node id.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>env</strong> (<a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><em>AirFogSimEnv</em></a>) – The environment.</p></li>
+<li><p><strong>node_id</strong> (<em>str</em>) – The node id.</p></li>
+<li><p><strong>distance</strong> (<em>float</em>) – The distance.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The neighbor RSUs in dict format.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.scheduler.entity_sched.EntityScheduler.getNeighborUAVsByNodeId">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">getNeighborUAVsByNodeId</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.entity_sched.EntityScheduler.getNeighborUAVsByNodeId" title="Link to this definition">¶</a></dt>
+<dd><p>Get the neighbor UAVs by the node id.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>env</strong> (<a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><em>AirFogSimEnv</em></a>) – The environment.</p></li>
+<li><p><strong>node_id</strong> (<em>str</em>) – The node id.</p></li>
+<li><p><strong>distance</strong> (<em>float</em>) – The distance.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The neighbor UAVs in dict format.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.scheduler.entity_sched.EntityScheduler.getNeighborVehiclesByNodeId">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">getNeighborVehiclesByNodeId</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.entity_sched.EntityScheduler.getNeighborVehiclesByNodeId" title="Link to this definition">¶</a></dt>
+<dd><p>Get the neighbor vehicles by the node id.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>env</strong> (<a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><em>AirFogSimEnv</em></a>) – The environment.</p></li>
+<li><p><strong>node_id</strong> (<em>str</em>) – The node id.</p></li>
+<li><p><strong>distance</strong> (<em>float</em>) – The distance.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The neighbor vehicles in dict format.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.scheduler.entity_sched.EntityScheduler.getR2RChannelIds">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">getR2RChannelIds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.entity_sched.EntityScheduler.getR2RChannelIds" title="Link to this definition">¶</a></dt>
+<dd><p>Get the R2R channel ids.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>env</strong> (<a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><em>AirFogSimEnv</em></a>) – The environment.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The R2R channel ids.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.scheduler.entity_sched.EntityScheduler.getRSUIds">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">getRSUIds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.entity_sched.EntityScheduler.getRSUIds" title="Link to this definition">¶</a></dt>
+<dd><p>Get the RSU ids.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>env</strong> (<a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><em>AirFogSimEnv</em></a>) – The environment.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The RSU ids.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.scheduler.entity_sched.EntityScheduler.getRegionIds">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">getRegionIds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.entity_sched.EntityScheduler.getRegionIds" title="Link to this definition">¶</a></dt>
+<dd><p>Get the region ids.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>env</strong> (<a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><em>AirFogSimEnv</em></a>) – The environment.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The region ids.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.scheduler.entity_sched.EntityScheduler.getU2RChannelIds">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">getU2RChannelIds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">reverse</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.entity_sched.EntityScheduler.getU2RChannelIds" title="Link to this definition">¶</a></dt>
+<dd><p>Get the U2R channel ids.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>env</strong> (<a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><em>AirFogSimEnv</em></a>) – The environment.</p></li>
+<li><p><strong>reverse</strong> (<em>bool</em>) – The flag to indicate whether the U2R channel ids or R2U channel ids are returned.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The U2R or R2U channel ids.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.scheduler.entity_sched.EntityScheduler.getU2UChannelIds">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">getU2UChannelIds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.entity_sched.EntityScheduler.getU2UChannelIds" title="Link to this definition">¶</a></dt>
+<dd><p>Get the U2U channel ids.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>env</strong> (<a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><em>AirFogSimEnv</em></a>) – The environment.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The U2U channel ids.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.scheduler.entity_sched.EntityScheduler.getUAVIds">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">getUAVIds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.entity_sched.EntityScheduler.getUAVIds" title="Link to this definition">¶</a></dt>
+<dd><p>Get the UAV ids.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>env</strong> (<a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><em>AirFogSimEnv</em></a>) – The environment.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The UAV ids.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.scheduler.entity_sched.EntityScheduler.getV2RChannelIds">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">getV2RChannelIds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">reverse</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.entity_sched.EntityScheduler.getV2RChannelIds" title="Link to this definition">¶</a></dt>
+<dd><p>Get the V2R channel ids.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>env</strong> (<a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><em>AirFogSimEnv</em></a>) – The environment.</p></li>
+<li><p><strong>reverse</strong> (<em>bool</em>) – The flag to indicate whether the V2R channel ids or R2V channel ids are returned.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The V2R or R2V channel ids.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.scheduler.entity_sched.EntityScheduler.getV2UChannelIds">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">getV2UChannelIds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">reverse</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.entity_sched.EntityScheduler.getV2UChannelIds" title="Link to this definition">¶</a></dt>
+<dd><p>Get the V2U channel ids.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>env</strong> (<a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><em>AirFogSimEnv</em></a>) – The environment.</p></li>
+<li><p><strong>reverse</strong> (<em>bool</em>) – The flag to indicate whether the V2U channel ids or U2V channel ids are returned.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The V2U or U2V channel ids.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.scheduler.entity_sched.EntityScheduler.getV2VChannelIds">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">getV2VChannelIds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.entity_sched.EntityScheduler.getV2VChannelIds" title="Link to this definition">¶</a></dt>
+<dd><p>Get the V2V channel ids.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>env</strong> (<a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><em>AirFogSimEnv</em></a>) – The environment.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The V2V channel ids.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.scheduler.entity_sched.EntityScheduler.getVehicleIds">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">getVehicleIds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.entity_sched.EntityScheduler.getVehicleIds" title="Link to this definition">¶</a></dt>
+<dd><p>Get the vehicle ids.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>env</strong> (<a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><em>AirFogSimEnv</em></a>) – The environment.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The vehicle ids.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.scheduler.entity_sched.EntityScheduler.setMaxVehicleNumber">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">setMaxVehicleNumber</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_vehicle_number</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.entity_sched.EntityScheduler.setMaxVehicleNumber" title="Link to this definition">¶</a></dt>
+<dd><p>Set the maximum vehicle number.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>env</strong> (<a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><em>AirFogSimEnv</em></a>) – The environment.</p></li>
+<li><p><strong>max_vehicle_number</strong> (<em>int</em>) – The maximum vehicle number.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The flag to indicate whether the maximum vehicle number is set successfully.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.scheduler.entity_sched.EntityScheduler.setVehicleArrivalRate">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">setVehicleArrivalRate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">arrival_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.entity_sched.EntityScheduler.setVehicleArrivalRate" title="Link to this definition">¶</a></dt>
+<dd><p>Set the vehicle arrival rate.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>env</strong> (<a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><em>AirFogSimEnv</em></a>) – The environment.</p></li>
+<li><p><strong>arrival_rate</strong> (<em>float</em>) – The vehicle arrival rate.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The flag to indicate whether the vehicle arrival rate is set successfully.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.scheduler.entity_sched.EntityScheduler.setVehicleDisappearAfterArrival">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">setVehicleDisappearAfterArrival</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">disappear_after_arrival</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.entity_sched.EntityScheduler.setVehicleDisappearAfterArrival" title="Link to this definition">¶</a></dt>
+<dd><p>Set the flag to indicate whether the vehicle disappears after arrival.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>env</strong> (<a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><em>AirFogSimEnv</em></a>) – The environment.</p></li>
+<li><p><strong>disappear_after_arrival</strong> (<em>bool</em>) – The flag to indicate whether the vehicle disappears after arrival.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The flag to indicate whether the flag is set successfully.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.scheduler.entity_sched.EntityScheduler.setVehicleTrafficModel">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">setVehicleTrafficModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">traffic_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.entity_sched.EntityScheduler.setVehicleTrafficModel" title="Link to this definition">¶</a></dt>
+<dd><p>Set the vehicle traffic model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>env</strong> (<a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><em>AirFogSimEnv</em></a>) – The environment.</p></li>
+<li><p><strong>traffic_model</strong> (<em>str</em>) – The traffic model.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The flag to indicate whether the traffic model is set successfully.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-airfogsim.scheduler.reward_sched">
+<span id="airfogsim-scheduler-reward-sched-module"></span><h2>airfogsim.scheduler.reward_sched module<a class="headerlink" href="#module-airfogsim.scheduler.reward_sched" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="airfogsim.scheduler.reward_sched.RewardScheduler">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">airfogsim.scheduler.reward_sched.</span></span><span class="sig-name descname"><span class="pre">RewardScheduler</span></span><a class="headerlink" href="#airfogsim.scheduler.reward_sched.RewardScheduler" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#airfogsim.scheduler.base_sched.BaseScheduler" title="airfogsim.scheduler.base_sched.BaseScheduler"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseScheduler</span></code></a></p>
+<p>The reward scheduler for the reinforcement learning agents. Provide static methods to compute the reward for the reinforcement learning agents. Use sympy to parse the reward expression and compute the reward for each task node. According to test, the efficiency of evalf is similar to direct symbolic computation.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="airfogsim.scheduler.reward_sched.RewardScheduler.ACCEPTED_SYMBOLS">
+<span class="sig-name descname"><span class="pre">ACCEPTED_SYMBOLS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">['task_delay',</span> <span class="pre">'energy',</span> <span class="pre">'task_ratio']</span></em><a class="headerlink" href="#airfogsim.scheduler.reward_sched.RewardScheduler.ACCEPTED_SYMBOLS" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="airfogsim.scheduler.reward_sched.RewardScheduler.REWARD_MODEL">
+<span class="sig-name descname"><span class="pre">REWARD_MODEL</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#airfogsim.scheduler.reward_sched.RewardScheduler.REWARD_MODEL" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="airfogsim.scheduler.reward_sched.RewardScheduler.SYMOBOLS">
+<span class="sig-name descname"><span class="pre">SYMOBOLS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#airfogsim.scheduler.reward_sched.RewardScheduler.SYMOBOLS" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.scheduler.reward_sched.RewardScheduler.getRewardByNodeName">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">getRewardByNodeName</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.reward_sched.RewardScheduler.getRewardByNodeName" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the reward of the node by the node name.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>env</strong> (<a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><em>AirFogSimEnv</em></a>) – The environment.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.scheduler.reward_sched.RewardScheduler.setRewardModel">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">setRewardModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">expression</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.reward_sched.RewardScheduler.setRewardModel" title="Link to this definition">¶</a></dt>
+<dd><p>Set the reward model for the reinforcement learning agents. Note that reward is computed for each task node, according to the QoE metrics defined in the expression. The QoE metrics include task delay, energy consumption, and task ratio. This metric is updated each step for each task node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>env</strong> (<a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><em>AirFogSimEnv</em></a>) – The environment.</p></li>
+<li><p><strong>expression</strong> (<em>str</em>) – The reward expression. The expression should be a valid sympy expression</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If the expression is invalid.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">sched</span> <span class="o">=</span> <span class="n">RewardScheduler</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">sched</span><span class="o">.</span><span class="n">setRewardModel</span><span class="p">(</span><span class="s1">&#39;1/log(1+energy)&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-airfogsim.scheduler.task_sched">
+<span id="airfogsim-scheduler-task-sched-module"></span><h2>airfogsim.scheduler.task_sched module<a class="headerlink" href="#module-airfogsim.scheduler.task_sched" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="airfogsim.scheduler.task_sched.TaskScheduler">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">airfogsim.scheduler.task_sched.</span></span><span class="sig-name descname"><span class="pre">TaskScheduler</span></span><a class="headerlink" href="#airfogsim.scheduler.task_sched.TaskScheduler" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#airfogsim.scheduler.base_sched.BaseScheduler" title="airfogsim.scheduler.base_sched.BaseScheduler"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseScheduler</span></code></a></p>
+</dd></dl>
+
+</section>
+<section id="module-airfogsim.scheduler.test_compute">
+<span id="airfogsim-scheduler-test-compute-module"></span><h2>airfogsim.scheduler.test_compute module<a class="headerlink" href="#module-airfogsim.scheduler.test_compute" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="airfogsim.scheduler.test_compute.direct_symbolic_computation">
+<span class="sig-prename descclassname"><span class="pre">airfogsim.scheduler.test_compute.</span></span><span class="sig-name descname"><span class="pre">direct_symbolic_computation</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.test_compute.direct_symbolic_computation" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="airfogsim.scheduler.test_compute.sympify_computation">
+<span class="sig-prename descclassname"><span class="pre">airfogsim.scheduler.test_compute.</span></span><span class="sig-name descname"><span class="pre">sympify_computation</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.test_compute.sympify_computation" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-airfogsim.scheduler.topo_sched">
+<span id="airfogsim-scheduler-topo-sched-module"></span><h2>airfogsim.scheduler.topo_sched module<a class="headerlink" href="#module-airfogsim.scheduler.topo_sched" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="airfogsim.scheduler.topo_sched.TopologyScheduler">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">airfogsim.scheduler.topo_sched.</span></span><span class="sig-name descname"><span class="pre">TopologyScheduler</span></span><a class="headerlink" href="#airfogsim.scheduler.topo_sched.TopologyScheduler" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#airfogsim.scheduler.base_sched.BaseScheduler" title="airfogsim.scheduler.base_sched.BaseScheduler"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseScheduler</span></code></a></p>
+<p>The topology scheduler for the fog nodes. Provide static methods to schedule the topology of the fog nodes.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="airfogsim.scheduler.topo_sched.TopologyScheduler.setTopologyByNodeName">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">setTopologyByNodeName</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><span class="pre">AirFogSimEnv</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">topology</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.topo_sched.TopologyScheduler.setTopologyByNodeName" title="Link to this definition">¶</a></dt>
+<dd><p>Schedule the topology of the fog node (e.g., fog vehicle, edge server, cloud server) by the fog node name.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>env</strong> (<a class="reference internal" href="airfogsim.html#airfogsim.airfogsim_env.AirFogSimEnv" title="airfogsim.airfogsim_env.AirFogSimEnv"><em>AirFogSimEnv</em></a>) – The environment.</p></li>
+<li><p><strong>fog_node_name</strong> (<em>str</em>) – The fog node name.</p></li>
+<li><p><strong>topology</strong> (<em>dict</em>) – The topology of the fog node. The topology includes the connection information of the fog node.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The flag to indicate whether the topology is scheduled successfully.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-airfogsim.scheduler.validate">
+<span id="airfogsim-scheduler-validate-module"></span><h2>airfogsim.scheduler.validate module<a class="headerlink" href="#module-airfogsim.scheduler.validate" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="airfogsim.scheduler.validate.ValidateStaticMethods">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">airfogsim.scheduler.validate.</span></span><span class="sig-name descname"><span class="pre">ValidateStaticMethods</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bases</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">attrs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#airfogsim.scheduler.validate.ValidateStaticMethods" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">type</span></code></p>
+</dd></dl>
+
+</section>
+<section id="module-airfogsim.scheduler">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-airfogsim.scheduler" title="Link to this heading">¶</a></h2>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">airfogsim-demo</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">airfogsim</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="airfogsim.html">airfogsim package</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">airfogsim</a><ul>
+  <li><a href="airfogsim.html">airfogsim package</a><ul>
+      <li>Previous: <a href="airfogsim.entities.html" title="previous chapter">airfogsim.entities package</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, NaMI-Lab.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.0.2</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/airfogsim.scheduler.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
