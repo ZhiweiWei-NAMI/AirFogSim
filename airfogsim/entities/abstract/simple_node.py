@@ -6,6 +6,14 @@ class SimpleNode:
         self._position_z = position_z
         self._speed = speed
         self._acceleration = acceleration
+        self._is_transmitting = False
+        self._is_receiving = False
+
+    def setTransmitting(self, is_transmitting):
+        self._is_transmitting = is_transmitting
+
+    def setReceiving(self, is_receiving):
+        self._is_receiving = is_receiving
 
     def getId(self):
         return self._id
