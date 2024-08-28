@@ -114,7 +114,7 @@ class AirFogSimEnv():
         self.mission_manager.updateMissions(self.simulation_interval, self.simulation_time, self._getNodeById)
         for node_id, mission in self.new_missions_for_nodes.items():
             # the task for mission is executed locally instead of being offloaded
-            self.mission_manager.addMission(node_id, mission)
+            self.mission_manager.addMission(node_id, mission, self.task_mananger)
 
     def _updateAuthPrivacy(self):
         """Update the authentication and privacy for the entities.
