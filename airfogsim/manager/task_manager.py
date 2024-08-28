@@ -22,6 +22,20 @@ class TaskManager:
         self.setTaskAttributeModel('Deadline', deadline_model, **kwargs)
         self.setTaskAttributeModel('Priority', priority_model, **kwargs)
 
+    def addToComputeTask(self, task:Task, node_id):
+        """Add the task to the to_compute_tasks.
+
+        Args:
+            task (Task): The task to add.
+            node_id (str): The node id.
+
+        Examples:
+            task_manager.addToComputeTask(task, 'vehicle1')
+        """
+        to_compute_task_list = self._to_compute_tasks.get(node_id, [])
+        to_compute_task_list.append(task)
+        self._to_compute_tasks[node_id] = to_compute_task_list
+
     def finishOffloadingTask(self, task:Task):
         """Remove the offloading task by the task id, and then move the task to the to_compute_tasks.
 
