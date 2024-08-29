@@ -1,13 +1,21 @@
 class SimpleNode:
-    def __init__(self, id, position_x, position_y, position_z, speed=0, acceleration=0):
+    def __init__(self, id, position_x, position_y, position_z, speed=0, acceleration=0, angle=0):
         self._id = id
         self._position_x = position_x
         self._position_y = position_y
         self._position_z = position_z
         self._speed = speed
+        self._angle = angle
         self._acceleration = acceleration
         self._is_transmitting = False
         self._is_receiving = False
+        self._revenue = 0
+
+    def getRevenue(self):
+        return self._revenue
+    
+    def setRevenue(self, revenue):
+        self._revenue = revenue
 
     def setTransmitting(self, is_transmitting):
         self._is_transmitting = is_transmitting

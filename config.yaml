@@ -2,19 +2,42 @@ simulation:
   vehicle_count: 100
   max_simulation_time: 3600
   simulation_interval: 0.01 # in seconds, for transmission, computation, task generation and assignment, etc.
-  traffic_interval: 0.1 # in seconds, for traffic simulation
+  traffic_interval: 0.1 # in seconds, for traffic simulation. Remember to set the same value in the SUMO configuration file; otherwise, the simulation will not work properly
   
 
 sumo:
-  map_file: "path/to/map.file"
-  sumo_path: "/usr/local/bin/sumo"
-  sumo_files_path: "path/to/sumo_files" # also decide the interval of the traffic simulation
-
+  sumo_config: "/home/weizhiwei/data/uvfogsim_python/sumo_berlin/map.sumocfg"
+  sumo_osm: "/home/weizhiwei/data/uvfogsim_python/sumo_berlin/map.osm"
+  sumo_net: "/home/weizhiwei/data/uvfogsim_python/sumo_berlin/map.net.xml"
+  sumo_port: 8813
 
 traffic:
-  vehicle_mode: "real" # "real" or "SUMO"
+  traffic_mode: "SUMO" # "real" or "SUMO"
+  x_range: [0, 1000] # The range of x coordinates in the simulation area, same as the SUMO map
+  y_range: [0, 1000] # The range of y coordinates in the simulation area, same as the SUMO map
+  UAV_z_range: [50, 300] # The range of z coordinates for UAVs
   vehicle_traffic_file: "path/to/vehicle_traffic_file.csv" # Only required if mode is "real". The format should be in accordance with the SUMO vehicle file format
-  require_uav_traffic: true # true or false, if true, UAV traffic file is required
   uav_traffic_file: "path/to/uav_traffic_file.csv" # UAV traffic file
-  n_vehicles: 100 # Number of vehicles to simulate
+  max_n_vehicles: 100 # Number of vehicles to simulate
+  max_n_UAVs: 10 # Number of UAVs to simulate. UAVs are randomly generated in the simulation area initially
+  RSU_positions: [[0, 0, 0], [0, 100, 0], [100, 0, 0], [100, 100, 0]] # List of RSU positions, each RSU is represented by a list of x, y, z coordinates
+  max_n_cloudServers: 1 # Number of cloud servers
+  arrival_lambda: 1 # The rate at which vehicles arrive at the network per second (in Poisson distribution)
 
+fog_profile:
+  vehicle:
+    cpu: 1 # CPU capacity of vehicles
+    memory: 1 # Memory capacity of vehicles
+    storage: 1 # Storage capacity of vehicles
+  uav:
+    cpu: 1 # CPU capacity of UAVs
+    memory: 1 # Memory capacity of UAVs
+    storage: 1 # Storage capacity of UAVs
+  rsu:
+    cpu: 1 # CPU capacity of RSUs
+    memory: 1 # Memory capacity of RSUs
+    storage: 1 # Storage capacity of RSUs
+  cloud:
+    cpu: 1 # CPU capacity of cloud servers
+    memory: 1 # Memory capacity of cloud servers
+    storage: 1 # Storage capacity of cloud servers

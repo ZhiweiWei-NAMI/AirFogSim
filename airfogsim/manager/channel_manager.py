@@ -3,7 +3,7 @@ from ..all_channels import V2IChannel, V2UChannel, V2VChannel, U2IChannel, U2UCh
 import numpy as np
 class ChannelManager:
     """ChannelManager is the class for managing the wireless communication channels in the airfogsim environment. It provides the APIs for the agent to interact with the channels."""
-    def __init__(self, n_BS, n_UAV, n_Veh, hei_UAVs, BS_positions, time_step):
+    def __init__(self, n_RSU, n_UAV, n_Veh, hei_UAVs, BS_positions, time_step):
         self.V2V_power_dB = 23 # dBm 记录的都是最大功率
         self.V2I_power_dB = 26
         self.V2U_power_dB = 26
@@ -61,7 +61,7 @@ class ChannelManager:
         self.I2V_Rate = None
 
         self.n_Veh = n_Veh
-        self.n_BS = n_BS
+        self.n_RSU = n_RSU
         self.n_UAV = n_UAV
         self.hei_UAVs = hei_UAVs
         self.BS_positions = BS_positions
@@ -69,49 +69,48 @@ class ChannelManager:
 
         self._initialize_Channels()
         self._initialize_Interference_and_active()
+        self.resetActiveLinks()
 
 
 
     def _initialize_Channels(self):
         self.V2VChannel = V2VChannel(self.n_Veh, self.n_RB)  # number of vehicles
-        self.V2IChannel = V2IChannel(self.n_Veh, self.n_BS, self.n_RB, self.BS_positions)
+        self.V2IChannel = V2IChannel(self.n_Veh, self.n_RSU, self.n_RB, self.BS_positions)
         self.V2UChannel = V2UChannel(self.n_Veh, self.n_RB, self.n_UAV, self.hei_UAVs)
         self.U2UChannel = U2UChannel(self.n_RB, self.n_UAV, self.hei_UAVs)
-        self.U2IChannel = U2IChannel(self.n_RB, self.n_BS, self.n_UAV, self.hei_UAVs, self.BS_positions)
-        self.I2IChannel = I2IChannel(self.n_RB, self.n_BS, self.BS_positions)
+        self.U2IChannel = U2IChannel(self.n_RB, self.n_RSU, self.n_UAV, self.hei_UAVs, self.BS_positions)
+        self.I2IChannel = I2IChannel(self.n_RB, self.n_RSU, self.BS_positions)
     
     def _initialize_Interference_and_active(self):
-        self.V2I_Interference = np.zeros((self.n_Veh, self.n_BS)) + self.sig2 # 默认每个车辆归属于一个基站
+        self.V2I_Interference = np.zeros((self.n_Veh, self.n_RSU)) + self.sig2 # 默认每个车辆归属于一个基站
         self.V2V_Interference = np.zeros((self.n_Veh, self.n_Veh)) + self.sig2
         self.V2U_Interference = np.zeros((self.n_Veh, self.n_UAV)) + self.sig2
-        self.U2I_Interference = np.zeros((self.n_UAV, self.n_BS)) + self.sig2
+        self.U2I_Interference = np.zeros((self.n_UAV, self.n_RSU)) + self.sig2
         self.U2V_Interference = np.zeros((self.n_UAV, self.n_Veh)) + self.sig2
         self.U2U_Interference = np.zeros((self.n_UAV, self.n_UAV)) + self.sig2
-        self.I2I_Interference = np.zeros((self.n_BS, self.n_BS)) + self.sig2
-        self.I2V_Interference = np.zeros((self.n_BS, self.n_Veh)) + self.sig2
-        self.I2U_Interference = np.zeros((self.n_BS, self.n_UAV)) + self.sig2
-        # 是否可以连接的信道
-        self.V2V_active_links = np.zeros((self.n_Veh, self.n_Veh, self.n_RB), dtype='bool')
-        self.V2I_active_links = np.zeros((self.n_Veh, self.n_BS, self.n_RB), dtype='bool')
-        self.V2U_active_links = np.zeros((self.n_Veh, self.n_UAV, self.n_RB), dtype='bool')
-        self.U2U_active_links = np.zeros((self.n_UAV, self.n_UAV, self.n_RB), dtype='bool')
-        self.U2V_active_links = np.zeros((self.n_UAV, self.n_Veh, self.n_RB), dtype='bool')
-        self.U2I_active_links = np.zeros((self.n_UAV, self.n_BS, self.n_RB), dtype='bool')
-        self.I2U_active_links = np.zeros((self.n_BS, self.n_UAV, self.n_RB), dtype='bool')
-        self.I2V_active_links = np.zeros((self.n_BS, self.n_Veh, self.n_RB), dtype='bool')
-        self.I2I_active_links = np.zeros((self.n_BS, self.n_BS, self.n_RB), dtype='bool')
+        self.I2I_Interference = np.zeros((self.n_RSU, self.n_RSU)) + self.sig2
+        self.I2V_Interference = np.zeros((self.n_RSU, self.n_Veh)) + self.sig2
+        self.I2U_Interference = np.zeros((self.n_RSU, self.n_UAV)) + self.sig2
 
     def resetActiveLinks(self):
         self.V2V_active_links = np.zeros((self.n_Veh, self.n_Veh, self.n_RB), dtype='bool')
-        self.V2I_active_links = np.zeros((self.n_Veh, self.n_BS, self.n_RB), dtype='bool')
+        self.V2I_active_links = np.zeros((self.n_Veh, self.n_RSU, self.n_RB), dtype='bool')
         self.V2U_active_links = np.zeros((self.n_Veh, self.n_UAV, self.n_RB), dtype='bool')
         self.U2U_active_links = np.zeros((self.n_UAV, self.n_UAV, self.n_RB), dtype='bool')
         self.U2V_active_links = np.zeros((self.n_UAV, self.n_Veh, self.n_RB), dtype='bool')
-        self.U2I_active_links = np.zeros((self.n_UAV, self.n_BS, self.n_RB), dtype='bool')
-        self.I2U_active_links = np.zeros((self.n_BS, self.n_UAV, self.n_RB), dtype='bool')
-        self.I2V_active_links = np.zeros((self.n_BS, self.n_Veh, self.n_RB), dtype='bool')
-        self.I2I_active_links = np.zeros((self.n_BS, self.n_BS, self.n_RB), dtype='bool')
+        self.U2I_active_links = np.zeros((self.n_UAV, self.n_RSU, self.n_RB), dtype='bool')
+        self.I2U_active_links = np.zeros((self.n_RSU, self.n_UAV, self.n_RB), dtype='bool')
+        self.I2V_active_links = np.zeros((self.n_RSU, self.n_Veh, self.n_RB), dtype='bool')
+        self.I2I_active_links = np.zeros((self.n_RSU, self.n_RSU, self.n_RB), dtype='bool')
     
+    def updateNodes(self, n_Veh, n_UAV, n_RSU):
+        self.n_Veh = n_Veh
+        self.n_UAV = n_UAV
+        self.n_RSU = n_RSU
+        self._initialize_Channels()
+        self._initialize_Interference_and_active()
+        self.resetActiveLinks()
+
     def updateFastFading(self, UAVs, vehicles, vid_index, uav_index):
         """Renew the channels with fast fading.
 
@@ -251,27 +250,27 @@ class ChannelManager:
         Args:
             activated_task_dict (dict): The activated tasks. The key is the node ID, and the value is dict {tx_idx, rx_idx, channel_type, task}.
         """
-        X2I_Interference = np.zeros((self.n_BS, self.n_RB))
+        X2I_Interference = np.zeros((self.n_RSU, self.n_RB))
         X2V_Interference = np.zeros((self.n_Veh, self.n_RB))
         X2U_Interference = np.zeros((self.n_UAV, self.n_RB))
         V2V_Signal = np.zeros((self.n_Veh, self.n_Veh, self.n_RB))
         V2U_Signal = np.zeros((self.n_Veh, self.n_UAV, self.n_RB))
-        V2I_Signal = np.zeros((self.n_Veh, self.n_BS, self.n_RB))
+        V2I_Signal = np.zeros((self.n_Veh, self.n_RSU, self.n_RB))
         U2U_Signal = np.zeros((self.n_UAV, self.n_UAV, self.n_RB))
         U2V_Signal = np.zeros((self.n_UAV, self.n_Veh, self.n_RB))
-        U2I_Signal = np.zeros((self.n_UAV, self.n_BS, self.n_RB))
-        I2U_Signal = np.zeros((self.n_BS, self.n_UAV, self.n_RB))
-        I2V_Signal = np.zeros((self.n_BS, self.n_Veh, self.n_RB))
-        I2I_Signal = np.zeros((self.n_BS, self.n_BS, self.n_RB))
-        interference_power_matrix_vtx_x2i = np.zeros((self.n_Veh, self.n_BS, self.n_RB))
+        U2I_Signal = np.zeros((self.n_UAV, self.n_RSU, self.n_RB))
+        I2U_Signal = np.zeros((self.n_RSU, self.n_UAV, self.n_RB))
+        I2V_Signal = np.zeros((self.n_RSU, self.n_Veh, self.n_RB))
+        I2I_Signal = np.zeros((self.n_RSU, self.n_RSU, self.n_RB))
+        interference_power_matrix_vtx_x2i = np.zeros((self.n_Veh, self.n_RSU, self.n_RB))
         interference_power_matrix_vtx_x2v = np.zeros((self.n_Veh, self.n_Veh, self.n_RB))
         interference_power_matrix_vtx_x2u = np.zeros((self.n_Veh, self.n_UAV, self.n_RB))
-        interference_power_matrix_utx_x2i = np.zeros((self.n_UAV, self.n_BS, self.n_RB))
+        interference_power_matrix_utx_x2i = np.zeros((self.n_UAV, self.n_RSU, self.n_RB))
         interference_power_matrix_utx_x2v = np.zeros((self.n_UAV, self.n_Veh, self.n_RB))
         interference_power_matrix_utx_x2u = np.zeros((self.n_UAV, self.n_UAV, self.n_RB))
-        interference_power_matrix_itx_x2i = np.zeros((self.n_BS, self.n_BS, self.n_RB))
-        interference_power_matrix_itx_x2v = np.zeros((self.n_BS, self.n_Veh, self.n_RB))
-        interference_power_matrix_itx_x2u = np.zeros((self.n_BS, self.n_UAV, self.n_RB))
+        interference_power_matrix_itx_x2i = np.zeros((self.n_RSU, self.n_RSU, self.n_RB))
+        interference_power_matrix_itx_x2v = np.zeros((self.n_RSU, self.n_Veh, self.n_RB))
+        interference_power_matrix_itx_x2u = np.zeros((self.n_RSU, self.n_UAV, self.n_RB))
         # 1. 计算所有的signal, 如果信号源同时传输多个数据,信号强度叠加,当然,干扰也叠加
         # 遍历所有的车辆
         for task_id, task_profile in enumerate(activated_task_dict):
@@ -378,9 +377,9 @@ class ChannelManager:
         self.U2V_Rate = np.log2(1 + np.divide(U2V_Signal, self.U2V_Interference))
         self.U2I_Rate = np.log2(1 + np.divide(U2I_Signal, self.U2I_Interference))
 
-        I2U_Interference = np.repeat(X2U_Interference[np.newaxis, :, :], self.n_BS, axis = 0)
-        I2V_Interference = np.repeat(X2V_Interference[np.newaxis, :, :], self.n_BS, axis = 0)
-        I2I_Interference = np.repeat(X2I_Interference[np.newaxis, :, :], self.n_BS, axis = 0)
+        I2U_Interference = np.repeat(X2U_Interference[np.newaxis, :, :], self.n_RSU, axis = 0)
+        I2V_Interference = np.repeat(X2V_Interference[np.newaxis, :, :], self.n_RSU, axis = 0)
+        I2I_Interference = np.repeat(X2I_Interference[np.newaxis, :, :], self.n_RSU, axis = 0)
         self.I2U_Interference = I2U_Interference + self.sig2
         self.I2V_Interference = I2V_Interference + self.sig2
         self.I2I_Interference = I2I_Interference + self.sig2

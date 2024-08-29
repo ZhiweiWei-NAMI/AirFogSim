@@ -3,7 +3,7 @@ from .simple_node import SimpleNode
 class FogNode(SimpleNode):
     """The fog node class. This class represents the basic fog node entity in the airfogsim environment.
     """
-    def __init__(self, id, position_x=0, position_y=0, position_z=0, speed=0, acceleration=0, fog_profile=None):
+    def __init__(self, id, position_x=0, position_y=0, position_z=0, speed=0, acceleration=0, angle=0, fog_profile=None):
         """The constructor of the FogNode class.
 
         Args:
@@ -13,9 +13,10 @@ class FogNode(SimpleNode):
             position_z (float): The z-coordinate of the fog node.
             speed (float): The speed of the fog node.
             acceleration (float): The acceleration of the fog node.
+            angle (float): The angle of the fog node.
             fog_profile (dict): The fog profile of the fog node.
         """
-        super(FogNode, self).__init__(id, position_x, position_y, position_z, speed, acceleration)
+        super(FogNode, self).__init__(id, position_x, position_y, position_z, speed, acceleration, angle)
         self._fog_profile = fog_profile
 
     def getFogProfile(self):
