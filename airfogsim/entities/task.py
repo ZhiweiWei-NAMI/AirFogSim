@@ -3,7 +3,7 @@ from .mission import Mission
 class Task:
     """ Task is the class that represents the task. 
     """
-    def __init__(self, task_id, task_node_id, task_cpu, task_size, task_deadline, task_priority, task_arrival_time, farther_mission:Mission = None):
+    def __init__(self, task_id, task_node_id, task_cpu, task_size, task_deadline, task_priority, task_arrival_time, farther_mission:Mission = None, required_returned_size = 0):
         """The constructor of the Task class.
 
         Args:
@@ -15,29 +15,99 @@ class Task:
             task_priority (float): The value of the task.
             task_arrival_time (float): The start time of the task.
             farther_mission (Mission): The farther mission of the task.
+            required_returned_size (float): The required returned size of the task.
         """
         self._task_id = task_id
         self._task_node_id = task_node_id
         self._task_cpu = task_cpu
         self._task_size = task_size
+        self._required_returned_size = required_returned_size
         self._task_deadline = task_deadline
         self._task_priority = task_priority
         self._task_arrival_time = task_arrival_time
-        self._executed_locally = True
+        self._executed_locally = False
         self._assigned_to = None
-        self._decided_route = None # the decided route for offloading
+        self._decided_route = [] # the decided route for offloading
         self._routes = [task_node_id] # arrived node list
-        self._to_offload_route = None # the route to offload the task
-        self._decided_offload_time = None # the decided offload time
+        self._to_offload_route = [] # the route to offload the task. If task is computed, i.e., _compute_size >= _task_cpu, the list denotes the route the returned data should be transmitted.
+        self._decided_offload_time = [] # the decided offload time
         self._routed_time = [task_arrival_time] # the time that the task is routed to the node
         self._start_to_transmit_time = 0
         self._last_transmission_time = 0
         self._transmitted_size = 0
         self._start_to_compute_time = 0
+        self._start_to_return_time = 0
+        self._last_return_time = 0
         self._computed_size = 0
         self._last_compute_time = 0
         self._failure_reason_code = -1
         self._farther_mission = farther_mission
+        self._is_finished = False
+
+    def startToCompute(self, time):
+        """Set the start time to compute the task and set to_offload_route as to_return_route.
+
+        Args:
+            time (float): The start time to compute the task.
+        """
+        self._start_to_compute_time = time
+        self._last_compute_time = time
+
+    def startToReturn(self, current_time):
+        """Set the start time to return the task.
+
+        Args:
+            current_time (float): The current time.
+        """
+        if self._required_returned_size > 0:
+            self._to_offload_route = [self._task_node_id] # the route to offload the task. If task is computed, i.e., _compute_size >= _task_cpu, the list denotes the route the returned data should be transmitted.
+            self._start_to_return_time = current_time
+            self._last_return_time = current_time
+        else:
+            self._to_offload_route = []
+
+    def requireReturn(self):
+        """Check if the task requires return.
+
+        Returns:
+            bool: True if the task requires return, False otherwise.
+        """
+        assert self.isComputed(), "The task should be computed before returning."
+        if self._assigned_to != self._task_node_id and self._required_returned_size > 0:
+            assert len(self._to_offload_route) > 0, "The route to offload the task should be set."
+            return True
+        return False
+
+    def compute(self, allocated_cpu, simulation_interval, current_time):
+        """Compute the task.
+
+        Args:
+            allocated_cpu (float): The allocated CPU.
+            simulation_interval (float): The simulation interval.
+            current_time (float): The current time.
+        """
+        assert current_time >= self._start_to_compute_time, "The current time should be greater than the start time to compute the task."
+        assert self._assigned_to == self.getCurrentNodeId(), "The task should be computed at the assigned node."
+        self._computed_size += allocated_cpu * simulation_interval
+        self._last_compute_time = current_time
+        if self._computed_size >= self._task_cpu:
+            self._computed_size = self._task_cpu
+
+    def getReturnedSize(self):
+        """Get the returned size.
+
+        Returns:
+            float: The required returned size.
+        """
+        return self._required_returned_size
+    
+    def isComputed(self):
+        """Check if the task is computed.
+
+        Returns:
+            bool: True if the task is computed, False otherwise.
+        """
+        return self._computed_size >= self._task_cpu
 
     def setFartherMission(self, farther_mission:Mission):
         """Set the farther mission.
@@ -46,7 +116,7 @@ class Task:
             farther_mission (Mission): The farther mission.
         """
         self._farther_mission = farther_mission
-        
+
     def wait_to_ddl(self, current_time):
         """Check if the task is out of deadline.
 
@@ -58,8 +128,16 @@ class Task:
         """
         return self._task_arrival_time + self._task_deadline <= current_time
     
+    def isReturning(self):
+        """Check if the task is returning or offloading.
+
+        Returns:
+            bool: True if the task is returning, False otherwise.
+        """
+        return self.isComputed() and self.isTransmitting()
+    
     def transmit_to_Node(self, node_id, trans_data, current_time):
-        """Transmit the data to the node.
+        """Transmit the data to the node. Possible to return or offload the task. 
 
         Args:
             node_id (str): The ID of the node.
@@ -67,9 +145,16 @@ class Task:
         Returns:
             bool: True if the task is transmitted, False if requires more transmission.
         """
+        assert self.isTransmitting(), "The task should be transmitting."
+        isReturning = self.isReturning()
         self._transmitted_size += trans_data
-        self._last_transmission_time = current_time
-        if self._transmitted_size >= self._task_size:
+        if isReturning:
+            self._last_return_time = current_time
+            require_transmit_size = self._required_returned_size
+        else:
+            self._last_transmission_time = current_time
+            require_transmit_size = self._task_size
+        if self._transmitted_size >= require_transmit_size:
             self._transmitted_size = 0
             self._routes.append(node_id)
             self._routed_time.append(current_time)
@@ -94,6 +179,9 @@ class Task:
         self._assigned_to = node_id
         self._decided_offload_time = time
         self._executed_locally = node_id == self._task_node_id
+        if not self._executed_locally:
+            self._start_to_transmit_time = time
+            self._last_transmission_time = time
 
     def isExecutedLocally(self):
         """Check if the task is executed locally.
@@ -133,7 +221,8 @@ class Task:
         Returns:
             bool: True if the task is transmitting, False otherwise.
         """
-        return self._transmitted_size < self._task_size and not self._executed_locally
+        require_transmit_size = self._task_size if not self.isComputed() else self._required_returned_size
+        return self._transmitted_size < require_transmit_size and not self._executed_locally
     
     def isTransmittedToAssignedNode(self):
         """Check if the task is transmitted to the assigned node.
@@ -141,7 +230,7 @@ class Task:
         Returns:
             bool: True if the task is transmitted, False otherwise.
         """
-        return self._transmitted_size >= self._task_size and not self._executed_locally and len(self._to_offload_route) == 0
+        return self.getCurrentNodeId() == self._assigned_to
 
     def setTaskFailueCode(self, code):
         """Set the task failure code
@@ -165,7 +254,7 @@ class Task:
         Returns:
             bool: True if the task is finished, False otherwise.
         """
-        return self._computed_size >= self._task_size
+        return self.isComputed() and len(self._to_offload_route) == 0
     
     def getTransmittedSize(self):
         """Get the transmitted size.
