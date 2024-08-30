@@ -68,6 +68,7 @@ class AirFogSimEnv():
         self.compute_tasks_with_cpu = {} # dict, key是task_id, value是对应assigned node分配的cpu
         self.task_node_ids = [] # list, 存储所有的task node id。可以在每个决策时隙更新，即每个车辆在不同的时候可能是fog node或task node。注意，每次生成的任务数量是按照"predictable_seconds"来预先存储的，所以可能t=0.1s时，车辆是task node，t=0.2s时，车辆是fog node，但是此时还有该车辆的任务需要进行卸载或计算。
         self.revenue_and_punishment_for_tasks = {} # dict, key是task_id, value是{node_id, amount}
+        self.update_AI_models = {} # dict, key是node_id, value是{"model_name": AI model}
 
     def _connectToSUMO(self, config):
         """Connect to the SUMO simulator with a generated label (e.g., airfogsim_{timestamp}).
@@ -95,8 +96,10 @@ class AirFogSimEnv():
         Returns:
             bool: The done signal. True if the episode is done, False otherwise.
         """
-        # 1. Update the traffics (positions, speeds, routes, etc.)
+        # 0. Update the traffics (positions, speeds, routes, etc.)
         self._updateTraffics()
+        # 1. Update the AI models (Federated Learning, Transfer Learning, etc.)
+        self._updateAIModels()
         sim_step_per_traffic_step = int(self.traffic_interval / self.simulation_interval)
         for _ in range(sim_step_per_traffic_step):
             # 2. Update the authentication and privacy
@@ -139,9 +142,12 @@ class AirFogSimEnv():
         pass
 
     def _updateAIModels(self):
-        """Update the AI models for the moving entities. Not training the AI models, just updating the AI models when the entities enter a new region.
+        """Update the AI models. Not training the AI models, just updating the AI models when Federated Learning, Transfer Learning, in new regions, etc.
         """
-        pass
+        for node_id, model_dict in self.update_AI_models.items():
+            node = self._getNodeById(node_id)
+            for model_name, model in model_dict.items():
+                node.updateAIModel(model_name, model)
 
     def _updateWirelessCommunication(self):
         """Update the wireless communication for the fog computing nodes.
