@@ -6,16 +6,98 @@ class TaskScheduler(BaseScheduler):
     """
 
     @staticmethod
-    def setTaskGenerationModel(env:AirFogSimEnv, model, predictable_seconds = 10, **kwargs):
+    def setTaskGenerationModel(env:AirFogSimEnv, model, predictable_seconds = 1, **kwargs):
         """Set the task generation model for the environment. The task generation model will not affact the determined task infos, so better to set it before the simulation starts.
 
         Args:
             env (AirFogSimEnv): The AirFogSim environment.
             model (str): The task generation model, including 'Poisson', 'Random', etc.
-            predictable_seconds (float, optional): The maximum predictable seconds for the task generation. Defaults to 10.
+            predictable_seconds (float, optional): The maximum predictable seconds for the task generation. Defaults to 1, which means tasks will be generated during the first second.
 
         Examples:
-            taskSched.setTaskGeneration(env, 'Poisson', max_predictable_task_num=10)
+            taskSched.setTaskGeneration(env, 'Poisson', predictable_seconds=1)
         """
-        env.getTaskManager().setTaskGenerationModel(model, **kwargs)
-        env.getTaskManager().setPredictableSeconds(predictable_seconds)
+        env.task_mananger.setTaskGenerationModel(model, **kwargs)
+        env.task_mananger.setPredictableSeconds(predictable_seconds)
+
+
+    @staticmethod
+    def setTaskNodePossibility(env:AirFogSimEnv, max_num = 30, node_types = ['vehicle'], threshold_poss = 0.5):
+        """Set the possibility of the task node for the task generation.
+
+        Args:
+            env (AirFogSimEnv): The AirFogSim environment.
+            max_num (int, optional): The maximum number of the task nodes. Defaults to 30.
+            node_types (list, optional): The types of the task nodes. Limited to ['vehicle', 'UAV']. Defaults to ['vehicle'].
+            threshold_poss (float, optional): The threshold possibility for the task node. Defaults to 0.5.
+
+        Examples:
+            taskSched.setTaskNodePossibility(env, max_num=30, node_types=['vehicle'], threshold_poss=0.5)
+        """
+        env.max_task_node_num = max_num
+        env.task_node_types = node_types
+        env.task_node_threshold_poss = threshold_poss
+
+    @staticmethod
+    def getAllToOffloadTaskInfos(env:AirFogSimEnv):
+        """Get the task infos for the environment to offload.
+
+        Args:
+            env (AirFogSimEnv): The AirFogSim environment.
+
+        Returns:
+            list: The list of task infos.
+        """
+        task_dict = env.task_mananger.getToOffloadTasks()
+        task_info_list = []
+        for task_node_id, tasks in task_dict.items():
+            for task_id, task in tasks.items():
+                task_info_list.append(task.to_dict())
+        return task_info_list
+    
+    @staticmethod
+    def setTaskOffloading(env:AirFogSimEnv, task_node_id:str, task_id:str, target_node_id:str):
+        """Set the task offloading for the task node.
+
+        Args:
+            env (AirFogSimEnv): The AirFogSim environment.
+            task_node_id (str): The task node id.
+            task_id (str): The task id.
+            target_node_id (str): The target node id.
+        """
+        env.task_mananger.offloadTask(task_node_id, task_id, target_node_id, env.simulation_time)
+
+    @staticmethod
+    def getAllOffloadingTaskInfos(env:AirFogSimEnv):
+        """Get the task infos for the environment to offload.
+
+        Args:
+            env (AirFogSimEnv): The AirFogSim environment.
+
+        Returns:
+            list: The list of task infos.
+        """
+        task_dict = env.task_mananger.getOffloadingTasks()
+        task_info_list = []
+        for task_node_id, tasks in task_dict.items():
+            for task_id, task in tasks.items():
+                task_info_list.append(task.to_dict())
+        return task_info_list
+    
+    @staticmethod
+    def getLastStepSuccTaskInfos(env:AirFogSimEnv):
+        """Get the task infos for the environment to offload.
+
+        Args:
+            env (AirFogSimEnv): The AirFogSim environment.
+
+        Returns:
+            list: The list of task infos.
+        """
+        recently_done_100_tasks = env.task_mananger.getRecentlyDoneTasks()
+        last_step = env.simulation_time - env.traffic_interval
+        task_info_list = []
+        for task in recently_done_100_tasks:
+            if task.isFinished() and task.getLastOperationTime() >= last_step:
+                task_info_list.append(task.to_dict())
+        return task_info_list

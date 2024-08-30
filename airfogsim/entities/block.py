@@ -20,6 +20,14 @@ class Block():
         self.block_miner = None
         self.block_hash = self.get_hash()
 
+    def getTransactionNum(self):
+        """Get the number of the transactions in the block.
+
+        Returns:
+            int: The number.
+        """
+        return len(self.block_transactions)
+
     def get_hash(self):
         """Creates the unique hash for the block using sha256.
 
@@ -50,7 +58,7 @@ class Blockchain():
         self.transaction_threshold = transaction_threshold
         self.consensus_type = consensus
         self.chain = [self.create_genesis_block()]
-        print("区块链初始化完成, 共识机制为: ", consensus)
+        print("区块链初始化完成, 共识机制为: ", EnumerateConstants.getDescByCode(consensus))
         self.to_mine_blocks = []
     
     @property
@@ -70,6 +78,17 @@ class Blockchain():
             int: The number.
         """
         return len(self.all_transactions)
+    
+    def getBlockByIndex(self, idx):
+        """Get the block by the index.
+
+        Args:
+            idx (int): The index of the block.
+
+        Returns:
+            Block: The block.
+        """
+        return self.chain[idx]
 
     def create_genesis_block(self):
         """Creates the genesis block of the blockchain.
@@ -81,4 +100,38 @@ class Blockchain():
 
    
 
-   
+    def setConsensus(self, consensus):
+        """Set the consensus of the blockchain.
+
+        Args:
+            consensus (int): The consensus.
+
+        Returns:
+            None.
+        """
+        self.consensus_type = consensus
+
+    def getConsensus(self):
+        """Get the consensus of the blockchain.
+
+        Returns:
+            int: The consensus.
+        """
+        return self.consensus_type
+    def getMineTimeThreshold(self):
+        """Get the threshold of the mine time.
+
+        Returns:
+            int: The threshold.
+        """
+        return self.mine_time_threshold
+    def setMineTimeThreshold(self, threshold):
+        """Set the threshold of the mine time.
+
+        Args:
+            threshold (int): The threshold.
+
+        Returns:
+            None.
+        """
+        self.mine_time_threshold = threshold

@@ -19,3 +19,21 @@ class CloudServer(FogNode, TaskNode, NetworkNode):
         TaskNode.__init__(self, id, position_x, position_y, position_z, 0, 0, 0, task_profile)
         FogNode.__init__(self, id, position_x, position_y, position_z, 0, 0, 0, fog_profile)
         NetworkNode.__init__(self, id, position_x, position_y, position_z, 0, 0, 0, network_profile)
+
+    def to_dict(self):
+        """Convert the cloud server to a dictionary.
+
+        Returns:
+            dict: The cloud server in dictionary format.
+        """
+        cloud_server_dict = TaskNode.to_dict(self)
+        cloud_server_dict.update(FogNode.to_dict(self))
+        cloud_server_dict.update(NetworkNode.to_dict(self))
+        infos = {}
+        for key, value in self.__dict__.items():
+            if key.startswith("_"):
+                infos[key[1:]] = value
+            else:
+                infos[key] = value
+        cloud_server_dict.update(infos)
+        return cloud_server_dict

@@ -24,7 +24,7 @@ class UAV(TaskNode, FogNode):
         self._phi = phi
         self._last_updated_time = 0
 
-    def udpate(self, uav_traffic_info, simulation_time):
+    def update(self, uav_traffic_info, simulation_time):
         """Update the UAV.
 
         Args:
@@ -37,3 +37,21 @@ class UAV(TaskNode, FogNode):
         self._acceleration = uav_traffic_info['acceleration']
         self._angle = uav_traffic_info['angle']
         self._phi = uav_traffic_info['phi']
+
+    def to_dict(self):
+        """Convert the UAV to a dictionary.
+
+        Returns:
+            dict: The UAV in dictionary format.
+        """
+        # Need to include the information of TaskNode and FogNode
+        uav_dict = TaskNode.to_dict(self)
+        uav_dict.update(FogNode.to_dict(self))
+        infos = {}
+        for key, value in self.__dict__.items():
+            if key.startswith("_"):
+                infos[key[1:]] = value
+            else:
+                infos[key] = value
+        uav_dict.update(infos)
+        return uav_dict

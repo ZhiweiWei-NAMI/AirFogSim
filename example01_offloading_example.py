@@ -9,40 +9,47 @@ def load_config(path):
     
 
 # 1. Load the configuration file
-config_path = sys.argv[1] if len(sys.argv) > 1 else 'example_1_config.yaml'
+config_path = sys.argv[1] if len(sys.argv) > 1 else 'config.yaml'
 config = load_config(config_path)
 
 # 2. Create the environment
 env = AirFogSimEnv(config)
 
-# 3. Create the environment visualizer (optional). 
-env_wrapper = AirFogSimEnvVisualizer(env, config)
-
-# 4. Get Schedulers
+# 3. Get Schedulers and setup the environment
 compSched = AirFogSimScheduler.getComputationScheduler()
-taskSched = AirFogSimScheduler.getTaskScheduler() # task settings are in the config file
-taskSched.setTaskGenerationModel(env, 'Poisson', max_predictable_task_num=10) # max_predictable_task_num: always maintain 10 task info (generation time, cpu, ddl, priority, etc.) for future generation
+taskSched = AirFogSimScheduler.getTaskScheduler()
+taskSched.setTaskGenerationModel(env, 'Poisson')
+taskSched.setTaskNodePossibility(env, node_types=['vehicle'], max_num=30, threshold_poss=0.5)
 rewardSched = AirFogSimScheduler.getRewardScheduler()
 rewardSched.setRewardModel(env, '1/delay')
 entitySched = AirFogSimScheduler.getEntityScheduler()
-# 5. Start the simulation
-env.reset()
-done = False
-while not done:
+commSched = AirFogSimScheduler.getCommunicationScheduler()
+
+
+while not env.isDone():
     # 5.1 Get all to-do tasks
-    taskNodes = env.getTaskNodes()
-    for task_node in taskNodes:
-        tasks = task_node.getToDoTasks()
-        for task in tasks:
-            # 5.2 Get the fog node with the highest computation power
-            fog_node_list = entitySched.getNeighborFogNodesByNodeName(env, task_node['name'], sort_by='CPU', reverse=True)
-            # returned fog_node_list is a list of dict, which can be easily sorted by lambda function
-            # 5.3 Offload the task to the fog node
-            taskSched.offloadTaskToNode(env, task_node['name'], fog_node_list[0]['name'], task['name'])
-    done = env.step()
+    all_task_infos = taskSched.getAllToOffloadTaskInfos(env)
+    all_node_infos = entitySched.getAllNodeInfos(env)
+    # convert all_node_infos to dict, where key is the node id
+    all_node_infos_dict = {}
+    for node_info in all_node_infos:
+        all_node_infos_dict[node_info['id']] = node_info
+    for task_dict in all_task_infos:
+        task_node_id = task_dict['task_node_id']
+        task_id = task_dict['task_id']
+        task_node = all_node_infos_dict[task_node_id]
+        neighbor_infos = entitySched.getNeighborNodeInfosById(env, task_node_id, sorted_by='distance')
+        nearest_node_id = neighbor_infos[0]['id']
+        taskSched.setTaskOffloading(env, task_node_id, task_id, nearest_node_id)
+    all_offloading_task_infos = taskSched.getAllOffloadingTaskInfos(env)
+    n_RB = commSched.getNumberOfRB(env)
+    for task_dict in all_offloading_task_infos:
+        allocated_RB_nos = np.random.choice(n_RB, 3, replace=False)
+        commSched.setCommunicationWithRB(env, task_dict['task_id'], allocated_RB_nos)
+    env.step()
     reward = 0
-    for task_node in taskNodes:
-        reward += rewardSched.getReward(env, task_node['name'])
-    env_wrapper.render()
+    last_step_succ_task_infos = taskSched.getLastStepSuccTaskInfos(env)
+    for task_info in last_step_succ_task_infos:
+        reward += rewardSched.getRewardByTask(env, task_info)
     print(f"Reward: {reward}")
-env_wrapper.close()
+env.close()

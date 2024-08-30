@@ -8,7 +8,7 @@ class RewardScheduler(BaseScheduler):
     """
     REWARD_MODEL = None
     SYMOBOLS = None
-    ACCEPTED_SYMBOLS = ['task_delay', 'energy', 'task_ratio']
+    ACCEPTED_SYMBOLS = ['energy', 'task_ratio', 'delay']
 
     @staticmethod
     def setRewardModel(env:AirFogSimEnv, expression):
@@ -29,20 +29,21 @@ class RewardScheduler(BaseScheduler):
             # 使用sympify来将字符串表达式转换为可计算的表达式
             RewardScheduler.REWARD_MODEL = {env: sympify(expression)}
             # 自动检测表达式中使用的变量，并创建符号
-            RewardScheduler.SYMOBOLS = {env: {str(sym): symbols(str(sym)) for sym in RewardScheduler.REWARD_MODEL.free_symbols}}
+            RewardScheduler.SYMOBOLS = {env: {str(sym): symbols(str(sym)) for sym in RewardScheduler.REWARD_MODEL[env].free_symbols}}
             # 检查是否所有符号都是有效的
-            for sym in RewardScheduler.SYMOBOLS:
+            for sym in RewardScheduler.SYMOBOLS[env]:
                 if sym not in RewardScheduler.ACCEPTED_SYMBOLS:
                     raise ValueError(f"Invalid symbol in reward expression: {sym}, expected one of {RewardScheduler.ACCEPTED_SYMBOLS}")
         except SympifyError as e:
             raise ValueError(f"Invalid expression: {e}")
 
     @staticmethod
-    def getRewardByNodeName(env:AirFogSimEnv, node_name:str):
-        """Compute the reward of the node by the node name.
+    def getRewardByTask(env:AirFogSimEnv, task_info:dict):
+        """Compute the reward of the task.
 
         Args:
             env (AirFogSimEnv): The environment.
+            task_info (dict): The task information.
         """
         if RewardScheduler.REWARD_MODEL is None:
             raise ValueError("Reward model is not set, please set the reward model first.")
@@ -50,10 +51,9 @@ class RewardScheduler(BaseScheduler):
             raise ValueError("Symbols are not set, please set the reward model first.")
         if env not in RewardScheduler.REWARD_MODEL or env not in RewardScheduler.SYMOBOLS:
             raise ValueError(f"Reward model is not set for {env}, please set the reward model first.")
-        # 从env中获取任务节点的信息
-        task_node = env.getNodeByName(node_name)
-        # 从RewardScheduler.SYMOBOLS中获取任务节点的信息，用task_node.getXXX()来获取
-        kwargs = {key: getattr(task_node, key) for key in RewardScheduler.SYMOBOLS[env]}
+        task = env.task_mananger.getDoneTaskByTaskNodeAndTaskId(task_info['task_node_id'], task_info['task_id'])
+        # 调用task.getXXX()获取任务信息
+        kwargs = {key: task.__getattribute__(key) for key in RewardScheduler.SYMOBOLS[env]}
 
         # 获取任务信息，需要是还没有
         if not all(param in kwargs for param in RewardScheduler.SYMOBOLS[env]):

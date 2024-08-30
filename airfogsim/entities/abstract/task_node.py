@@ -9,3 +9,8 @@ class TaskNode(SimpleNode):
     
     def setTaskProfile(self, task_profile):
         self._task_profile = task_profile
+
+    def to_dict(self):
+        node_dict = super(TaskNode, self).to_dict()
+        node_dict.update({'task_profile': self._task_profile})
+        return node_dict

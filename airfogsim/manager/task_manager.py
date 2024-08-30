@@ -1,6 +1,7 @@
 import numpy as np
 from ..entities.task import Task
 from ..enum_const import EnumerateConstants
+from collections import deque
 class TaskManager:
     """ Task Manager is responsible for generating tasks and managing the task status. 
     """
@@ -16,6 +17,7 @@ class TaskManager:
         self._done_tasks = {}
         self._failed_tasks = {}
         self._removed_tasks = {}
+        self._recently_done_100_tasks = deque(maxlen=100)
         self._task_id = 0
         self._predictable_seconds = predictable_seconds # the seconds that the task generation can be predicted
         self.setTaskGenerationModel(task_generation_model, **kwargs)
@@ -24,6 +26,35 @@ class TaskManager:
         self.setTaskAttributeModel('Deadline', deadline_model, **kwargs)
         self.setTaskAttributeModel('Priority', priority_model, **kwargs)
 
+    def getDoneTaskByTaskNodeAndTaskId(self, task_node_id, task_id):
+        """Get the done task by the task node id and the task id.
+
+        Args:
+            task_node_id (str): The task node id.
+            task_id (str): The task id.
+
+        Returns:
+            Task: The task.
+
+        Examples:
+            task_manager.getDoneTaskByTaskNodeAndTaskId('vehicle1', 'Task_1')
+        """
+        if task_node_id in self._done_tasks:
+            for task_info in self._done_tasks[task_node_id]:
+                if task_info.getTaskId() == task_id:
+                    return task_info
+        return None
+
+    def setPredictableSeconds(self, predictable_seconds):
+        """Set the predictable seconds for the task generation.
+
+        Args:
+            predictable_seconds (float): The predictable seconds.
+
+        Examples:
+            task_manager.setPredictableSeconds(5)
+        """
+        self._predictable_seconds = predictable_seconds
     def addToComputeTask(self, task:Task, node_id, current_time):
         """Add the task to the to_compute_tasks.
 
@@ -69,6 +100,7 @@ class TaskManager:
                     self._to_return_tasks[node_id].remove(task_info)
                     self._done_tasks[task_node_id] = self._done_tasks.get(task_node_id, [])
                     self._done_tasks[task_node_id].append(task_info)
+                    self._recently_done_100_tasks.append(task_info)
                     return True
         return False
     
@@ -127,17 +159,36 @@ class TaskManager:
                         task_node_id = task_info.getTaskNodeId()
                         self._done_tasks[task_node_id] = self._done_tasks.get(task_node_id, [])
                         self._done_tasks[task_node_id].append(task_info)
+                        self._recently_done_100_tasks.append(task_info)
 
+    def getRecentlyDoneTasks(self):
+        """Get the recently done tasks (the maximum number is 100).
 
+        Returns:
+            list: The list of the recently done tasks.
+        """
+        return self._recently_done_100_tasks
+    def getToOffloadTasks(self):
+        """Get the tasks to offload.
+
+        Returns:
+            dict: The tasks to offload. The key is the node id, and the value is the task list.
+        """
+        return self._to_offload_tasks
+    
     def getOffloadingTasks(self):
-        """Get the offloading tasks (transmission).
+        offloading_tasks, num = self.getOffloadingTasksWithNumber()
+        return offloading_tasks
+
+    def getOffloadingTasksWithNumber(self):
+        """Get the offloading tasks (transmission) with the total number.
 
         Returns:
             dict: The offloading tasks. The key is the node id, and the value is the task list.
-            int: The total number of offloading tasks.
+            int: The total number of the offloading tasks.
 
         Examples:
-            offloading_tasks, total_num = task_manager.getOffloadingTasks()
+            offloading_tasks, total_num = task_manager.getOffloadingTasksWithNumber()
         """
         # 遍历task，if isTransmitting() == True, 则加入到offloading_tasks中
         offloading_tasks = {} # key: transmitter node id, value: list of tasks
@@ -195,6 +246,7 @@ class TaskManager:
             task_manager.setTaskAttributeModel('Priority', 'Normal', mean=0, std=1)
         """
         if attribute == 'CPU':
+            self._task_cpu_model = model
             if model == 'Uniform':
                 self._task_cpu_low = kwargs.get('low', 0)
                 self._task_cpu_high = kwargs.get('high', 1)
@@ -202,6 +254,7 @@ class TaskManager:
                 self._task_cpu_mean = kwargs.get('mean', 0)
                 self._task_cpu_std = kwargs.get('std', 1)
         elif attribute == 'Size':
+            self._task_size_model = model
             if model == 'Uniform':
                 self._task_size_low = kwargs.get('low', 0)
                 self._task_size_high = kwargs.get('high', 1)
@@ -209,6 +262,7 @@ class TaskManager:
                 self._task_size_mean = kwargs.get('mean', 0)
                 self._task_size_std = kwargs.get('std', 1)
         elif attribute == 'Deadline':
+            self._task_deadline_model = model
             if model == 'Uniform':
                 self._task_deadline_low = kwargs.get('low', 0)
                 self._task_deadline_high = kwargs.get('high', 1)
@@ -216,6 +270,7 @@ class TaskManager:
                 self._task_deadline_mean = kwargs.get('mean', 0)
                 self._task_deadline_std = kwargs.get('std', 1)
         elif attribute == 'Priority':
+            self._task_priority_model = model
             if model == 'Uniform':
                 self._task_priority_low = kwargs.get('low', 0)
                 self._task_priority_high = kwargs.get('high', 1)
@@ -274,7 +329,7 @@ class TaskManager:
 
     def _generateTaskInfo(self, task_node_id, arrival_time):
         self._task_id += 1
-        return Task(task_id = 'Task_'+self._task_id, task_node_id = task_node_id, task_cpu = self._generateCPU(), task_size = self._generateSize(), task_deadline = self._generateDeadline(), task_priority = self._generatePriority(), task_arrival_time = arrival_time)
+        return Task(task_id = f'Task_{self._task_id}', task_node_id = task_node_id, task_cpu = self._generateCPU(), task_size = self._generateSize(), task_deadline = self._generateDeadline(), task_priority = self._generatePriority(), task_arrival_time = arrival_time)
     
     def _generateTasks(self, task_node_ids_kwardsDict, cur_time, simulation_interval):
         # 1. Move the tasks from the to_generate_task_infos to the todo_tasks according to the current time
@@ -365,3 +420,28 @@ class TaskManager:
                     failed_task_list.append(task_info)
                     self._failed_tasks[task_node_id] = failed_task_list
                     self._to_offload_tasks[task_node_id].remove(task_info)
+
+    def offloadTask(self, task_node_id, task_id, target_node_id, current_time, route = None):
+        """Offload the task by the task id and the target node id.
+
+        Args:
+            task_node_id (str): The task node id.
+            task_id (str): The task id.
+            target_node_id (str): The target node id.
+            current_time (float): The current simulation time
+            route (list, optional): The route for the task offloading. Default [target_node_id]
+
+        Returns:
+            bool: True if the task is offloaded successfully, False otherwise.
+
+        Examples:
+            task_manager.offloadTask('vehicle1', 'Task_1', 'fog1')
+        """
+        if route is None:
+            route = [target_node_id]
+        if task_node_id in self._to_offload_tasks:
+            for task_info in self._to_offload_tasks[task_node_id]:
+                if task_info.getTaskId() == task_id:
+                    task_info.offloadTo(target_node_id, route, current_time)
+                    return True
+        return False

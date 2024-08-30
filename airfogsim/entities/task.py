@@ -42,7 +42,22 @@ class Task:
         self._last_compute_time = 0
         self._failure_reason_code = -1
         self._farther_mission = farther_mission
-        self._is_finished = False
+
+    def to_dict(self):
+        """Convert the task to dictionary.
+
+        Returns:
+            dict: The dictionary of the task.
+        """
+        # 遍历所有属性，将其转化为字典
+        task_dict = {}
+        for key, value in self.__dict__.items():
+            key = key[1:]
+            if key == "farther_mission":
+                task_dict[key] = value.to_dict()
+            else:
+                task_dict[key] = value
+        return task_dict
 
     def startToCompute(self, time):
         """Set the start time to compute the task and set to_offload_route as to_return_route.
@@ -59,10 +74,10 @@ class Task:
         Args:
             current_time (float): The current time.
         """
+        self._start_to_return_time = current_time
+        self._last_return_time = current_time
         if self._required_returned_size > 0:
             self._to_offload_route = [self._task_node_id] # the route to offload the task. If task is computed, i.e., _compute_size >= _task_cpu, the list denotes the route the returned data should be transmitted.
-            self._start_to_return_time = current_time
-            self._last_return_time = current_time
         else:
             self._to_offload_route = []
 
@@ -179,9 +194,8 @@ class Task:
         self._assigned_to = node_id
         self._decided_offload_time = time
         self._executed_locally = node_id == self._task_node_id
-        if not self._executed_locally:
-            self._start_to_transmit_time = time
-            self._last_transmission_time = time
+        self._start_to_transmit_time = time
+        self._last_transmission_time = time
 
     def isExecutedLocally(self):
         """Check if the task is executed locally.
@@ -214,6 +228,14 @@ class Task:
             str: The assigned node ID.
         """
         return self._assigned_to
+    
+    def setAssignedTo(self, node_id):
+        """Set the assigned node ID.
+
+        Args:
+            node_id (str): The node ID.
+        """
+        self._assigned_to = node_id
 
     def isTransmitting(self):
         """Check if the task is transmitting.
@@ -255,6 +277,23 @@ class Task:
             bool: True if the task is finished, False otherwise.
         """
         return self.isComputed() and len(self._to_offload_route) == 0
+    
+    def getDelay(self):
+        """Get the delay of the task.
+
+        Returns:
+            float: The delay of the task.
+        """
+        return self._last_return_time - self._task_arrival_time
+
+    def getLastOperationTime(self):
+        """Get the last operation time.
+
+        Returns:
+            float: The last operation time.
+        """
+        last_time = max(self._last_transmission_time, self._last_compute_time, self._last_return_time)
+        return last_time
     
     def getTransmittedSize(self):
         """Get the transmitted size.

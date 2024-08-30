@@ -34,3 +34,13 @@ class FogNode(SimpleNode):
             fog_profile (dict): The fog profile of the fog node.
         """
         self._fog_profile = fog_profile
+
+    def to_dict(self):
+        """Convert the fog node to a dictionary.
+
+        Returns:
+            dict: The fog node in dictionary format.
+        """
+        fog_node_dict = super(FogNode, self).to_dict()
+        fog_node_dict.update({'fog_profile': self._fog_profile})
+        return fog_node_dict

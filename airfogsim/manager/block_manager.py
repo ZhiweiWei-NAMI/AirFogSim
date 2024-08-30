@@ -1,5 +1,6 @@
 from ..entities.block import Blockchain, Block
 import numpy as np
+from ..enum_const import EnumerateConstants
 
 class BlockchainManager:
     
@@ -7,6 +8,35 @@ class BlockchainManager:
         self.blockchain = Blockchain(0)
         self.RSUs = RSUs
 
+    def getBlockchain(self):
+        """Get the blockchain.
+
+        Returns:
+            Blockchain: the blockchain.
+        """
+        return self.blockchain
+
+    def setBlockchainConsensus(self, consensus):
+        """Set the consensus of the blockchain.
+
+        Args:
+            consensus (int): the consensus.
+
+        Returns:
+            None.
+        """
+        assert consensus in [EnumerateConstants.CONSENSUS_POS, EnumerateConstants.CONSENSUS_POW]
+        if consensus == EnumerateConstants.CONSENSUS_POW:
+            raise NotImplementedError("The PoW consensus is not supported yet.")
+        self.blockchain.setConsensus(consensus)
+
+    def getBlockchainConsensus(self):
+        """Get the consensus of the blockchain.
+
+        Returns:
+            int: the consensus.
+        """
+        return self.blockchain.getConsensus()
 
     def generateToMineBlocks(self, cur_time):
         """Find the blocks that can be mined.
@@ -96,7 +126,7 @@ class BlockchainManager:
            
         return result
     
-    def Mining(self, miner_and_revenues, simulation_interval, validated = False):
+    def Mining(self, miner_and_revenues, simulation_interval, cur_time, validated = False):
         """Select the specified RSU for mining
 
         miner_and_revenues={
@@ -119,7 +149,7 @@ class BlockchainManager:
             self.addBlock(block, selected_rsu)
 
         # 检查是否有新的block
-        self.generateToMineBlocks()
+        self.generateToMineBlocks(cur_time)
         if validated:
             validate_chain = self.isValidChain()
             # 这里可以加入一些验证的信息和输出
@@ -127,7 +157,7 @@ class BlockchainManager:
 
         # 更新bs的stake
         # 现在的bs应该还没有这个函数
-        for rsu in self.RSUs:
+        for rsu in self.RSUs.values():
             self._update_stake(rsu, simulation_interval)
 
     
@@ -136,7 +166,7 @@ class BlockchainManager:
         rsu.setStake(rsu.getStake() - cost_stake)
         rsu.setTotalRevenues(rsu.getTotalRevenues() + revenue)
     
-    def _update_stake(self, bs,time_step):
+    def _update_stake(self, bs, time_step):
         bs.setStake(bs.getStake() + bs.getTotalRevenues() * 0.1 * time_step)
      
      
@@ -197,5 +227,6 @@ class BlockchainManager:
             str: the transaction.
         """
         return self.blockchain.all_transactions[idx]
+    
     
     
