@@ -1,4 +1,89 @@
-
+from ..airfogsim_env import AirFogSimEnv
 from .base_sched import BaseScheduler
+from ..enum_const import EnumerateConstants
 class BlockchainScheduler(BaseScheduler):
-    pass
+           
+    
+    @staticmethod
+    def setBlockchainConsensus(env: AirFogSimEnv, consensus: int):
+        """
+         Set the consensus used by the blockchain.
+
+        Args:
+            consensus (int): The consensus mechanism to use, in EnumerateConstants.CONSENSUS_POW or EnumerateConstants.CONSENSUS_POW.
+           
+        Returns:
+            bool: The flag to indicate whether the consensus is scheduled successfully.
+        """
+        if BlockchainScheduler.IS_OPEN and env.blockchain is not None:
+            if consensus in [EnumerateConstants.CONSENSUS_POS, EnumerateConstants.CONSENSUS_POW]:
+                env.blockchain_manager.setBlockchainConsensus(consensus)
+                return True
+        return False
+    
+    @staticmethod
+    def getBlockchainConsensus(env: AirFogSimEnv):
+        """
+         Get the consensus used by the blockchain.
+
+        Args:
+            env
+           
+        Returns:
+            str: The consensus.
+        """
+        return EnumerateConstants.getDescByCode(env.blockchain_manager.getBlockchainConsensus())
+
+    @staticmethod
+    def getSizeByBlockIdx(env: AirFogSimEnv,idx:int):
+        """
+          Get the transaction size of the specific block.
+
+        Args:
+            idx (int): The index of the block.
+
+        Returns:
+            int: The size of the transaction in the block.
+        """
+        blockchain = env.blockchain_manager.getBlockchain()
+        block = blockchain.getBlockByIndex(idx)
+        n_transaction = block.getTransactionNum()
+        return n_transaction
+
+    @staticmethod
+    def getBlockGenerationThreshold(env: AirFogSimEnv):
+        """
+         Obtain a threshold for the time of two block generations
+
+        Args:
+            
+        Returns:
+            int: The threshold.
+        """   
+        return env.blockchain_manager.getBlockchain().getMineTimeThreshold()
+
+    @staticmethod
+    def setBlockGenerationThreshold(env: AirFogSimEnv, threshold:int):
+        """
+         Change the threshold of two block generations.
+
+        Args:
+            threshold(int): The new threshold.
+        """  
+        env.blockchain_manager.getBlockchain().setMineTimeThreshold(threshold)
+        
+    @staticmethod
+    def getBlockNum(env: AirFogSimEnv):
+        """
+         Get the block number in the blockchain.
+
+        Args:
+            env
+           
+        Returns:
+            int: The number of the blocks.
+        """
+        return env.blockchain_manager.getBlockchain().length
+    
+
+

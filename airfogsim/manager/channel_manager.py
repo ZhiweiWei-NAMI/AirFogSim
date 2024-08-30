@@ -3,7 +3,7 @@ from ..all_channels import V2IChannel, V2UChannel, V2VChannel, U2IChannel, U2UCh
 import numpy as np
 class ChannelManager:
     """ChannelManager is the class for managing the wireless communication channels in the airfogsim environment. It provides the APIs for the agent to interact with the channels."""
-    def __init__(self, n_RSU, n_UAV, n_Veh, hei_UAVs, BS_positions, time_step):
+    def __init__(self, n_RSU=1, n_UAV=1, n_Veh=1, hei_UAVs=100, RSU_positions=[], simulation_interval=0.1):
         self.V2V_power_dB = 23 # dBm 记录的都是最大功率
         self.V2I_power_dB = 26
         self.V2U_power_dB = 26
@@ -64,8 +64,8 @@ class ChannelManager:
         self.n_RSU = n_RSU
         self.n_UAV = n_UAV
         self.hei_UAVs = hei_UAVs
-        self.BS_positions = BS_positions
-        self.time_step = time_step
+        self.RSU_positions = RSU_positions
+        self.simulation_interval = simulation_interval
 
         self._initialize_Channels()
         self._initialize_Interference_and_active()
@@ -75,11 +75,11 @@ class ChannelManager:
 
     def _initialize_Channels(self):
         self.V2VChannel = V2VChannel(self.n_Veh, self.n_RB)  # number of vehicles
-        self.V2IChannel = V2IChannel(self.n_Veh, self.n_RSU, self.n_RB, self.BS_positions)
+        self.V2IChannel = V2IChannel(self.n_Veh, self.n_RSU, self.n_RB, self.RSU_positions)
         self.V2UChannel = V2UChannel(self.n_Veh, self.n_RB, self.n_UAV, self.hei_UAVs)
         self.U2UChannel = U2UChannel(self.n_RB, self.n_UAV, self.hei_UAVs)
-        self.U2IChannel = U2IChannel(self.n_RB, self.n_RSU, self.n_UAV, self.hei_UAVs, self.BS_positions)
-        self.I2IChannel = I2IChannel(self.n_RB, self.n_RSU, self.BS_positions)
+        self.U2IChannel = U2IChannel(self.n_RB, self.n_RSU, self.n_UAV, self.hei_UAVs, self.RSU_positions)
+        self.I2IChannel = I2IChannel(self.n_RB, self.n_RSU, self.RSU_positions)
     
     def _initialize_Interference_and_active(self):
         self.V2I_Interference = np.zeros((self.n_Veh, self.n_RSU)) + self.sig2 # 默认每个车辆归属于一个基站
@@ -172,8 +172,8 @@ class ChannelManager:
         self.V2UChannel.update_pathloss()
         self.I2IChannel.update_pathloss()
         # 计算距离差，根据self.vid_index的index数值排序
-        veh_delta_distance = self.time_step * np.asarray([c.velocity for c in sorted(vehicles.values(), key=lambda x: vid_index[x.id])])
-        uav_delta_distance = self.time_step * np.asarray([c.velocity for c in sorted(UAVs.values(), key=lambda x: uav_index[x.id])])
+        veh_delta_distance = self.simulation_interval * np.asarray([c.velocity for c in sorted(vehicles.values(), key=lambda x: vid_index[x.id])])
+        uav_delta_distance = self.simulation_interval * np.asarray([c.velocity for c in sorted(UAVs.values(), key=lambda x: uav_index[x.id])])
         # 更新阴影
         self.V2IChannel.update_shadow(veh_delta_distance)
         self.V2VChannel.update_shadow(veh_delta_distance)

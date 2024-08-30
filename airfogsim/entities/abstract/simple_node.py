@@ -13,6 +13,15 @@ class SimpleNode:
         self._ai_model_dict = {}
         self._token = None # Token for the node to access the vehicular network
 
+    def to_dict(self):
+        infos = {}
+        for key, value in self.__dict__.items():
+            if key.startswith("_"):
+                infos[key[1:]] = value
+            else:
+                infos[key] = value
+        return infos
+
     def setToken(self, token):
         self._token = token
 

@@ -54,3 +54,21 @@ class RSU(TaskNode, FogNode, NetworkNode):
             total_revenues (float): The total revenues of the RSU.
         """
         self._total_revenues = total_revenues
+
+    def to_dict(self):
+        """Convert the RSU to a dictionary.
+
+        Returns:
+            dict: The RSU in dictionary format.
+        """
+        rsu_dict = TaskNode.to_dict(self)
+        rsu_dict.update(FogNode.to_dict(self))
+        rsu_dict.update(NetworkNode.to_dict(self))
+        infos = {}
+        for key, value in self.__dict__.items():
+            if key.startswith("_"):
+                infos[key[1:]] = value
+            else:
+                infos[key] = value
+        rsu_dict.update(infos)
+        return rsu_dict

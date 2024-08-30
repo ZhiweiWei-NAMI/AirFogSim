@@ -33,3 +33,21 @@ class Vehicle(TaskNode, FogNode):
         self._speed = vehicle_traffic_info['speed']
         self._acceleration = vehicle_traffic_info['acceleration']
         self._angle = vehicle_traffic_info['angle']
+
+    def to_dict(self):
+        """Convert the vehicle to a dictionary.
+
+        Returns:
+            dict: The vehicle in dictionary format.
+        """
+        # 需要包含TaskNode和FogNode的信息
+        vehicle_dict = TaskNode.to_dict(self)
+        vehicle_dict.update(FogNode.to_dict(self))
+        infos = {}
+        for key, value in self.__dict__.items():
+            if key.startswith("_"):
+                infos[key[1:]] = value
+            else:
+                infos[key] = value
+        vehicle_dict.update(infos)
+        return vehicle_dict

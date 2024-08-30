@@ -1,8 +1,8 @@
 simulation:
   vehicle_count: 100
   max_simulation_time: 3600
-  simulation_interval: 0.01 # in seconds, for transmission, computation, task generation and assignment, etc.
-  traffic_interval: 0.1 # in seconds, for traffic simulation. Remember to set the same value in the SUMO configuration file; otherwise, the simulation will not work properly
+  simulation_interval: 0.1 # in seconds, for transmission, computation, task generation and assignment, etc.
+  traffic_interval: 0.5 # in seconds, for traffic simulation. Remember to set the same value in the SUMO configuration file; otherwise, the simulation will not work properly
   
 
 sumo:

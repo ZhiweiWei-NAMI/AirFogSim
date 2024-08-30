@@ -4,16 +4,26 @@ class CommunicationScheduler(BaseScheduler):
     """The communication scheduler for channels.
     """
 
+    
     @staticmethod
-    def setRBByChannelName(env: AirFogSimEnv, channel_type: str, n_RB: int):
-        """Schedule the resource blocks of the channel by the channel name.
+    def getNumberOfRB(env: AirFogSimEnv):
+        """Get the number of resource blocks.
 
         Args:
             env (AirFogSimEnv): The environment.
-            channel_type (str): The channel type.
-            n_RB (int): The number of resource blocks.
 
         Returns:
-            bool: The flag to indicate whether the bandwidth is scheduled successfully.
+            int: The number of resource blocks.
         """
-        return True
+        return env.channel_manager.n_RB
+    
+    @staticmethod
+    def setCommunicationWithRB(env: AirFogSimEnv, task_id: str, RB_nos: list):
+        """Set the communication with the resource blocks.
+
+        Args:
+            env (AirFogSimEnv): The environment.
+            task_id (str): The task id.
+            RB_nos (list): The list of resource block numbers.
+        """
+        env.activated_offloading_tasks_with_RB_Nos[task_id] = RB_nos

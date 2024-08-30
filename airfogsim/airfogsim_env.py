@@ -17,7 +17,7 @@ class AirFogSimEnv():
     """AirFogSimEnv is the main class for the airfogsim environment. It provides the simulation of communication, computation, storage, battery, vehicle/UAV trajectory, cloud/cloudlet nodes, AI models for entities, blockchain, authentication, and privacy. It also provides the APIs for the agent to interact with the environment. The agent can be a DRL agent, a rule-based agent, or a human player.
     """
 
-    def _init_(self, config):
+    def __init__(self, config):
         """The constructor of the AirFogSimEnv class. It initializes the environment with the given configuration.
 
         Args:
@@ -55,10 +55,14 @@ class AirFogSimEnv():
         self.traci_connection = self._connectToSUMO(config['sumo'])
         self.traffic_manager = TrafficManager(config['traffic'], self.traci_connection) # traffic interval is decided by sumo simulation step
         self._initRSUsAndCloudServers()
-        self.task_mananger = TaskManager()
-        self.channel_manager = ChannelManager()
+        self.task_mananger = TaskManager(predictable_seconds=self.traffic_interval) # suppose tasks are generated every traffic interval
+        self.channel_manager = ChannelManager(n_RSU=self.traffic_manager.getNumberOfRSUs(), n_UAV=self.traffic_manager.getNumberOfUAVs(), n_Veh=self.traffic_manager.getNumberOfVehicles(), RSU_positions=self.traffic_manager.getRSUPositions(), simulation_interval=self.simulation_interval)
         self.mission_manager = MissionManager()
         self.blockchain_manager = BlockchainManager(self.RSUs)
+        
+        self.max_task_node_num = 0
+        self.task_node_types = []
+        self.task_node_threshold_poss = 0.0
 
         # ----------------decisions, managed by schedulers----------------
         self.vehicle_mobility_patterns = {} # dict, key是vehicle_id, value是mobility pattern={speed}
@@ -69,6 +73,11 @@ class AirFogSimEnv():
         self.task_node_ids = [] # list, 存储所有的task node id。可以在每个决策时隙更新，即每个车辆在不同的时候可能是fog node或task node。注意，每次生成的任务数量是按照"predictable_seconds"来预先存储的，所以可能t=0.1s时，车辆是task node，t=0.2s时，车辆是fog node，但是此时还有该车辆的任务需要进行卸载或计算。
         self.revenue_and_punishment_for_tasks = {} # dict, key是task_id, value是{node_id, amount}
         self.update_AI_models = {} # dict, key是node_id, value是{"model_name": AI model}
+
+    def close(self):
+        """Close the environment.
+        """
+        traci.close()
 
     def _connectToSUMO(self, config):
         """Connect to the SUMO simulator with a generated label (e.g., airfogsim_{timestamp}).
@@ -279,16 +288,16 @@ class AirFogSimEnv():
             }
 
         """
-        offloading_tasks, total_num = self.task_mananger.getOffloadingTasks() # dict, key是node_id, value是task
+        offloading_tasks, total_num = self.task_mananger.getOffloadingTasksWithNumber() # dict, key是node_id, value是task
+        activated_tasks = {}
         if total_num == 0:
-            return
+            return activated_tasks
      
         # 初始化
         activated_offloading_tasks_with_RB_Nos = np.array(activated_offloading_tasks_with_RB_Nos, dtype='bool')
         self.channel_manager.resetActiveLinks()
-        activated_tasks = {}
         # 遍历激活连接
-        for _, task_set in enumerate(offloading_tasks): # offloading_tasks是一个list，每个元素是Task对象
+        for _, task_set in offloading_tasks.items():
             for task in task_set:
                 assert isinstance(task, Task)
                 assert not task.isExecutedLocally(), '任务已经在本地执行，不需要分配RB！'
@@ -356,9 +365,9 @@ class AirFogSimEnv():
         """Update the blockchain for the entities.
         """
         self.payAndPunish(self.revenue_and_punishment_for_tasks)
-        self.blockchain_manager.generateToMineBlocks()
+        self.blockchain_manager.generateToMineBlocks(self.simulation_time)
         miner_and_revenues = self.blockchain_manager.chooseMiner()
-        self.blockchain_manager.Mining(miner_and_revenues)
+        self.blockchain_manager.Mining(miner_and_revenues, self.simulation_interval, self.simulation_time)
     
     def payAndPunish(self, revenue_and_punishment_for_tasks):
         """
@@ -469,16 +478,28 @@ class AirFogSimEnv():
         vehicle = Vehicle(vehicle_traffic_info['id'], vehicle_traffic_info['position'], vehicle_traffic_info['speed'], vehicle_traffic_info['acceleration'], vehicle_traffic_info['angle'], task_profile, fog_profile)
         return vehicle
     
+    def _getDistanceBetweenNodes(self, node1, node2):
+        """Get the distance between two nodes.
+
+        Args:
+            node1 (SimpleNode): The first node.
+            node2 (SimpleNode): The second node.
+
+        Returns:
+            float: The distance between two nodes.
+        """
+        return np.linalg.norm(np.array(node1.getPosition()) - np.array(node2.getPosition()))
+    
     def _initRSUsAndCloudServers(self):
         rsu_infos = self.traffic_manager.getRSUInfos()
         cloudserver_infos = self.traffic_manager.getCloudServerInfos()
         for rsu_id, rsu_info in rsu_infos.items():
             if rsu_id not in self.RSUs:
-                self.RSUs[rsu_id] = RSU(id=rsu_info['id'], position=rsu_info['position'], fog_profile=self.fog_profile['rsu'], task_profile={})
+                self.RSUs[rsu_id] = RSU(id=rsu_id, position=rsu_info['position'], fog_profile=self.fog_profile['rsu'], task_profile={})
 
         for cloudserver_id, cloudserver_info in cloudserver_infos.items():
             if cloudserver_id not in self.cloudServers:
-                self.cloudServers[cloudserver_id] = CloudServer(id=cloudserver_info['id'], position=cloudserver_info['position'], fog_profile=self.fog_profile['cloud'], task_profile={})
+                self.cloudServers[cloudserver_id] = CloudServer(id=cloudserver_id, position=cloudserver_info['position'], fog_profile=self.fog_profile['cloud'], task_profile={})
 
     def _updateTraffics(self):
         """Update the vehicle traffics.
@@ -494,11 +515,17 @@ class AirFogSimEnv():
         for vehicle_id, vehicle_traffic_info in vehicle_traffic_infos.items():
             if vehicle_id not in self.vehicles:
                 self.vehicles[vehicle_id] = self._initVehicle(vehicle_traffic_info, fog_profile=self.fog_profile['vehicle'])
+                # check if the vehicle_id should be in the task_node_ids
+                if 'vehicle' in self.task_node_types and np.random.rand() < self.task_node_threshold_poss and len(self.task_node_ids) < self.max_task_node_num and vehicle_id not in self.task_node_ids:
+                    self.task_node_ids.append(vehicle_id)
             self.vehicles[vehicle_id].update(vehicle_traffic_info, self.simulation_time)
         
         for uav_id, uav_traffic_info in uav_traffic_infos.items():
             if uav_id not in self.UAVs:
-                self.UAVs[uav_id] = UAV(uav_traffic_info['id'], uav_traffic_info['position'], uav_traffic_info['speed'], uav_traffic_info['acceleration'], uav_traffic_info['angle'], uav_traffic_info['phi'], fog_profile=self.fog_profile['uav'], task_profile={})
+                self.UAVs[uav_id] = UAV(uav_id, uav_traffic_info['position'], uav_traffic_info['speed'], uav_traffic_info['acceleration'], uav_traffic_info['angle'], uav_traffic_info['phi'], fog_profile=self.fog_profile['uav'], task_profile={})
+                # check if the uav_id should be in the task_node_ids
+                if 'UAV' in self.task_node_types and np.random.rand() < self.task_node_threshold_poss and len(self.task_node_ids) < self.max_task_node_num and uav_id not in self.task_node_ids:
+                    self.task_node_ids.append(uav_id)
             self.UAVs[uav_id].update(uav_traffic_info, self.simulation_time)
 
         to_delete_vehicle_ids = list(set(existing_vehicle_ids) - set(certain_vehicle_ids))
@@ -519,6 +546,8 @@ class AirFogSimEnv():
         Args:
             vehicle_id (str): The id of the vehicle.
         """
+        if vehicle_id in self.task_node_ids:
+            self.task_node_ids.remove(vehicle_id)
         if vehicle_id in self.vehicles:
             self.task_mananger.removeTasksByNodeId(vehicle_id)
             self.vehicle_ids_as_index.remove(vehicle_id)

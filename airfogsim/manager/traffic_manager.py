@@ -40,13 +40,53 @@ class TrafficManager():
         self._initialize_cloudServers()
         self._initialize_UAVs()
 
+    def getRSUPositions(self):
+        """Get the RSU positions.
+
+        Returns:
+            list: The RSU positions.
+        """
+        return self._RSU_positions
+
+    def getNumberOfRSUs(self):
+        """Get the number of RSUs.
+
+        Returns:
+            int: The number of RSUs.
+        """
+        return len(self._RSU_infos)
+    
+    def getNumberOfCloudServers(self):
+        """Get the number of cloud servers.
+
+        Returns:
+            int: The number of cloud servers.
+        """
+        return len(self._cloudServer_infos)
+    
+    def getNumberOfUAVs(self):
+        """Get the number of UAVs.
+
+        Returns:
+            int: The number of UAVs.
+        """
+        return len(self._UAV_infos)
+    
+    def getNumberOfVehicles(self):
+        """Get the number of vehicles.
+
+        Returns:
+            int: The number of vehicles.
+        """
+        return len(self._vehicle_infos)
+
     def _initialize_RSUs(self):
         """Initialize the RSU information.
         """
         for RSU_position in self._RSU_positions:
             RSU_id = "RSU_" + str(self._RSU_id_counter)
             self._RSU_id_counter += 1
-            self._RSU_infos[RSU_id] = {"position": RSU_position}
+            self._RSU_infos[RSU_id] = {"position": RSU_position, "id": RSU_id}
 
     def _initialize_cloudServers(self):
         """Initialize the cloud server information.
@@ -54,7 +94,7 @@ class TrafficManager():
         for _ in range(self._max_n_cloudServers):
             cloudServer_id = "cloudServer_" + str(self._RSU_id_counter)
             self._cloudServer_id_counter += 1
-            self._cloudServer_infos[cloudServer_id] = {"position": (0, 0, 0)}
+            self._cloudServer_infos[cloudServer_id] = {"position": (0, 0, 0), "id": cloudServer_id}
 
     def _initialize_UAVs(self):
         """Initialize the UAV information with random positions in the given range.
@@ -93,18 +133,19 @@ class TrafficManager():
             str: The route id.
         """
         route_id = "gen_veh_route_" + str(self._route_id_counter)
+        edges = list(self._sumo_edges.keys())
         while True:
             try:
-                from_edge, to_edge = random.sample(self.edges, 2)
+                from_edge, to_edge = random.sample(edges, 2)
                 route = self._traci_connection.simulation.findRoute(from_edge, to_edge)
                 while len(route.edges) == 0:
-                    from_edge, to_edge = random.sample(self.edges, 2)
+                    from_edge, to_edge = random.sample(edges, 2)
                     route = self._traci_connection.simulation.findRoute(from_edge, to_edge)
                 self._traci_connection.route.add(route_id, route.edges)
                 break
-            except self._traci_connection.exceptions.TraCIException as e:
-                # 如果路线已经存在，就不再创建
+            except:
                 pass
+            
         self._route_id_counter += 1
         return route_id
     
@@ -150,7 +191,8 @@ class TrafficManager():
             route_id = self._traci_connection.vehicle.getRouteID(vehicle_id)
             acceleration = self._traci_connection.vehicle.getAcceleration(vehicle_id)
             angle = self._traci_connection.vehicle.getAngle(vehicle_id)
-            self._vehicle_infos[vehicle_id] = {"position": position, "speed": speed, "acceleration": acceleration, "angle": angle, "routeId": route_id}
+            position3d = (position[0], position[1], 0)
+            self._vehicle_infos[vehicle_id] = {"position": position3d, "speed": speed, "acceleration": acceleration, "angle": angle, "routeId": route_id, 'id': vehicle_id}
         for UAV_id in self._UAV_infos:
             org_position = self._UAV_infos[UAV_id]["position"]
             speed = self._UAV_infos[UAV_id].get("speed", 0)
