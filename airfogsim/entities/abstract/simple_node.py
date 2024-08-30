@@ -10,6 +10,20 @@ class SimpleNode:
         self._is_transmitting = False
         self._is_receiving = False
         self._revenue = 0
+        self._ai_model_dict = {}
+        self._token = None # Token for the node to access the vehicular network
+
+    def setToken(self, token):
+        self._token = token
+
+    def getToken(self):
+        return self._token
+
+    def updateAIModel(self, model_name, model):
+        self._ai_model_dict[model_name] = model
+
+    def getAIModel(self, model_name):
+        return self._ai_model_dict[model_name]
 
     def getRevenue(self):
         return self._revenue
