@@ -5,15 +5,12 @@ class ComputationScheduler(BaseScheduler):
     """
 
     @staticmethod
-    def setCPUByNodeName(env:AirFogSimEnv, node_name: str, resource_allocation: list):
-        """Schedule the computation resources of the fog node (e.g., fog vehicle, edge server, cloud server) by the fog node name.
+    def setComputingWithNodeCPU(env: AirFogSimEnv, task_id: str, allocated_cpu: float):
+        """Set the computing with the node CPU.
 
         Args:
             env (AirFogSimEnv): The environment.
-            fog_node_name (str): The fog node name.
-            resource_allocation (list): The resource allocation list. Each element is the resource allocation ratio for the computation tasks. Guarantee the sum of the resource allocation ratio is 1.
-
-        Returns:
-            bool: The flag to indicate whether the computation resources are scheduled successfully.
+            task_id (str): The task id.
+            allocated_cpu (float): The allocated CPU.
         """
-        return True
+        env.compute_tasks_with_cpu[task_id] = allocated_cpu

@@ -123,6 +123,9 @@ class ChannelManager:
         """
         if self.n_Veh == 0:
             return
+        # vid_index is list, each element is vehicle_id, first turn vid_index to dict
+        vid_index = {vid: idx for idx, vid in enumerate(vid_index)}
+        uav_index = {uav: idx for idx, uav in enumerate(uav_index)}
         self._renew_channel(vehicles, UAVs, vid_index, uav_index)
         self._update_small_fading()
         # 为什么要减去快速衰落?
@@ -147,8 +150,8 @@ class ChannelManager:
         self.V2UChannel.update_fast_fading()
 
     def _renew_channel(self, vehicles, UAVs, vid_index, uav_index):
-        veh_positions = [c.position for c in sorted(vehicles.values(), key=lambda x: vid_index[x.id])]
-        uav_positions = [c.position for c in sorted(UAVs.values(), key=lambda x: uav_index[x.id])]
+        veh_positions = [c.getPosition() for c in sorted(vehicles.values(), key=lambda x: vid_index[x.getId()])]
+        uav_positions = [c.getPosition() for c in sorted(UAVs.values(), key=lambda x: uav_index[x.getId()])]
         self._update_large_fading(veh_positions, uav_positions, vehicles, UAVs, vid_index, uav_index)
         self.V2VChannel_abs = self.V2VChannel.PathLoss + self.V2VChannel.Shadow
         self.V2IChannel_abs = self.V2IChannel.PathLoss + self.V2IChannel.Shadow
@@ -172,8 +175,8 @@ class ChannelManager:
         self.V2UChannel.update_pathloss()
         self.I2IChannel.update_pathloss()
         # 计算距离差，根据self.vid_index的index数值排序
-        veh_delta_distance = self.simulation_interval * np.asarray([c.velocity for c in sorted(vehicles.values(), key=lambda x: vid_index[x.id])])
-        uav_delta_distance = self.simulation_interval * np.asarray([c.velocity for c in sorted(UAVs.values(), key=lambda x: uav_index[x.id])])
+        veh_delta_distance = self.simulation_interval * np.asarray([c.getSpeed() for c in sorted(vehicles.values(), key=lambda x: vid_index[x.getId()])])
+        uav_delta_distance = self.simulation_interval * np.asarray([c.getSpeed() for c in sorted(UAVs.values(), key=lambda x: uav_index[x.getId()])])
         # 更新阴影
         self.V2IChannel.update_shadow(veh_delta_distance)
         self.V2VChannel.update_shadow(veh_delta_distance)
@@ -273,7 +276,7 @@ class ChannelManager:
         interference_power_matrix_itx_x2u = np.zeros((self.n_RSU, self.n_UAV, self.n_RB))
         # 1. 计算所有的signal, 如果信号源同时传输多个数据,信号强度叠加,当然,干扰也叠加
         # 遍历所有的车辆
-        for task_id, task_profile in enumerate(activated_task_dict):
+        for task_id, task_profile in activated_task_dict.items():
             channel_type = task_profile['channel_type']
             txidx = task_profile['tx_idx']
             rxidx = task_profile['rx_idx']

@@ -17,8 +17,8 @@ class TaskScheduler(BaseScheduler):
         Examples:
             taskSched.setTaskGeneration(env, 'Poisson', predictable_seconds=1)
         """
-        env.task_mananger.setTaskGenerationModel(model, **kwargs)
-        env.task_mananger.setPredictableSeconds(predictable_seconds)
+        env.task_manager.setTaskGenerationModel(model, **kwargs)
+        env.task_manager.setPredictableSeconds(predictable_seconds)
 
 
     @staticmethod
@@ -48,10 +48,10 @@ class TaskScheduler(BaseScheduler):
         Returns:
             list: The list of task infos.
         """
-        task_dict = env.task_mananger.getToOffloadTasks()
+        task_dict = env.task_manager.getToOffloadTasks()
         task_info_list = []
         for task_node_id, tasks in task_dict.items():
-            for task_id, task in tasks.items():
+            for task in tasks:
                 task_info_list.append(task.to_dict())
         return task_info_list
     
@@ -65,7 +65,7 @@ class TaskScheduler(BaseScheduler):
             task_id (str): The task id.
             target_node_id (str): The target node id.
         """
-        env.task_mananger.offloadTask(task_node_id, task_id, target_node_id, env.simulation_time)
+        env.task_manager.offloadTask(task_node_id, task_id, target_node_id, env.simulation_time)
 
     @staticmethod
     def getAllOffloadingTaskInfos(env:AirFogSimEnv):
@@ -77,10 +77,27 @@ class TaskScheduler(BaseScheduler):
         Returns:
             list: The list of task infos.
         """
-        task_dict = env.task_mananger.getOffloadingTasks()
+        task_dict = env.task_manager.getOffloadingTasks()
         task_info_list = []
         for task_node_id, tasks in task_dict.items():
-            for task_id, task in tasks.items():
+            for task in tasks:
+                task_info_list.append(task.to_dict())
+        return task_info_list
+    
+    @staticmethod
+    def getAllComputingTaskInfos(env:AirFogSimEnv):
+        """Get the task infos for the environment to offload.
+
+        Args:
+            env (AirFogSimEnv): The AirFogSim environment.
+
+        Returns:
+            list: The list of task infos.
+        """
+        task_dict = env.task_manager.getComputingTasks()
+        task_info_list = []
+        for task_node_id, tasks in task_dict.items():
+            for task in tasks:
                 task_info_list.append(task.to_dict())
         return task_info_list
     
@@ -94,7 +111,7 @@ class TaskScheduler(BaseScheduler):
         Returns:
             list: The list of task infos.
         """
-        recently_done_100_tasks = env.task_mananger.getRecentlyDoneTasks()
+        recently_done_100_tasks = env.task_manager.getRecentlyDoneTasks()
         last_step = env.simulation_time - env.traffic_interval
         task_info_list = []
         for task in recently_done_100_tasks:

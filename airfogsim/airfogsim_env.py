@@ -25,6 +25,7 @@ class AirFogSimEnv():
         """
         self.vehicles = {}
         self.vehicle_ids_as_index = [] # vehicle ids as a list, used for indexing
+        self.removed_vehicles = []
 
         self.RSUs = {}
         self.rsu_ids_as_index = [] # RSU ids as a list, used for indexing
@@ -55,7 +56,7 @@ class AirFogSimEnv():
         self.traci_connection = self._connectToSUMO(config['sumo'])
         self.traffic_manager = TrafficManager(config['traffic'], self.traci_connection) # traffic interval is decided by sumo simulation step
         self._initRSUsAndCloudServers()
-        self.task_mananger = TaskManager(predictable_seconds=self.traffic_interval) # suppose tasks are generated every traffic interval
+        self.task_manager = TaskManager(predictable_seconds=self.traffic_interval) # suppose tasks are generated every traffic interval
         self.channel_manager = ChannelManager(n_RSU=self.traffic_manager.getNumberOfRSUs(), n_UAV=self.traffic_manager.getNumberOfUAVs(), n_Veh=self.traffic_manager.getNumberOfVehicles(), RSU_positions=self.traffic_manager.getRSUPositions(), simulation_interval=self.simulation_interval)
         self.mission_manager = MissionManager()
         self.blockchain_manager = BlockchainManager(self.RSUs)
@@ -142,7 +143,7 @@ class AirFogSimEnv():
         self.mission_manager.updateMissions(self.simulation_interval, self.simulation_time, self._getNodeById)
         for node_id, mission in self.new_missions_for_nodes.items():
             # the task for mission is executed locally instead of being offloaded
-            self.mission_manager.addMission(node_id, mission, self.task_mananger, self.simulation_time)
+            self.mission_manager.addMission(node_id, mission, self.task_manager, self.simulation_time)
 
     def _updateAuthPrivacy(self):
         """Update the authentication and privacy for the entities.
@@ -171,6 +172,7 @@ class AirFogSimEnv():
         Args:
             activated_task_dict (dict): The activated offloading tasks with the profiles. The key is the task ID, and the value is dict {tx_idx, rx_idx, channel_type, task}
         """
+        self.channel_manager.updateFastFading(self.UAVs, self.vehicles, self.vehicle_ids_as_index, self.uav_ids_as_index)
         self.channel_manager.computeRate(activated_task_dict)
 
     def _execute_communication(self, activated_task_dict):
@@ -181,7 +183,7 @@ class AirFogSimEnv():
         """
         tmp_succeed_tasks = []
         tmp_failed_tasks = []
-        for task_idx, task_profile in enumerate(activated_task_dict):
+        for task_idx, task_profile in activated_task_dict.items():
             task = task_profile['task']
             assert isinstance(task, Task)
             channel_type = task_profile['channel_type']
@@ -207,10 +209,10 @@ class AirFogSimEnv():
                 tmp_succeed_tasks.append(task_profile)
 
         for task_profile in tmp_succeed_tasks:
-            flag = self.task_mananger.finishOffloadingTask(task_profile['task'], self.simulation_time)
+            flag = self.task_manager.finishOffloadingTask(task_profile['task'], self.simulation_time)
             assert flag, 'Unexpected error occurs when finishing the offloading task! Possibly due to that task (node) id has been removed in task manager!'
         for task_profile in tmp_failed_tasks:
-            flag = self.task_mananger.failOffloadingTask(task_profile['task'])
+            flag = self.task_manager.failOffloadingTask(task_profile['task'])
             assert flag, 'Unexpected error occurs when failing the offloading task! Possibly due to that task (node) id has been removed in task manager!'
 
     def _getNodeIdxById(self, node_id):
@@ -288,13 +290,12 @@ class AirFogSimEnv():
             }
 
         """
-        offloading_tasks, total_num = self.task_mananger.getOffloadingTasksWithNumber() # dict, key是node_id, value是task
+        offloading_tasks, total_num = self.task_manager.getOffloadingTasksWithNumber() # dict, key是node_id, value是task
         activated_tasks = {}
         if total_num == 0:
             return activated_tasks
      
         # 初始化
-        activated_offloading_tasks_with_RB_Nos = np.array(activated_offloading_tasks_with_RB_Nos, dtype='bool')
         self.channel_manager.resetActiveLinks()
         # 遍历激活连接
         for _, task_set in offloading_tasks.items():
@@ -302,8 +303,9 @@ class AirFogSimEnv():
                 assert isinstance(task, Task)
                 assert not task.isExecutedLocally(), '任务已经在本地执行，不需要分配RB！'
                 path = task.getToOffloadRoute()
-                assert len(path)>0
                 task_id = task.getTaskId()
+                if task_id not in activated_offloading_tasks_with_RB_Nos:
+                    continue
                 allocated_RBs = activated_offloading_tasks_with_RB_Nos[task_id]
                 tx, rx = task.getCurrentNodeId(), path[0]
                 tx_idx = self._getNodeIdxById(tx)
@@ -336,7 +338,7 @@ class AirFogSimEnv():
     def _updateComputation(self):
         """Update the computation for the entities.
         """
-        self.task_mananger.computeTasks(self.compute_tasks_with_cpu, self.simulation_interval, self.simulation_time)
+        self.task_manager.computeTasks(self.compute_tasks_with_cpu, self.simulation_interval, self.simulation_time)
         
     def _updateStorage(self):
         """Update the storage for the entities.
@@ -352,7 +354,7 @@ class AirFogSimEnv():
         for task_node_ids in self.task_node_ids:
             task_node_ids_kwardsDict[task_node_ids] = self._getNodeById(task_node_ids).getTaskProfile()
         # generate task for each task node. It generates the future tasks, and stored in "to_generate_tasks" in the task manager. These tasks are viewed as ``predictable'' tasks.
-        self.task_mananger.generateAndCheckTasks(task_node_ids_kwardsDict, self.simulation_time, self.simulation_interval)
+        self.task_manager.generateAndCheckTasks(task_node_ids_kwardsDict, self.simulation_time, self.simulation_interval)
 
     def _updateBattery(self):
         """Update the battery for the entities.
@@ -529,7 +531,7 @@ class AirFogSimEnv():
             self.UAVs[uav_id].update(uav_traffic_info, self.simulation_time)
 
         to_delete_vehicle_ids = list(set(existing_vehicle_ids) - set(certain_vehicle_ids))
-        for vehicle_id in to_delete_vehicle_ids:
+        for vehicle_id in to_delete_vehicle_ids.copy():
             self._removeVehicle(vehicle_id)
         n_Vehicles = len(self.vehicles)
         n_UAVs = len(self.UAVs)
@@ -549,6 +551,7 @@ class AirFogSimEnv():
         if vehicle_id in self.task_node_ids:
             self.task_node_ids.remove(vehicle_id)
         if vehicle_id in self.vehicles:
-            self.task_mananger.removeTasksByNodeId(vehicle_id)
+            self.task_manager.removeTasksByNodeId(vehicle_id)
             self.vehicle_ids_as_index.remove(vehicle_id)
             del self.vehicles[vehicle_id]
+            self.removed_vehicles.append(vehicle_id)
