@@ -21,7 +21,7 @@ taskSched = AirFogSimScheduler.getTaskScheduler()
 taskSched.setTaskGenerationModel(env, 'Poisson')
 taskSched.setTaskNodePossibility(env, node_types=['vehicle'], max_num=30, threshold_poss=0.5)
 rewardSched = AirFogSimScheduler.getRewardScheduler()
-rewardSched.setRewardModel(env, 'task_deadline-task_delay')
+rewardSched.setRewardModel(env, 'log(1+(task_deadline-task_delay))')
 entitySched = AirFogSimScheduler.getEntityScheduler()
 commSched = AirFogSimScheduler.getCommunicationScheduler()
 
