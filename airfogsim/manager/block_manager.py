@@ -62,7 +62,7 @@ class BlockchainManager:
         # 判断是否达到挖矿时间阈值
         if cur_time - BC.last_update_time >= BC.mine_time_threshold:
             # 生成新的区块
-            new_block = Block(cur_time, BC.all_transactions, BC.chain[-1].hash)
+            new_block = Block(cur_time, BC.all_transactions, BC.chain[-1].get_hash())
             # 将新的区块加入待挖矿区块列表
             BC.to_mine_blocks.append(new_block)
             # 清空self.transactions

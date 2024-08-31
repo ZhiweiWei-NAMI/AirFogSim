@@ -54,7 +54,10 @@ class Task:
         for key, value in self.__dict__.items():
             key = key[1:]
             if key == "farther_mission":
-                task_dict[key] = value.to_dict()
+                if value is not None:
+                    task_dict[key] = value.to_dict()
+                else:
+                    task_dict[key] = None
             else:
                 task_dict[key] = value
         return task_dict
@@ -278,13 +281,23 @@ class Task:
         """
         return self.isComputed() and len(self._to_offload_route) == 0
     
-    def getDelay(self):
+    @property
+    def task_delay(self):
         """Get the delay of the task.
 
         Returns:
             float: The delay of the task.
         """
         return self._last_return_time - self._task_arrival_time
+    
+    @property
+    def task_deadline(self):
+        """Get the deadline of the task.
+
+        Returns:
+            float: The deadline of the task.
+        """
+        return self._task_deadline
 
     def getLastOperationTime(self):
         """Get the last operation time.
@@ -407,3 +420,21 @@ class Task:
             float: The task deadline.
         """
         return self._task_deadline
+
+    def isRelatedToNode(self, node_id):
+        """Check if the task is related to the node. (The task is related to the node if the task is offloaded to the node, the task is assigned to the node, or the node is in the to_offload_route.)
+
+        Args:
+            node_id (str): The ID of the node.
+
+        Returns:
+            bool: True if the task is related to the node, False otherwise.
+        """
+        flag = False
+        if self._task_node_id == node_id:
+            flag = True
+        if self._assigned_to == node_id:
+            flag = True
+        if node_id in self._to_offload_route:
+            flag = True
+        return flag

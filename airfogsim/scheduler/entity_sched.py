@@ -290,6 +290,19 @@ class EntityScheduler(BaseScheduler):
         """
         env.task_node_ids = task_node_ids
         
+    @staticmethod
+    def getNodeInfoById(env: AirFogSimEnv, node_id: str):
+        """Get the node info by the node id.
+
+        Args:
+            env (AirFogSimEnv): The environment.
+            node_id (str): The node id.
+
+        Returns:
+            dict: The node info.
+        """
+        node = env._getNodeById(node_id)
+        return node.to_dict()
 
     @staticmethod
     def getNeighborNodeInfosById(env: AirFogSimEnv, node_id: str, sorted_by = 'distance', reverse = False):
@@ -306,7 +319,7 @@ class EntityScheduler(BaseScheduler):
         """
         assert sorted_by in ['distance', 'cpu'], "sorted_by should be 'distance' or 'cpu'"
         node = env._getNodeById(node_id)
-        all_nodes = env.vehicles.values() + env.UAVs.values() + env.RSUs.values() + env.cloudServers.values()
+        all_nodes = list(env.vehicles.values()) + list(env.UAVs.values()) + list(env.RSUs.values()) + list(env.cloudServers.values())
         neighbor_node_infos = []
         cpu_list = []
         distance_list = []

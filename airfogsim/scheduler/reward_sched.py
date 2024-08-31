@@ -8,7 +8,7 @@ class RewardScheduler(BaseScheduler):
     """
     REWARD_MODEL = None
     SYMOBOLS = None
-    ACCEPTED_SYMBOLS = ['energy', 'task_ratio', 'delay']
+    ACCEPTED_SYMBOLS = ['energy', 'task_ratio', 'task_deadline', 'task_delay']
 
     @staticmethod
     def setRewardModel(env:AirFogSimEnv, expression):
@@ -51,7 +51,7 @@ class RewardScheduler(BaseScheduler):
             raise ValueError("Symbols are not set, please set the reward model first.")
         if env not in RewardScheduler.REWARD_MODEL or env not in RewardScheduler.SYMOBOLS:
             raise ValueError(f"Reward model is not set for {env}, please set the reward model first.")
-        task = env.task_mananger.getDoneTaskByTaskNodeAndTaskId(task_info['task_node_id'], task_info['task_id'])
+        task = env.task_manager.getDoneTaskByTaskNodeAndTaskId(task_info['task_node_id'], task_info['task_id'])
         # 调用task.getXXX()获取任务信息
         kwargs = {key: task.__getattribute__(key) for key in RewardScheduler.SYMOBOLS[env]}
 
@@ -61,6 +61,6 @@ class RewardScheduler(BaseScheduler):
             raise ValueError(f"Missing parameters for reward computation: {missing}")
 
         # 替换表达式中的符号为实际的参数值
-        subs = {RewardScheduler.SYMOBOLS[env][key]: kwargs[key] for key in RewardScheduler.SYMOBOLS[env]}
+        subs = {RewardScheduler.SYMOBOLS[env][key]: float(kwargs[key]) for key in RewardScheduler.SYMOBOLS[env]}
         return RewardScheduler.REWARD_MODEL[env].evalf(subs=subs)
     

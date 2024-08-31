@@ -85,7 +85,7 @@ class TaskManager:
         node_id = task.getAssignedTo() # node id is used for to_compute_tasks and to_return_tasks
         task_node_id = task.getTaskNodeId() # task node id is used for to_offload_tasks
         task_id = task.getTaskId() 
-        if not task_info.isReturning(): # if the task is offloading
+        if not task.isReturning(): # if the task is offloading
             for task_info in self._to_offload_tasks[task_node_id]:
                 if task_info.getTaskId() == task_id:
                     task_info.startToCompute(current_time)
@@ -94,7 +94,7 @@ class TaskManager:
                     to_compute_task_list.append(task_info)
                     self._to_compute_tasks[node_id] = to_compute_task_list
                     return True
-        elif task_info.isReturning(): # if the task is returning
+        elif task.isReturning(): # if the task is returning
             for task_info in self._to_return_tasks[node_id]:
                 if task_info.getTaskId() == task_id:
                     self._to_return_tasks[node_id].remove(task_info)
@@ -179,6 +179,14 @@ class TaskManager:
     def getOffloadingTasks(self):
         offloading_tasks, num = self.getOffloadingTasksWithNumber()
         return offloading_tasks
+    
+    def getComputingTasks(self):
+        """Get the tasks to compute.
+
+        Returns:
+            dict: The tasks to compute. The key is the node id, and the value is the task list.
+        """
+        return self._to_compute_tasks
 
     def getOffloadingTasksWithNumber(self):
         """Get the offloading tasks (transmission) with the total number.
@@ -203,33 +211,93 @@ class TaskManager:
             total_num += len(offloading_tasks[node_id])
         return offloading_tasks, total_num
 
-    def removeTasksByNodeId(self, node_id):
+    def removeTasksByNodeId(self, to_remove_node_id):
         """Remove the tasks by the node id.
 
         Args:
-            node_id (str): The node id.
+            to_remove_node_id (str): The node id.
 
         Examples:
             task_manager.removeTasksByNodeId('vehicle1')
         """
-        # remove as fog node
-        if node_id in self._to_compute_tasks:
-            to_compute_task_list = self._to_compute_tasks[node_id]
-            for task_info in to_compute_task_list:
-                self._removed_tasks[task_info.getTaskNodeId()] = task_info
-            del self._to_compute_tasks[node_id]
-        # remove as task node
-        if node_id in self._to_offload_tasks:
-            to_offload_task_list = self._to_offload_tasks[node_id]
-            for task_info in to_offload_task_list:
-                self._removed_tasks[task_info.getTaskNodeId()] = task_info
-            del self._to_offload_tasks[node_id]
-        # remove as fog node
-        if node_id in self._to_return_tasks:
-            to_return_task_list = self._to_return_tasks[node_id]
-            for task_info in to_return_task_list:
-                self._removed_tasks[task_info.getTaskNodeId()] = task_info
-            del self._to_return_tasks[node_id]
+    
+        # remove all related tasks in to_compute_tasks
+        for node_id in list(self._to_compute_tasks.keys()):
+            task_set = self._to_compute_tasks.get(node_id, [])
+            if node_id == to_remove_node_id:
+                for task_info in task_set.copy():
+                    removed_task_set = self._removed_tasks.get(task_info.getTaskNodeId(), [])
+                    removed_task_set.append(task_info)
+                    self._removed_tasks[task_info.getTaskNodeId()] = removed_task_set
+                    task_set.remove(task_info)
+                    self._to_compute_tasks[node_id] = task_set
+                del self._to_compute_tasks[node_id]
+            else:
+                for task_info in task_set.copy():
+                    if task_info.isRelatedToNode(to_remove_node_id):
+                        removed_task_set = self._removed_tasks.get(task_info.getTaskNodeId(), [])
+                        removed_task_set.append(task_info)
+                        self._removed_tasks[task_info.getTaskNodeId()] = removed_task_set
+                        task_set.remove(task_info)
+                        self._to_compute_tasks[node_id] = task_set
+        # remove all related tasks in to_offload_tasks
+        for task_node_id in list(self._to_offload_tasks.keys()):
+            task_set = self._to_offload_tasks.get(task_node_id, [])
+            if task_node_id == to_remove_node_id:
+                for task_info in task_set.copy():
+                    removed_task_set = self._removed_tasks.get(task_info.getTaskNodeId(), [])
+                    removed_task_set.append(task_info)
+                    self._removed_tasks[task_info.getTaskNodeId()] = removed_task_set
+                    task_set.remove(task_info)
+                    self._to_offload_tasks[task_node_id] = task_set
+                del self._to_offload_tasks[task_node_id]
+            else:
+                for task_info in task_set.copy():
+                    if task_info.isRelatedToNode(to_remove_node_id):
+                        removed_task_set = self._removed_tasks.get(task_info.getTaskNodeId(), [])
+                        removed_task_set.append(task_info)
+                        self._removed_tasks[task_info.getTaskNodeId()] = removed_task_set
+                        task_set.remove(task_info)
+                        self._to_offload_tasks[task_node_id] = task_set
+        # remove all related tasks in to_return_tasks
+        for node_id in list(self._to_return_tasks.keys()):
+            task_set = self._to_return_tasks.get(node_id, [])
+            if node_id == to_remove_node_id:
+                for task_info in task_set.copy():
+                    removed_task_set = self._removed_tasks.get(task_info.getTaskNodeId(), [])
+                    removed_task_set.append(task_info)
+                    self._removed_tasks[task_info.getTaskNodeId()] = removed_task_set
+                    task_set.remove(task_info)
+                    self._to_return_tasks[node_id] = task_set
+                del self._to_return_tasks[node_id]
+            else:
+                for task_info in task_set.copy():
+                    if task_info.isRelatedToNode(to_remove_node_id):
+                        removed_task_set = self._removed_tasks.get(task_info.getTaskNodeId(), [])
+                        removed_task_set.append(task_info)
+                        self._removed_tasks[task_info.getTaskNodeId()] = removed_task_set
+                        task_set.remove(task_info)
+                        self._to_return_tasks[node_id] = task_set
+        # remove all related tasks in to_generate_tasks
+        for task_node_id in list(self._to_generate_task_infos.keys()):
+            task_set = self._to_generate_task_infos.get(task_node_id, [])
+            if task_node_id == to_remove_node_id:
+                for task_info in task_set.copy():
+                    removed_task_set = self._removed_tasks.get(task_info.getTaskNodeId(), [])
+                    removed_task_set.append(task_info)
+                    self._removed_tasks[task_info.getTaskNodeId()] = removed_task_set
+                    task_set.remove(task_info)
+                    self._to_generate_task_infos[task_node_id] = task_set
+                del self._to_generate_task_infos[task_node_id]
+            else:
+                for task_info in task_set.copy():
+                    if task_info.isRelatedToNode(to_remove_node_id):
+                        removed_task_set = self._removed_tasks.get(task_info.getTaskNodeId(), [])
+                        removed_task_set.append(task_info)
+                        self._removed_tasks[task_info.getTaskNodeId()] = removed_task_set
+                        task_set.remove(task_info)
+                        self._to_generate_task_infos[task_node_id] = task_set
+
 
     def setTaskAttributeModel(self, attribute, model, **kwargs):
         """Set the task attribute model. The given model should be in the ATTRIBUTE_MODELS. The provided kwargs should be the parameters for the task attribute model.
@@ -335,7 +403,7 @@ class TaskManager:
         # 1. Move the tasks from the to_generate_task_infos to the todo_tasks according to the current time
         for task_node_id, task_infos in self._to_generate_task_infos.items():
             for task_info in task_infos.copy():
-                if task_info.getTaskArrivalTime() >= cur_time: # if the task is arrived, i.e., the task arrival time is greater than the current time
+                if task_info.getTaskArrivalTime() <= cur_time: # if the task is arrived, i.e., the task arrival time is less than the current time
                     todo_task_list = self._to_offload_tasks.get(task_node_id, [])
                     todo_task_list.append(task_info)
                     self._to_offload_tasks[task_node_id] = todo_task_list
@@ -420,6 +488,24 @@ class TaskManager:
                     failed_task_list.append(task_info)
                     self._failed_tasks[task_node_id] = failed_task_list
                     self._to_offload_tasks[task_node_id].remove(task_info)
+        # 2. Check the return tasks
+        for node_id, task_infos in self._to_return_tasks.items():
+            for task_info in task_infos.copy():
+                if task_info.getTaskDeadline() + task_info.getTaskArrivalTime() <= cur_time:
+                    task_info.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_DDL)
+                    failed_task_list = self._failed_tasks.get(node_id, [])
+                    failed_task_list.append(task_info)
+                    self._failed_tasks[node_id] = failed_task_list
+                    self._to_return_tasks[node_id].remove(task_info)
+        # 3. Check the computing tasks
+        for node_id, task_infos in self._to_compute_tasks.items():
+            for task_info in task_infos.copy():
+                if task_info.getTaskDeadline() + task_info.getTaskArrivalTime() <= cur_time:
+                    task_info.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_DDL)
+                    failed_task_list = self._failed_tasks.get(node_id, [])
+                    failed_task_list.append(task_info)
+                    self._failed_tasks[node_id] = failed_task_list
+                    self._to_compute_tasks[node_id].remove(task_info)
 
     def offloadTask(self, task_node_id, task_id, target_node_id, current_time, route = None):
         """Offload the task by the task id and the target node id.
