@@ -27,9 +27,9 @@ class RewardScheduler(BaseScheduler):
         """
         try:
             # 使用sympify来将字符串表达式转换为可计算的表达式
-            RewardScheduler.REWARD_MODEL = {env: sympify(expression)}
+            RewardScheduler.REWARD_MODEL = {env: sympify(expression)} if RewardScheduler.REWARD_MODEL is None else {**RewardScheduler.REWARD_MODEL, env: sympify(expression)}
             # 自动检测表达式中使用的变量，并创建符号
-            RewardScheduler.SYMOBOLS = {env: {str(sym): symbols(str(sym)) for sym in RewardScheduler.REWARD_MODEL[env].free_symbols}}
+            RewardScheduler.SYMOBOLS = {env: {str(sym): symbols(str(sym)) for sym in RewardScheduler.REWARD_MODEL[env].free_symbols}} if RewardScheduler.SYMOBOLS is None else {**RewardScheduler.SYMOBOLS, env: {str(sym): symbols(str(sym)) for sym in RewardScheduler.REWARD_MODEL[env].free_symbols}}
             # 检查是否所有符号都是有效的
             for sym in RewardScheduler.SYMOBOLS[env]:
                 if sym not in RewardScheduler.ACCEPTED_SYMBOLS:
