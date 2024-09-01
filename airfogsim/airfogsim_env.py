@@ -75,6 +75,10 @@ class AirFogSimEnv():
         self.revenue_and_punishment_for_tasks = {} # dict, key是task_id, value是{node_id, amount}
         self.update_AI_models = {} # dict, key是node_id, value是{"model_name": AI model}
 
+    @property
+    def airfogsim_label(self):
+        return self._sumo_label
+
     def close(self):
         """Close the environment.
         """
