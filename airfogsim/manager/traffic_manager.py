@@ -55,7 +55,7 @@ class TrafficManager():
         """
         row_num = int((self._y_range[1] - self._y_range[0]) / self._grid_width)
         col_num = int((self._x_range[1] - self._x_range[0]) / self._grid_width)
-        self._map_by_grid = np.zeros((row_num, col_num), dtype=object)
+        self._map_by_grid = np.empty((row_num, col_num), dtype=object)
         for i in range(row_num):
             for j in range(col_num):
                 self._map_by_grid[i, j] = []
@@ -253,7 +253,11 @@ class TrafficManager():
         self._update_map_by_grid()
 
     def _update_map_by_grid(self):
-        self._map_by_grid = np.zeros((self._map_by_grid.shape[0], self._map_by_grid.shape[1]), dtype=object)
+        
+        self._map_by_grid = np.empty((self._map_by_grid.shape[0], self._map_by_grid.shape[1]), dtype=object)
+        for i in range(self._map_by_grid.shape[0]):
+            for j in range(self._map_by_grid.shape[1]):
+                self._map_by_grid[i, j] = []
         for vehicle_id, vehicle_info in self._vehicle_infos.items():
             position = vehicle_info["position"]
             row = int((position[1] - self._y_range[0]) / self._grid_width)
