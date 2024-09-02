@@ -1,4 +1,3 @@
-from ..airfogsim_env import AirFogSimEnv
 from abc import ABCMeta, abstractmethod
 
 class BaseLayout:

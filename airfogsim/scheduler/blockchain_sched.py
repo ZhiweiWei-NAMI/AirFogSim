@@ -1,11 +1,11 @@
-from ..airfogsim_env import AirFogSimEnv
+
 from .base_sched import BaseScheduler
 from ..enum_const import EnumerateConstants
 class BlockchainScheduler(BaseScheduler):
            
     
     @staticmethod
-    def setBlockchainConsensus(env: AirFogSimEnv, consensus: int):
+    def setBlockchainConsensus(env, consensus: int):
         """
          Set the consensus used by the blockchain.
 
@@ -22,7 +22,7 @@ class BlockchainScheduler(BaseScheduler):
         return False
     
     @staticmethod
-    def getBlockchainConsensus(env: AirFogSimEnv):
+    def getBlockchainConsensus(env):
         """
          Get the consensus used by the blockchain.
 
@@ -35,7 +35,7 @@ class BlockchainScheduler(BaseScheduler):
         return EnumerateConstants.getDescByCode(env.blockchain_manager.getBlockchainConsensus())
 
     @staticmethod
-    def getSizeByBlockIdx(env: AirFogSimEnv,idx:int):
+    def getSizeByBlockIdx(env,idx:int):
         """
           Get the transaction size of the specific block.
 
@@ -51,7 +51,7 @@ class BlockchainScheduler(BaseScheduler):
         return n_transaction
 
     @staticmethod
-    def getBlockGenerationThreshold(env: AirFogSimEnv):
+    def getBlockGenerationThreshold(env):
         """
          Obtain a threshold for the time of two block generations
 
@@ -63,7 +63,7 @@ class BlockchainScheduler(BaseScheduler):
         return env.blockchain_manager.getBlockchain().getMineTimeThreshold()
 
     @staticmethod
-    def setBlockGenerationThreshold(env: AirFogSimEnv, threshold:int):
+    def setBlockGenerationThreshold(env, threshold:int):
         """
          Change the threshold of two block generations.
 
@@ -73,7 +73,7 @@ class BlockchainScheduler(BaseScheduler):
         env.blockchain_manager.getBlockchain().setMineTimeThreshold(threshold)
         
     @staticmethod
-    def getBlockNum(env: AirFogSimEnv):
+    def getBlockNum(env):
         """
          Get the block number in the blockchain.
 

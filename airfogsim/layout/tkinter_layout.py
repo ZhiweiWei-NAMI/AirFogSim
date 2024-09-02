@@ -3,18 +3,17 @@ import tkinter as tk
 import time
 import math
 import numpy as np
-from ..airfogsim_env import AirFogSimEnv
 from .base_layout import BaseLayout
 from ..utils.tk_utils import get_map_data_from_osm, parse_location_info, create_rotated_images, make_image_transparent, clear_screen
 from ..utils.my_generator import random_colors_generator
 from PIL import Image, ImageDraw, ImageTk
-from ..scheduler import EntityScheduler
+from ..scheduler.entity_sched import EntityScheduler
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 
 class TkinterLayout(tk.Tk, BaseLayout):
-    def __init__(self, config, env:AirFogSimEnv):
+    def __init__(self, config, env):
         tk.Tk.__init__(self)
         self._env = env
         # -------------load files and images----------------

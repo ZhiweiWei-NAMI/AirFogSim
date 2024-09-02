@@ -1,11 +1,10 @@
-from ..airfogsim_env import AirFogSimEnv
 from .base_sched import BaseScheduler
 class ComputationScheduler(BaseScheduler):
     """The computation scheduler for the fog nodes. Provide static methods to schedule the computation tasks for the fog nodes.
     """
 
     @staticmethod
-    def setComputingWithNodeCPU(env: AirFogSimEnv, task_id: str, allocated_cpu: float):
+    def setComputingWithNodeCPU(env, task_id: str, allocated_cpu: float):
         """Set the computing with the node CPU.
 
         Args:

@@ -1,4 +1,3 @@
-from ..airfogsim_env import AirFogSimEnv
 from .base_sched import BaseScheduler
 class CommunicationScheduler(BaseScheduler):
     """The communication scheduler for channels.
@@ -6,7 +5,7 @@ class CommunicationScheduler(BaseScheduler):
 
     
     @staticmethod
-    def getNumberOfRB(env: AirFogSimEnv):
+    def getNumberOfRB(env):
         """Get the number of resource blocks.
 
         Args:
@@ -18,7 +17,7 @@ class CommunicationScheduler(BaseScheduler):
         return env.channel_manager.n_RB
     
     @staticmethod
-    def setCommunicationWithRB(env: AirFogSimEnv, task_id: str, RB_nos: list):
+    def setCommunicationWithRB(env, task_id: str, RB_nos: list):
         """Set the communication with the resource blocks.
 
         Args:
