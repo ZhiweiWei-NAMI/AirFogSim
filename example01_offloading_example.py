@@ -1,4 +1,4 @@
-from airfogsim import AirFogSimEnv, BaseAlgorithmModule, AirFogSimEnvVisualizer
+from airfogsim import AirFogSimEnv, BaseAlgorithmModule
 import numpy as np
 import yaml
 import sys
@@ -24,4 +24,5 @@ while not env.isDone():
     env.step()
     accumulated_reward += algorithm_module.getReward(env)
     print(f"Simulation time: {env.simulation_time}, ACC_Reward: {accumulated_reward}", end='\r')
+    env.render()
 env.close()

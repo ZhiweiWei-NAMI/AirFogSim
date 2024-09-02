@@ -11,6 +11,9 @@ sumo:
   sumo_net: "/home/weizhiwei/data/uvfogsim_python/sumo_berlin/map.net.xml"
   sumo_port: 8813
 
+visualization:
+  icon_path: "/home/weizhiwei/data/airfogsim_code/icon"
+
 traffic:
   traffic_mode: "SUMO" # "real" or "SUMO"
   x_range: [0, 1000] # The range of x coordinates in the simulation area, same as the SUMO map

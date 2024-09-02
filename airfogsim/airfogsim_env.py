@@ -9,6 +9,7 @@ from .entities.cloud_server import CloudServer
 from .entities.task import Task
 from .manager.mission_manager import MissionManager
 from .enum_const import EnumerateConstants
+from .airfogsim_visual import AirFogSimEnvVisualizer
 import traci
 import numpy as np
 import time
@@ -17,11 +18,12 @@ class AirFogSimEnv():
     """AirFogSimEnv is the main class for the airfogsim environment. It provides the simulation of communication, computation, storage, battery, vehicle/UAV trajectory, cloud/cloudlet nodes, AI models for entities, blockchain, authentication, and privacy. It also provides the APIs for the agent to interact with the environment. The agent can be a DRL agent, a rule-based agent, or a human player.
     """
 
-    def __init__(self, config):
+    def __init__(self, config, interactive_mode=None):
         """The constructor of the AirFogSimEnv class. It initializes the environment with the given configuration.
 
         Args:
             config (dict): The configuration of the environment. Please follow standard YAML format.
+            interactive_mode (str, optional): The interactive mode. 'graphic' or 'text'. Defaults to None.
         """
         self.vehicles = {}
         self.vehicle_ids_as_index = [] # vehicle ids as a list, used for indexing
@@ -65,6 +67,10 @@ class AirFogSimEnv():
         self.task_node_types = []
         self.task_node_threshold_poss = 0.0
 
+        self._visualizer = None
+        if interactive_mode is not None:
+            self.mountVisualizer(interactive_mode)
+
         # ----------------decisions, managed by schedulers----------------
         self.vehicle_mobility_patterns = {} # dict, key是vehicle_id, value是mobility pattern={speed}
         self.uav_mobility_patterns = {} # dict, key是uav_id, value是mobility pattern={angle, phi, speed}
@@ -74,6 +80,21 @@ class AirFogSimEnv():
         self.task_node_ids = [] # list, 存储所有的task node id。可以在每个决策时隙更新，即每个车辆在不同的时候可能是fog node或task node。注意，每次生成的任务数量是按照"predictable_seconds"来预先存储的，所以可能t=0.1s时，车辆是task node，t=0.2s时，车辆是fog node，但是此时还有该车辆的任务需要进行卸载或计算。
         self.revenue_and_punishment_for_tasks = {} # dict, key是task_id, value是{node_id, amount}
         self.update_AI_models = {} # dict, key是node_id, value是{"model_name": AI model}
+
+    def mountVisualizer(self, mode='graphic'):
+        """Mount the visualizer to the environment.
+
+        Args:
+            mode (str, optional): The mode of the visualizer. 'graphic' or 'text'. Defaults to 'graphic
+        """
+        self._visualizer = AirFogSimEnvVisualizer(mode=mode, config=self.config, env=self)
+
+    def render(self):
+        """Render the environment if the visualizer is mounted.
+        """
+        if self._visualizer is not None:
+            self._visualizer.render(self)
+
 
     @property
     def airfogsim_label(self):
