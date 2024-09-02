@@ -77,6 +77,7 @@ class TkinterLayout(tk.Tk, BaseLayout):
             if self.map_grid_window is None or not self.map_grid_window.winfo_exists():
                 self.map_grid_window = tk.Toplevel(self)
                 self.map_grid_window.title("Map Grid")
+                self.map_grid_window.geometry(f"400x400+{self.canvas_width}+0")
                 # before map_grid window distroyed, the map_grid_activate_button should be set to "Deactivate Map Grid"
                 self.map_grid_window.protocol("WM_DELETE_WINDOW", self.create_map_grid_window)
         else:
