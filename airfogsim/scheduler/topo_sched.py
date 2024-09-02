@@ -1,12 +1,11 @@
 from .base_sched import BaseScheduler
-from ..airfogsim_env import AirFogSimEnv
 
 class TopologyScheduler(BaseScheduler):
     """The topology scheduler for the fog nodes. Provide static methods to schedule the topology of the fog nodes.
     """
 
     @staticmethod
-    def setTopologyByNodeName(env:AirFogSimEnv, node_name: str, topology: dict):
+    def setTopologyByNodeName(env, node_name: str, topology: dict):
         """Schedule the topology of the fog node (e.g., fog vehicle, edge server, cloud server) by the fog node name.
 
         Args:

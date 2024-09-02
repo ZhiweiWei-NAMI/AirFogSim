@@ -1,12 +1,12 @@
 
 from .base_sched import BaseScheduler
-from ..airfogsim_env import AirFogSimEnv
+
 class TaskScheduler(BaseScheduler):
     """Scheduler for task scheduling, setting the task generation model and executing the task offloading.
     """
 
     @staticmethod
-    def setTaskGenerationModel(env:AirFogSimEnv, model, predictable_seconds = 1, **kwargs):
+    def setTaskGenerationModel(env, model, predictable_seconds = 1, **kwargs):
         """Set the task generation model for the environment. The task generation model will not affact the determined task infos, so better to set it before the simulation starts.
 
         Args:
@@ -22,7 +22,7 @@ class TaskScheduler(BaseScheduler):
 
 
     @staticmethod
-    def setTaskNodePossibility(env:AirFogSimEnv, max_num = 30, node_types = ['vehicle'], threshold_poss = 0.5):
+    def setTaskNodePossibility(env, max_num = 30, node_types = ['vehicle'], threshold_poss = 0.5):
         """Set the possibility of the task node for the task generation.
 
         Args:
@@ -39,7 +39,7 @@ class TaskScheduler(BaseScheduler):
         env.task_node_threshold_poss = threshold_poss
 
     @staticmethod
-    def getAllToOffloadTaskInfos(env:AirFogSimEnv):
+    def getAllToOffloadTaskInfos(env):
         """Get the task infos for the environment to offload.
 
         Args:
@@ -56,7 +56,7 @@ class TaskScheduler(BaseScheduler):
         return task_info_list
     
     @staticmethod
-    def setTaskOffloading(env:AirFogSimEnv, task_node_id:str, task_id:str, target_node_id:str):
+    def setTaskOffloading(env, task_node_id:str, task_id:str, target_node_id:str):
         """Set the task offloading for the task node.
 
         Args:
@@ -68,7 +68,7 @@ class TaskScheduler(BaseScheduler):
         env.task_manager.offloadTask(task_node_id, task_id, target_node_id, env.simulation_time)
 
     @staticmethod
-    def getAllOffloadingTaskInfos(env:AirFogSimEnv):
+    def getAllOffloadingTaskInfos(env):
         """Get the task infos for the environment to offload.
 
         Args:
@@ -85,7 +85,7 @@ class TaskScheduler(BaseScheduler):
         return task_info_list
     
     @staticmethod
-    def getAllComputingTaskInfos(env:AirFogSimEnv):
+    def getAllComputingTaskInfos(env):
         """Get the task infos for the environment to offload.
 
         Args:
@@ -102,7 +102,7 @@ class TaskScheduler(BaseScheduler):
         return task_info_list
     
     @staticmethod
-    def getLastStepSuccTaskInfos(env:AirFogSimEnv):
+    def getLastStepSuccTaskInfos(env):
         """Get the task infos for the environment to offload.
 
         Args:

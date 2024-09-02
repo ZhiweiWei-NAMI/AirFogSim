@@ -1,3 +1,4 @@
-from .validate import ValidateStaticMethods
-class BaseScheduler(metaclass=ValidateStaticMethods):
+
+# class BaseScheduler(metaclass=ValidateStaticMethods):
+class BaseScheduler:
     pass

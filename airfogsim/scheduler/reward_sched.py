@@ -1,7 +1,6 @@
 from sympy import symbols, log, sympify
 from sympy.core.sympify import SympifyError
 from .base_sched import BaseScheduler
-from ..airfogsim_env import AirFogSimEnv
 
 class RewardScheduler(BaseScheduler):
     """The reward scheduler for the reinforcement learning agents. Provide static methods to compute the reward for the reinforcement learning agents. Use sympy to parse the reward expression and compute the reward for each task node. According to test, the efficiency of evalf is similar to direct symbolic computation.
@@ -11,7 +10,7 @@ class RewardScheduler(BaseScheduler):
     ACCEPTED_SYMBOLS = ['energy', 'task_ratio', 'task_deadline', 'task_delay']
 
     @staticmethod
-    def setRewardModel(env:AirFogSimEnv, expression):
+    def setRewardModel(env, expression):
         """Set the reward model for the reinforcement learning agents. Note that reward is computed for each task node, according to the QoE metrics defined in the expression. The QoE metrics include task delay, energy consumption, and task ratio. This metric is updated each step for each task node.
         
         Args:
@@ -38,7 +37,7 @@ class RewardScheduler(BaseScheduler):
             raise ValueError(f"Invalid expression: {e}")
 
     @staticmethod
-    def getRewardByTask(env:AirFogSimEnv, task_info:dict):
+    def getRewardByTask(env, task_info:dict):
         """Compute the reward of the task.
 
         Args:

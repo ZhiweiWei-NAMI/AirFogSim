@@ -13,7 +13,7 @@ config_path = sys.argv[1] if len(sys.argv) > 1 else 'config.yaml'
 config = load_config(config_path)
 
 # 2. Create the environment
-env = AirFogSimEnv(config)
+env = AirFogSimEnv(config, interactive_mode='graphic')
 
 # 3. Get algorithm module
 algorithm_module = BaseAlgorithmModule()
