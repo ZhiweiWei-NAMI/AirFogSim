@@ -25,6 +25,7 @@ class TkinterLayout(tk.Tk, BaseLayout):
         self.rsu_image = make_image_transparent(f'{self.img_path}/rsu.png', size=(50, 50))
         self.color_generator = random_colors_generator(20)
         self.simulation_delay = 0
+        self.last_updated_time = time.time()
 
         # -------------read net.xml file to adjust the boundary of the map----------------
         self.canvas_width = 800
@@ -53,6 +54,7 @@ class TkinterLayout(tk.Tk, BaseLayout):
         self.map_grid_activate_button.pack(side=tk.LEFT)
         self.isTransActivated = False
         self.isShowMapGrid = False
+        self.map_grid_window = None
         self.canvas.pack()
         
         # -------------draw the map----------------
@@ -69,13 +71,14 @@ class TkinterLayout(tk.Tk, BaseLayout):
         self.isShowMapGrid = not self.isShowMapGrid
         if self.isShowMapGrid:
             self.map_grid_activate_button.config(text="Deactive Map Grid")
-            self.map_grid_window = tk.Toplevel(tk.Tk())
-            self.map_grid_window.title("Map Grid")
-            # before map_grid window distroyed, the map_grid_activate_button should be set to "Deactive Map Grid"
-            self.map_grid_window.protocol("WM_DELETE_WINDOW", self.create_map_grid_window)
+            if self.map_grid_window is None or not self.map_grid_window.winfo_exists():
+                self.map_grid_window = tk.Toplevel(tk.Tk())
+                self.map_grid_window.title("Map Grid")
+                # before map_grid window distroyed, the map_grid_activate_button should be set to "Deactive Map Grid"
+                self.map_grid_window.protocol("WM_DELETE_WINDOW", self.create_map_grid_window)
         else:
             self.map_grid_activate_button.config(text="Active Map Grid")
-            if self.map_grid_window.winfo_exists():
+            if self.map_grid_window is not None and self.map_grid_window.winfo_exists():
                 self.map_grid_window.destroy()
 
     def render(self):
@@ -95,7 +98,7 @@ class TkinterLayout(tk.Tk, BaseLayout):
         self.draw_time()
         if self.isTransActivated:
             self.draw_links()
-        if self.isShowMapGrid:
+        if self.isShowMapGrid and self.map_grid_window is not None and self.map_grid_window.winfo_exists():
             self.draw_map_grid()
 
     def draw_map_grid(self):
@@ -123,13 +126,14 @@ class TkinterLayout(tk.Tk, BaseLayout):
     def draw_links(self):
         self.clear_links()
         mana = self._env.channel_manager
-        all_links = (mana.V2V_active_links, mana.V2I_active_links, mana.V2U_active_links, mana.U2U_active_links, mana.U2I_active_links, mana.U2V_active_links, mana.I2V_active_links, mana.I2U_active_links, mana.I2I_active_links)
+        all_links = [mana.V2V_active_links, mana.V2I_active_links, mana.V2U_active_links, mana.U2U_active_links, mana.U2I_active_links, mana.U2V_active_links, mana.I2V_active_links, mana.I2U_active_links, mana.I2I_active_links]
         type_str = ['v2v', 'v2i', 'v2u', 'u2u', 'u2i', 'u2v', 'i2v', 'i2u', 'i2i']
         for idx, links in enumerate(all_links):
             # v2v_link: [n_Veh, n_Veh, n_RB] -> [n_Veh, n_Veh], if any of the last dimension is not 0, then it is a valid link
             tmp_links = links
             all_links[idx] = np.zeros((tmp_links.shape[0], tmp_links.shape[1]), dtype='bool')
             all_links[idx] = np.any(tmp_links, axis=-1)
+            links = all_links[idx]
             tx_type, rx_type = type_str[idx].split('2')
             for tx_idx, rx_idx in zip(*np.where(links)):
                 tx_info = EntityScheduler.getNodeInfoByIndexAndType(self._env, tx_idx, tx_type)
@@ -137,6 +141,8 @@ class TkinterLayout(tk.Tk, BaseLayout):
                 rate = self._env.channel_manager.getRateByChannelType(tx_idx, rx_idx, type_str[idx])
                 tx_pos = self._get_position_by_id(tx_info['id'])
                 rx_pos = self._get_position_by_id(rx_info['id'])
+                if tx_pos is None or rx_pos is None:
+                    continue
                 self.canvas.create_line(tx_pos, rx_pos, dash=(4, 4), fill=self.color_generator.get_color(f'{type_str[idx]}_link'), tags=f'{type_str[idx]}_link')
                 mid_pos_x = (tx_pos[0] + rx_pos[0]) / 2
                 mid_pos_y = (tx_pos[1] + rx_pos[1]) / 2
@@ -154,11 +160,12 @@ class TkinterLayout(tk.Tk, BaseLayout):
     def draw_time(self):
         if self.canvas_time_image is not None:
             self.canvas.delete(self.canvas_time_image)
-        posx = 0.7 * self.canvas_width * self.scale_factor
-        posy = 0.8 * self.canvas_height * self.scale_factor
+        posx = 0.7 * self.canvas_width
+        posy = 0.8 * self.canvas_height
         # simulation delay 只显示小数点后两位
-        self.simulation_delay = time.time() - self.simulation_delay
+        self.simulation_delay = time.time() - self.last_updated_time
         self.canvas_time_image = self.canvas.create_text(posx, posy, text="Time: {} Vehicle Num: {} Step-wise Simulation Delay: {} ms".format(self._env.simulation_time, len(self._env.vehicle_ids_as_index), round(self.simulation_delay * 1000, 3)), anchor=tk.NW)
+        self.last_updated_time = time.time()
 
     def draw_canvas_images(self, canvas_images:dict, positions:dict, image_set, tag, directions=None):
         to_delete_keys = canvas_images.keys() - positions.keys()
@@ -167,7 +174,7 @@ class TkinterLayout(tk.Tk, BaseLayout):
             del canvas_images[key]
         for key, position in positions.items():
             direction = directions[key] if directions is not None else 0
-            rotated_image = image_set[(math.floor(direction/10)-9) % 36]
+            rotated_image = image_set[(math.floor(direction/10)-9) % 36] if directions is not None else image_set[0]
             if key not in canvas_images:
                 canvas_image = self.canvas.create_image(position[0], position[1], image=rotated_image, anchor=tk.CENTER, tag=tag)
                 canvas_images[key] = canvas_image
@@ -175,29 +182,29 @@ class TkinterLayout(tk.Tk, BaseLayout):
                 self.canvas.move(canvas_images[key], position[0] - self.canvas.coords(canvas_images[key])[0], position[1] - self.canvas.coords(canvas_images[key])[1])
 
     def update_uav_position(self):
-        uav_infos = EntityScheduler.getAllNodeInfos(self._env, 'uav')
+        uav_infos = EntityScheduler.getAllNodeInfos(self._env, ['uav'])
         self.uav_positions_in_pixel = {}
         for info_dict in uav_infos:
             x, y = info_dict['position_x'], info_dict['position_y']
             x, y = self.position_to_pixel(x, y)
-            self.uav_positions_in_pixel[info_dict['id']] = (x, y)
+            self.uav_positions_in_pixel[info_dict['id']] = [x, y]
 
     def update_rsu_position(self):
-        rsu_infos = EntityScheduler.getAllNodeInfos(self._env, 'rsu')
+        rsu_infos = EntityScheduler.getAllNodeInfos(self._env, ['rsu'])
         self.rsu_positions_in_pixel = {}
         for info_dict in rsu_infos:
             x, y = info_dict['position_x'], info_dict['position_y']
             x, y = self.position_to_pixel(x, y)
-            self.rsu_positions_in_pixel[info_dict['id']] = (x, y)
+            self.rsu_positions_in_pixel[info_dict['id']] = [x, y]
 
     def update_vehicle_position_and_direction(self):
-        vehicle_infos = EntityScheduler.getAllNodeInfos(self._env, 'vehicle')
+        vehicle_infos = EntityScheduler.getAllNodeInfos(self._env, ['vehicle'])
         self.vehicle_positions_in_pixel = {}
         self.vehicle_directions = {}
         for info_dict in vehicle_infos:
             x, y = info_dict['position_x'], info_dict['position_y']
             x, y = self.position_to_pixel(x, y)
-            self.vehicle_positions_in_pixel[info_dict['id']] = (x, y)
+            self.vehicle_positions_in_pixel[info_dict['id']] = [x, y]
             self.vehicle_directions[info_dict['id']] = info_dict['angle']
 
     def close(self):
@@ -228,11 +235,14 @@ class TkinterLayout(tk.Tk, BaseLayout):
         # check scale factor在 1, 3之间
         self.scale_factor = min(max(1, self.scale_factor), 3)
         # 根据 scale_factor 调整 创建图片的大小
-        self.draw_map(self.map_data)
+        self.map_image_data = self.draw_map(self.map_data) 
+        self.canvas_map_image = self.canvas.create_image(0, 0, image=self.map_image_data, anchor=tk.NW)
         self.canvas_map_image = None
-        self.rsu_images = None
+        self.canvas_uav_images = {}
+        self.canvas.delete("uav")
+        self.canvas_rsu_images = {}
         self.canvas.delete("rsu")
-        self.vehicle_images = {} 
+        self.canvas_vehicle_images = {}
         self.canvas.delete("vehicle")
     
     def drag_move(self, event):
