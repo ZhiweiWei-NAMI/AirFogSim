@@ -34,11 +34,31 @@ class TrafficManager():
         self._RSU_id_counter = 0
         self._cloudServer_id_counter = 0
         self._route_id_counter = 0
+        self._grid_width = 50
+        self._initialize_map_by_grid()
         self._initialize_edges_and_lanes()
         self._update_route_ids()
         self._initialize_RSUs()
         self._initialize_cloudServers()
         self._initialize_UAVs()
+
+    @property
+    def map_by_grid(self):
+        return self._map_by_grid.copy()
+    
+    @property
+    def grid_width(self):
+        return self._grid_width
+
+    def _initialize_map_by_grid(self):
+        """Initialize the map_by_grid matrix. The matrix is used to store the node ids (as list) in each grid. The grid is defined by the grid width. The matrix is by: row1, col1 = y1, x1; row2, col2 = y2, x2 of position (x, y). 
+        """
+        row_num = int((self._y_range[1] - self._y_range[0]) / self._grid_width)
+        col_num = int((self._x_range[1] - self._x_range[0]) / self._grid_width)
+        self._map_by_grid = np.zeros((row_num, col_num), dtype=np.object)
+        for i in range(row_num):
+            for j in range(col_num):
+                self._map_by_grid[i, j] = []
 
     def getRSUPositions(self):
         """Get the RSU positions.
@@ -87,6 +107,10 @@ class TrafficManager():
             RSU_id = "RSU_" + str(self._RSU_id_counter)
             self._RSU_id_counter += 1
             self._RSU_infos[RSU_id] = {"position": RSU_position, "id": RSU_id}
+            row = int((RSU_position[1] - self._y_range[0]) / self._grid_width)
+            col = int((RSU_position[0] - self._x_range[0]) / self._grid_width)
+            if row >= 0 and row < self._map_by_grid.shape[0] and col >= 0 and col < self._map_by_grid.shape[1]:
+                self._map_by_grid[row, col].append(RSU_id)
 
     def _initialize_cloudServers(self):
         """Initialize the cloud server information.
@@ -94,7 +118,9 @@ class TrafficManager():
         for _ in range(self._max_n_cloudServers):
             cloudServer_id = "cloudServer_" + str(self._RSU_id_counter)
             self._cloudServer_id_counter += 1
-            self._cloudServer_infos[cloudServer_id] = {"position": (0, 0, 0), "id": cloudServer_id}
+            position = (0, 0, 0)
+            self._cloudServer_infos[cloudServer_id] = {"position": position, "id": cloudServer_id}
+
 
     def _initialize_UAVs(self):
         """Initialize the UAV information with random positions in the given range.
@@ -104,6 +130,10 @@ class TrafficManager():
             self._UAV_id_counter += 1
             position = (random.uniform(self._x_range[0], self._x_range[1]), random.uniform(self._y_range[0], self._y_range[1]), random.uniform(self._UAV_z_range[0], self._UAV_z_range[1]))
             self._UAV_infos[UAV_id] = {"position": position}
+            row = int((position[1] - self._y_range[0]) / self._grid_width)
+            col = int((position[0] - self._x_range[0]) / self._grid_width)
+            if row >= 0 and row < self._map_by_grid.shape[0] and col >= 0 and col < self._map_by_grid.shape[1]:
+                self._map_by_grid[row, col].append(UAV_id)
 
     def _initialize_edges_and_lanes(self):
         """Initialize the edges information.
@@ -188,12 +218,13 @@ class TrafficManager():
         """
         to_generate_vehicles = int(np.random.poisson(self._arrival_lambda*self._traffic_interval))
         current_n_vehicles = self._traci_connection.vehicle.getIDCount()
-        to_generate_vehicles = max(min(to_generate_vehicles, self._max_n_vehicles - current_n_vehicles), 0)
-        for _ in range(to_generate_vehicles):
-            vehicle_id = "vehicle_" + str(self._vehicle_id_counter)
-            self._vehicle_id_counter += 1
-            route_id = self._generateRandomRoute()
-            self._traci_connection.vehicle.add(vehicle_id, route_id)
+        to_generate_vehicles = min(to_generate_vehicles, self._max_n_vehicles - current_n_vehicles)
+        if to_generate_vehicles > 0:
+            for _ in range(to_generate_vehicles):
+                vehicle_id = "vehicle_" + str(self._vehicle_id_counter)
+                self._vehicle_id_counter += 1
+                route_id = self._generateRandomRoute()
+                self._traci_connection.vehicle.add(vehicle_id, route_id)
         self._traci_connection.simulationStep()
         vehicle_ids = self._traci_connection.vehicle.getIDList()
         self._vehicle_infos = {}
@@ -205,6 +236,7 @@ class TrafficManager():
             angle = self._traci_connection.vehicle.getAngle(vehicle_id)
             position3d = (position[0], position[1], 0)
             self._vehicle_infos[vehicle_id] = {"position": position3d, "speed": speed, "acceleration": acceleration, "angle": angle, "routeId": route_id, 'id': vehicle_id}
+
         for UAV_id in self._UAV_infos:
             org_position = self._UAV_infos[UAV_id]["position"]
             speed = self._UAV_infos[UAV_id].get("speed", 0)
@@ -218,6 +250,28 @@ class TrafficManager():
             self._UAV_infos[UAV_id]["position"] = new_position
             self._UAV_infos[UAV_id] = {"position": new_position, "speed": speed, "last_speed": speed, "angle": angle, "phi": phi, "acceleration": acceleration}
         self._update_route_ids()
+        self._update_map_by_grid()
+
+    def _update_map_by_grid(self):
+        self._map_by_grid = np.zeros((self._map_by_grid.shape[0], self._map_by_grid.shape[1]), dtype=np.object)
+        for vehicle_id, vehicle_info in self._vehicle_infos.items():
+            position = vehicle_info["position"]
+            row = int((position[1] - self._y_range[0]) / self._grid_width)
+            col = int((position[0] - self._x_range[0]) / self._grid_width)
+            if row >= 0 and row < self._map_by_grid.shape[0] and col >= 0 and col < self._map_by_grid.shape[1]:
+                self._map_by_grid[row, col].append(vehicle_id)
+        for UAV_id, UAV_info in self._UAV_infos.items():
+            position = UAV_info["position"]
+            row = int((position[1] - self._y_range[0]) / self._grid_width)
+            col = int((position[0] - self._x_range[0]) / self._grid_width)
+            if row >= 0 and row < self._map_by_grid.shape[0] and col >= 0 and col < self._map_by_grid.shape[1]:
+                self._map_by_grid[row, col].append(UAV_id)
+        for RSU_id, RSU_info in self._RSU_infos.items():
+            position = RSU_info["position"]
+            row = int((position[1] - self._y_range[0]) / self._grid_width)
+            col = int((position[0] - self._x_range[0]) / self._grid_width)
+            if row >= 0 and row < self._map_by_grid.shape[0] and col >= 0 and col < self._map_by_grid.shape[1]:
+                self._map_by_grid[row, col].append(RSU_id)
 
     def getVehicleTrafficInfos(self):
         """Get the vehicle traffics at the given simulation time.

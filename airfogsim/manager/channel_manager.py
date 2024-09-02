@@ -223,28 +223,29 @@ class ChannelManager:
         Args:
             transmitter_idx (int): The index of the transmitter corresponding to its type.
             receiver_idx (int): The index of the receiver corresponding to its type.
-            channel_type (str): The channel type.
+            channel_type (str): The channel type. The channel type can be 'V2V', 'V2I', 'V2U', 'U2U', 'U2V', 'U2I', 'I2U', 'I2V', 'I2I'.
 
         Returns:
             np.ndarray: The rate of the channel in each RB.
         """
-        if channel_type == 'V2V':
+        channel_type = channel_type.lower()
+        if channel_type == 'v2v':
             return self.V2V_Rate[transmitter_idx, receiver_idx, :]
-        elif channel_type == 'V2I':
+        elif channel_type == 'v2i':
             return self.V2I_Rate[transmitter_idx, receiver_idx, :]
-        elif channel_type == 'V2U':
+        elif channel_type == 'v2u':
             return self.V2U_Rate[transmitter_idx, receiver_idx, :]
-        elif channel_type == 'U2U':
+        elif channel_type == 'u2u':
             return self.U2U_Rate[transmitter_idx, receiver_idx, :]
-        elif channel_type == 'U2V':
+        elif channel_type == 'u2v':
             return self.U2V_Rate[transmitter_idx, receiver_idx, :]
-        elif channel_type == 'U2I':
+        elif channel_type == 'u2i':
             return self.U2I_Rate[transmitter_idx, receiver_idx, :]
-        elif channel_type == 'I2U':
+        elif channel_type == 'i2u':
             return self.I2U_Rate[transmitter_idx, receiver_idx, :]
-        elif channel_type == 'I2V':
+        elif channel_type == 'i2v':
             return self.I2V_Rate[transmitter_idx, receiver_idx, :]
-        elif channel_type == 'I2I':
+        elif channel_type == 'i2i':
             return self.I2I_Rate[transmitter_idx, receiver_idx, :]
         
     def computeRate(self, activated_task_dict):

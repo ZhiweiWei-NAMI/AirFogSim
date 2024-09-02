@@ -253,16 +253,49 @@ class EntityScheduler(BaseScheduler):
         return all_ids, type_list
     
     @staticmethod
-    def getAllNodeInfos(env: AirFogSimEnv):
-        """Get all node infos.
+    def getNodeInfoByIndexAndType(env: AirFogSimEnv, idx: int, type: str):
+        """Get the node by the index and type.
 
         Args:
             env (AirFogSimEnv): The environment.
+            idx (int): The index.
+            type (str): The type, ['vehicle' or 'v', 'uav' or 'u', 'rsu' or 'r', 'cloud_server' or 'c']
+
+        Returns:
+            dict: The node info.
+        """
+        type = type.lower()
+        if type in ['vehicle', 'v']:
+            node = env.vehicles[env.vehicle_ids_as_index[idx]]
+        elif type in ['uav', 'u']:
+            node = env.UAVs[env.uav_ids_as_index[idx]]
+        elif type in ['rsu', 'r']:
+            node = env.RSUs[env.rsu_ids_as_index[idx]]
+        elif type in ['cloud_server', 'c']:
+            node = env.cloudServers[env.cloud_server_ids_as_index[idx]]
+        return node.to_dict()
+    
+    @staticmethod
+    def getAllNodeInfos(env: AirFogSimEnv, type_list = ['vehicle', 'uav', 'rsu', 'cloud_server']):
+        """Get all node infos. type_list = ['vehicle', 'uav', 'rsu', 'cloud_server']
+
+        Args:
+            env (AirFogSimEnv): The environment.
+            type_list (list): The list of the required types.
 
         Returns:
             list: The list of the node infos.
         """
-        all_nodes = list(env.vehicles.values()) + list(env.UAVs.values()) + list(env.RSUs.values()) + list(env.cloudServers.values())
+        all_nodes = []
+        for required_type in type_list:
+            if required_type == 'vehicle':
+                all_nodes += list(env.vehicles.values())
+            elif required_type == 'uav':
+                all_nodes += list(env.UAVs.values())
+            elif required_type == 'rsu':
+                all_nodes += list(env.RSUs.values())
+            elif required_type == 'cloud_server':
+                all_nodes += list(env.cloudServers.values())
         all_node_infos = []
         for node in all_nodes:
             all_node_infos.append(node.to_dict())
