@@ -48,13 +48,16 @@ class TkinterLayout(tk.Tk, BaseLayout):
         self.canvas.bind("<MouseWheel>", self.zoom)
         self.canvas.bind('<ButtonPress-1>', self.drag_start)
         self.canvas.bind('<B1-Motion>', self.drag_move)
-        self.trans_activate_button = tk.Button(self, text="Active Transmission Links", command=self.trans_activation)
+        self.buttons_frame = tk.Frame(self)
+        self.trans_activate_button = tk.Button(self.buttons_frame, text="Activate Transmission Links", command=self.trans_activation)
         self.trans_activate_button.pack(side=tk.LEFT)
-        self.map_grid_activate_button = tk.Button(self, text="Active Map Grid", command=self.create_map_grid_window)
+        self.map_grid_activate_button = tk.Button(self.buttons_frame, text="Activate Map Grid", command=self.create_map_grid_window)
         self.map_grid_activate_button.pack(side=tk.LEFT)
+        self.buttons_frame.pack(side=tk.BOTTOM)
         self.isTransActivated = False
         self.isShowMapGrid = False
         self.map_grid_window = None
+        self.map_grid_figure = None
         self.canvas.pack()
         
         # -------------draw the map----------------
@@ -70,14 +73,16 @@ class TkinterLayout(tk.Tk, BaseLayout):
     def create_map_grid_window(self):
         self.isShowMapGrid = not self.isShowMapGrid
         if self.isShowMapGrid:
-            self.map_grid_activate_button.config(text="Deactive Map Grid")
+            self.map_grid_activate_button.config(text="Deactivate Map Grid")
             if self.map_grid_window is None or not self.map_grid_window.winfo_exists():
-                self.map_grid_window = tk.Toplevel(tk.Tk())
+                self.map_grid_window = tk.Toplevel(self)
                 self.map_grid_window.title("Map Grid")
-                # before map_grid window distroyed, the map_grid_activate_button should be set to "Deactive Map Grid"
+                # before map_grid window distroyed, the map_grid_activate_button should be set to "Deactivate Map Grid"
                 self.map_grid_window.protocol("WM_DELETE_WINDOW", self.create_map_grid_window)
         else:
-            self.map_grid_activate_button.config(text="Active Map Grid")
+            self.map_grid_activate_button.config(text="Activate Map Grid")
+            # remove ax attribute to reinitialize the figure
+            del self.ax
             if self.map_grid_window is not None and self.map_grid_window.winfo_exists():
                 self.map_grid_window.destroy()
 
@@ -107,21 +112,27 @@ class TkinterLayout(tk.Tk, BaseLayout):
         n_col = veh_id_grid_map.shape[1]
         veh_number_grid_map = np.vectorize(len)(veh_id_grid_map)
         # heatmap
-        fig = Figure(figsize=(5, 5), dpi=100)
-        ax = fig.add_subplot(111)
-        cax = ax.matshow(veh_number_grid_map, cmap='hot')
-        fig.colorbar(cax)
-        x_range = np.arange(n_col*self._env.traffic_manager.grid_width, step=self._env.traffic_manager.grid_width)
-        y_range = np.arange(n_row*self._env.traffic_manager.grid_width, step=self._env.traffic_manager.grid_width)
-        ax.set_xticks(x_range)
-        ax.set_yticks(y_range)
-        ax.set_xticklabels(x_range)
-        ax.set_yticklabels(y_range)
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        canvas = FigureCanvasTkAgg(fig, master=self.map_grid_window)
-        canvas.draw()
-        canvas.get_tk_widget().pack()
+        if not hasattr(self, 'ax'):
+            self.fig = Figure(figsize=(5, 5), dpi=100)
+            self.ax = self.fig.add_subplot(111)
+            self.map_grid_figure = FigureCanvasTkAgg(self.fig, master=self.map_grid_window)
+            self.map_grid_figure.get_tk_widget().pack()
+        else:
+            self.ax.cla()
+            self.colorbar.remove()
+        cax = self.ax.matshow(veh_number_grid_map, cmap='hot')
+        self.colorbar = self.fig.colorbar(cax)
+        x_range = np.arange(n_col, step=5)
+        y_range = np.arange(n_row, step=5)
+        x_label = np.arange(n_col*self._env.traffic_manager.grid_width, step=5*self._env.traffic_manager.grid_width)
+        y_label = np.arange(n_row*self._env.traffic_manager.grid_width, step=5*self._env.traffic_manager.grid_width)
+        self.ax.set_xticks(x_range)
+        self.ax.set_yticks(y_range)
+        self.ax.set_xticklabels(x_label)
+        self.ax.set_yticklabels(y_label)
+        self.ax.set_xlabel('X')
+        self.ax.set_ylabel('Y')
+        self.map_grid_figure.draw()
 
     def draw_links(self):
         self.clear_links()
@@ -130,15 +141,12 @@ class TkinterLayout(tk.Tk, BaseLayout):
         type_str = ['v2v', 'v2i', 'v2u', 'u2u', 'u2i', 'u2v', 'i2v', 'i2u', 'i2i']
         for idx, links in enumerate(all_links):
             # v2v_link: [n_Veh, n_Veh, n_RB] -> [n_Veh, n_Veh], if any of the last dimension is not 0, then it is a valid link
-            tmp_links = links
-            all_links[idx] = np.zeros((tmp_links.shape[0], tmp_links.shape[1]), dtype='bool')
-            all_links[idx] = np.any(tmp_links, axis=-1)
-            links = all_links[idx]
+            links = np.any(links, axis=-1)
             tx_type, rx_type = type_str[idx].split('2')
             for tx_idx, rx_idx in zip(*np.where(links)):
                 tx_info = EntityScheduler.getNodeInfoByIndexAndType(self._env, tx_idx, tx_type)
                 rx_info = EntityScheduler.getNodeInfoByIndexAndType(self._env, rx_idx, rx_type)
-                rate = self._env.channel_manager.getRateByChannelType(tx_idx, rx_idx, type_str[idx])
+                rate = np.sum(self._env.channel_manager.getRateByChannelType(tx_idx, rx_idx, type_str[idx]))
                 tx_pos = self._get_position_by_id(tx_info['id'])
                 rx_pos = self._get_position_by_id(rx_info['id'])
                 if tx_pos is None or rx_pos is None:
@@ -218,9 +226,9 @@ class TkinterLayout(tk.Tk, BaseLayout):
         self.isTransActivated = not self.isTransActivated
         if not self.isTransActivated:
             self.clear_links()
-            self.trans_activate_button.config(text="Active Transmission Links")
+            self.trans_activate_button.config(text="Activate Transmission Links")
         else:
-            self.trans_activate_button.config(text="Deactive Transmission Links")
+            self.trans_activate_button.config(text="Deactivate Transmission Links")
     # 拖拽开始函数
     def drag_start(self, event):
         self.canvas.scan_mark(event.x, event.y)
