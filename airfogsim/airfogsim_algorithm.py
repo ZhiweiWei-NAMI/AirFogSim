@@ -35,6 +35,32 @@ class BaseAlgorithmModule:
         self.scheduleOffloading(env)
         self.scheduleCommunication(env)
         self.scheduleComputing(env)
+        self.scheduleMission(env)
+
+    def scheduleMission(self, env:AirFogSimEnv):
+        """The mission scheduling logic. Should be implemented by the subclass. Default is random.
+        
+        Args:
+            env (AirFogSimEnv): The environment object.
+        """
+        # 1. generate mission (according to Poisson)
+        missionScheduler = AirFogSimScheduler.getMissionScheduler()
+        mission_profiles = [{
+            'id':'Mission-1',
+            'position': (100,230),
+            'duration': 100,
+            'task_profiles': [{
+                'id':'Task-1',
+                'task_type':'classification',
+                'task_node_id':'Node-1',
+                'task_deadline': 100,
+                'task_data_size': 100,
+                'task_computation': 100,
+                'task_offloading': 100
+            }]
+            } for _ in range(3)]
+        for mission_profile in mission_profiles:
+            missionScheduler.generateMission(env, mission_profile)
         
     def scheduleOffloading(self, env:AirFogSimEnv):
         """The offloading scheduling logic. Should be implemented by the subclass. Default is to offload the task to the nearest node.

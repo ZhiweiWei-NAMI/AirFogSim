@@ -276,6 +276,9 @@ class TkinterLayout(tk.Tk, BaseLayout):
         draw = ImageDraw.Draw(map_image)
         for road_segment in map_data:
             (x1, y1), (x2, y2) = road_segment
+            # 判断x1, y1, x2, y2是否在 location_bound 中
+            if x1 < self.location_bound[0] or x1 > self.location_bound[2] or y1 < self.location_bound[1] or y1 > self.location_bound[3] or x2 < self.location_bound[0] or x2 > self.location_bound[2] or y2 < self.location_bound[1] or y2 > self.location_bound[3]:
+                continue
 
             # 先在 location_bound 进行归一化, 然后乘以 canvas_width, canvas_height，最后乘以 scale_factor
             x1, y1 = self.position_to_pixel(x1, y1, inverse=True)

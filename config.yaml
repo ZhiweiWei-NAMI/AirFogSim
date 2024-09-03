@@ -8,9 +8,12 @@ simulation:
   
 
 sumo:
-  sumo_config: "./sumo_berlin/map.sumocfg"
-  sumo_osm: "./sumo_berlin/map.osm"
-  sumo_net: "./sumo_berlin/map.net.xml"
+  # sumo_config: "./sumo_berlin/map.sumocfg"
+  # sumo_osm: "./sumo_berlin/map.osm"
+  # sumo_net: "./sumo_berlin/map.net.xml"
+  sumo_config: "./sumo_wujiaochang/osm.sumocfg"
+  sumo_osm: "./sumo_wujiaochang/osm_bbox.osm.xml"
+  sumo_net: "./sumo_wujiaochang/osm.net.xml"
   sumo_port: 8813
 
 visualization:
