@@ -51,7 +51,7 @@ class BaseAlgorithmModule:
             task_node_id = task_dict['task_node_id']
             task_id = task_dict['task_id']
             task_node = all_node_infos_dict[task_node_id]
-            neighbor_infos = self.entityScheduler.getNeighborNodeInfosById(env, task_node_id, sorted_by='distance')
+            neighbor_infos = self.entityScheduler.getNeighborNodeInfosById(env, task_node_id, sorted_by='distance', max_num=5)
             nearest_node_id = neighbor_infos[0]['id']
             self.taskScheduler.setTaskOffloading(env, task_node_id, task_id, nearest_node_id)
 

@@ -13,6 +13,7 @@ from .airfogsim_visual import AirFogSimEnvVisualizer
 import traci
 import numpy as np
 import time
+from .utils.tk_utils import parse_location_info
 
 class AirFogSimEnv():
     """AirFogSimEnv is the main class for the airfogsim environment. It provides the simulation of communication, computation, storage, battery, vehicle/UAV trajectory, cloud/cloudlet nodes, AI models for entities, blockchain, authentication, and privacy. It also provides the APIs for the agent to interact with the environment. The agent can be a DRL agent, a rule-based agent, or a human player.
@@ -56,6 +57,11 @@ class AirFogSimEnv():
 
 
         self.traci_connection = self._connectToSUMO(config['sumo'])
+        conv_boundary, _, _, _ = parse_location_info(config['sumo']['sumo_net'])
+        conv_boundary = tuple(map(float, conv_boundary.split(',')))
+        config['traffic']['x_range'] = [conv_boundary[0], conv_boundary[2]]
+        config['traffic']['y_range'] = [conv_boundary[1], conv_boundary[3]]
+        
         self.traffic_manager = TrafficManager(config['traffic'], self.traci_connection) # traffic interval is decided by sumo simulation step
         self._initRSUsAndCloudServers()
         self.task_manager = TaskManager(predictable_seconds=self.traffic_interval) # suppose tasks are generated every traffic interval

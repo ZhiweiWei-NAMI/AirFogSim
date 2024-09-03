@@ -109,7 +109,7 @@ class EntityScheduler(BaseScheduler):
         return node.to_dict()
 
     @staticmethod
-    def getNeighborNodeInfosById(env, node_id: str, sorted_by = 'distance', reverse = False):
+    def getNeighborNodeInfosById(env, node_id: str, sorted_by = 'distance', reverse = False, max_num = 10):
         """Get the neighbor node infos by the node id.
 
         Args:
@@ -123,16 +123,28 @@ class EntityScheduler(BaseScheduler):
         """
         assert sorted_by in ['distance', 'cpu'], "sorted_by should be 'distance' or 'cpu'"
         node = env._getNodeById(node_id)
-        all_nodes = list(env.vehicles.values()) + list(env.UAVs.values()) + list(env.RSUs.values()) + list(env.cloudServers.values())
+        node_ids_map = env.traffic_manager.map_by_grid # numpy array
+        row_idx, col_idx = env.traffic_manager.getIndexesByNodeId(node_id)
+        # bfs from row_idx, col_idx，search for max_num nodes
+        max_bfs_depth = max(node_ids_map.shape[0] - row_idx, node_ids_map.shape[1] - col_idx, row_idx, col_idx)
         neighbor_node_infos = []
         cpu_list = []
         distance_list = []
-        for n in all_nodes:
-            if n.getId() != node_id:
-                neighbor_node_infos.append(n.to_dict())
-                cpu_list.append(n.getFogProfile()['cpu'])
-                distance_list.append(env._getDistanceBetweenNodes(node, n))
-
+        for bfs_depth in range(0, max_bfs_depth):
+            # for each depth, search for indexes where (row_idx, col_idx) is the center, and the distance between them is bfs_depth
+            for i in range(-bfs_depth, bfs_depth + 1):
+                for j in range(-bfs_depth, bfs_depth + 1):
+                    if not (i == -bfs_depth or i == bfs_depth or j == -bfs_depth or j == bfs_depth): continue
+                    if row_idx + i < 0 or row_idx + i >= node_ids_map.shape[0] or col_idx + j < 0 or col_idx + j >= node_ids_map.shape[1]:
+                        continue
+                    for neighbor_node_id in node_ids_map[row_idx + i][col_idx + j]:
+                        if neighbor_node_id == node_id: continue
+                        neighbor_node = env._getNodeById(neighbor_node_id)
+                        neighbor_node_infos.append(neighbor_node.to_dict())
+                        cpu_list.append(neighbor_node.getFogProfile()['cpu'])
+                        distance_list.append(env._getDistanceBetweenNodes(node, neighbor_node))
+            if len(neighbor_node_infos) >= max_num:
+                break
         if sorted_by == 'distance':
             neighbor_node_infos = [x for _, x in sorted(zip(distance_list, neighbor_node_infos), key=lambda pair: pair[0], reverse=reverse)]
         elif sorted_by == 'cpu':

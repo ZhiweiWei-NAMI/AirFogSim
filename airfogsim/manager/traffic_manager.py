@@ -42,6 +42,14 @@ class TrafficManager():
         self._initialize_cloudServers()
         self._initialize_UAVs()
 
+    def getIndexesByNodeId(self, node_id):
+        # row_idx, col_idx = np.where(self._map_by_grid == node_id)
+        for row in range(self._map_by_grid.shape[0]):
+            for col in range(self._map_by_grid.shape[1]):
+                if node_id in self._map_by_grid[row, col]:
+                    return row, col
+        return [], []
+
     @property
     def map_by_grid(self):
         return self._map_by_grid.copy()

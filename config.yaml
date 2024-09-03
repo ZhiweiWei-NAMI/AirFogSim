@@ -1,3 +1,5 @@
+root_dir: '/home/weizhiwei/data/airfogsim_code'
+
 simulation:
   vehicle_count: 100
   max_simulation_time: 3600
@@ -6,18 +8,16 @@ simulation:
   
 
 sumo:
-  sumo_config: "/home/weizhiwei/data/uvfogsim_python/sumo_berlin/map.sumocfg"
-  sumo_osm: "/home/weizhiwei/data/uvfogsim_python/sumo_berlin/map.osm"
-  sumo_net: "/home/weizhiwei/data/uvfogsim_python/sumo_berlin/map.net.xml"
+  sumo_config: "./sumo_berlin/map.sumocfg"
+  sumo_osm: "./sumo_berlin/map.osm"
+  sumo_net: "./sumo_berlin/map.net.xml"
   sumo_port: 8813
 
 visualization:
-  icon_path: "/home/weizhiwei/data/airfogsim_code/icon"
+  icon_path: "./icon"
 
 traffic:
   traffic_mode: "SUMO" # "real" or "SUMO"
-  x_range: [0, 1000] # The range of x coordinates in the simulation area, same as the SUMO map
-  y_range: [0, 1000] # The range of y coordinates in the simulation area, same as the SUMO map
   UAV_z_range: [50, 300] # The range of z coordinates for UAVs
   vehicle_traffic_file: "path/to/vehicle_traffic_file.csv" # Only required if mode is "real". The format should be in accordance with the SUMO vehicle file format
   uav_traffic_file: "path/to/uav_traffic_file.csv" # UAV traffic file
