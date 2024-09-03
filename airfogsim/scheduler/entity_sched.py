@@ -125,6 +125,8 @@ class EntityScheduler(BaseScheduler):
         node = env._getNodeById(node_id)
         node_ids_map = env.traffic_manager.map_by_grid # numpy array
         row_idx, col_idx = env.traffic_manager.getIndexesByNodeId(node_id)
+        if row_idx is None or col_idx is None:
+            return []
         # bfs from row_idx, col_idx，search for max_num nodes
         max_bfs_depth = max(node_ids_map.shape[0] - row_idx, node_ids_map.shape[1] - col_idx, row_idx, col_idx)
         neighbor_node_infos = []

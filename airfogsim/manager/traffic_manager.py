@@ -48,7 +48,7 @@ class TrafficManager():
             for col in range(self._map_by_grid.shape[1]):
                 if node_id in self._map_by_grid[row, col]:
                     return row, col
-        return [], []
+        return None, None
 
     @property
     def map_by_grid(self):

@@ -52,14 +52,6 @@ class V2IChannel:
         distance_3D = np.sqrt(distance_matrix ** 2 + (self.h_bs - self.h_ms) ** 2)
         self.PathLoss = 128.1 + 37.6 * np.log10(distance_3D / 1000)  # 根据3GPP，距离的单位是km
 
-        # self.PathLoss = np.zeros(shape=(len(self.positions), len(self.BS_positions)))
-        # for i in range(len(self.positions)):
-        #     for j in range(len(self.BS_positions)):
-        #         d1 = abs(self.positions[i][0] - self.BS_positions[j][0])
-        #         d2 = abs(self.positions[i][1] - self.BS_positions[j][1])
-        #         distance = math.hypot(d1,d2)+0.001
-        #         self.PathLoss[i][j] = 128.1 + 37.6*np.log10(math.sqrt(distance**2 + (self.h_bs-self.h_ms)**2)/1000) # 根据3GPP，距离的单位是km
-
     def update_shadow(self, delta_distance_list):
         if len(self.Shadow) != len(delta_distance_list):
             # 1 如果过去一个时间片的车辆数量发生了变化
