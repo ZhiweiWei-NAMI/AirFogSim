@@ -4,7 +4,7 @@ Vehicular Fog Computing (VFC) is significantly enhancing the efficiency, safety,
 ![image](https://github.com/ZhiweiWei-NAMI/AirFogSim/assets/153070550/0e28ce03-8eed-40e7-8f9d-a85e067df575)
 
 ## Setup:
-1. Install [SUMO (https://sourceforge.net/projects/sumo/files/sumo/)][SUMO] (tested version is 1.8.0), and set the Environment variable. If enter sumo in command line:
+1. Install [SUMO](https://sourceforge.net/projects/sumo/files/sumo/) (tested version is 1.8.0), and set the Environment variable. If enter sumo in command line:
 `(airfogsim) (base) weizhiwei:~/data/airfogsim_code/$ sumo`
 the result should be:
 ```
@@ -46,3 +46,7 @@ Use Berlin as the map:
 https://github.com/user-attachments/assets/570a2980-77b8-42a1-818d-3a6bc2efa83a
 Use 五角场 in Shanghai as the map:
 https://github.com/user-attachments/assets/f6d1b1ce-dfa7-4bef-b2ad-a0e1ccce91b1
+
+5. For more personalized developing guidance, we attempt to build [AirFogSim Assistant-GPTs](https://chatgpt.com/g/g-uTOZnSsOr-airfogsim-assistant). However, GPT may make mistakes, remember to check the code.
+
+
