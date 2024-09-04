@@ -13,6 +13,14 @@ Subpackages
 Submodules
 ----------
 
+airfogsim.airfogsim\_algorithm module
+-------------------------------------
+
+.. automodule:: airfogsim.airfogsim_algorithm
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 airfogsim.airfogsim\_analyzer module
 ------------------------------------
 
@@ -49,6 +57,22 @@ airfogsim.airfogsim\_wrapper module
 -----------------------------------
 
 .. automodule:: airfogsim.airfogsim_wrapper
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+airfogsim.all\_channels module
+------------------------------
+
+.. automodule:: airfogsim.all_channels
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+airfogsim.enum\_const module
+----------------------------
+
+.. automodule:: airfogsim.enum_const
    :members:
    :undoc-members:
    :show-inheritance:

@@ -4,6 +4,14 @@ airfogsim.entities package
 Submodules
 ----------
 
+airfogsim.entities.block module
+-------------------------------
+
+.. automodule:: airfogsim.entities.block
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 airfogsim.entities.cloud\_server module
 ---------------------------------------
 
@@ -12,10 +20,26 @@ airfogsim.entities.cloud\_server module
    :undoc-members:
    :show-inheritance:
 
+airfogsim.entities.mission module
+---------------------------------
+
+.. automodule:: airfogsim.entities.mission
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 airfogsim.entities.rsu module
 -----------------------------
 
 .. automodule:: airfogsim.entities.rsu
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+airfogsim.entities.task module
+------------------------------
+
+.. automodule:: airfogsim.entities.task
    :members:
    :undoc-members:
    :show-inheritance:
