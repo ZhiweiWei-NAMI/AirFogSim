@@ -5,19 +5,22 @@
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+
+project = 'AirFogSim'
+copyright = '2024, NaMI'
+author = 'NaMI'
+release = '0.1'
 import os
 import sys
-sys.path.insert(0, '/home/weizhiwei/data/airfogsim_code')
-
-project = 'airfogsim-demo'
-copyright = '2024, NaMI-Lab'
-author = 'NaMI-Lab'
-release = '0.1'
+sys.path.insert(0, os.path.abspath('../../airfogsim'))
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ['sphinx.ext.napoleon']
+extensions = [
+    'sphinx.ext.napoleon',
+]
+
 
 templates_path = ['_templates']
 exclude_patterns = []

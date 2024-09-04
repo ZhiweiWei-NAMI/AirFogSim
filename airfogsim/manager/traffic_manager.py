@@ -208,6 +208,18 @@ class TrafficManager():
         for vehicle_id, mobility_pattern in vehicle_mobility_patterns.items():
             self._traci_connection.vehicle.setSpeed(vehicle_id, mobility_pattern["speed"])
 
+    def updateUAVMobilityPatternById(self, UAV_id, mobility_pattern):
+        """Update the UAV mobility pattern by the UAV id.
+
+        Args:
+            UAV_id (str): The UAV id.
+            mobility_pattern (dict): The mobility pattern={angle, phi, speed}
+        """
+        assert UAV_id in self._UAV_infos, "The UAV id should be in the UAV information."
+        self._UAV_infos[UAV_id]["speed"] = mobility_pattern["speed"]
+        self._UAV_infos[UAV_id]["angle"] = mobility_pattern["angle"]
+        self._UAV_infos[UAV_id]["phi"] = mobility_pattern["phi"]
+
     def updateUAVMobilityPatterns(self, UAV_mobility_patterns):
         """Update the UAV mobility patterns.
 
@@ -215,11 +227,7 @@ class TrafficManager():
             UAV_mobility_patterns (dict): The UAV mobility patterns. The key is UAV id, and the value is the mobility pattern={angle, phi, speed}
         """
         for UAV_id, mobility_pattern in UAV_mobility_patterns.items():
-            assert UAV_id in self._UAV_infos, "The UAV id should be in the UAV information."
-            # UAV is controlled by the python
-            self._UAV_infos[UAV_id]["speed"] = mobility_pattern["speed"]
-            self._UAV_infos[UAV_id]["angle"] = mobility_pattern["angle"]
-            self._UAV_infos[UAV_id]["phi"] = mobility_pattern["phi"]
+            self.updateUAVMobilityPatternById(UAV_id, mobility_pattern)
 
     def stepSimulation(self):
         """Step the simulation for one step. Generate vehicles according to Poisson distribution, limit the number of vehicles, and update the route ids.

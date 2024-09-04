@@ -152,3 +152,16 @@ class EntityScheduler(BaseScheduler):
         elif sorted_by == 'cpu':
             neighbor_node_infos = [x for _, x in sorted(zip(cpu_list, neighbor_node_infos), key=lambda pair: pair[0], reverse=reverse)]
         return neighbor_node_infos
+
+    @staticmethod
+    def setUAVSpeedAndDirectionByNodeId(env, node_id: str, speed: float, angle: float, phi: float):
+        """Set the UAV speed and direction by the node id.
+
+        Args:
+            env (AirFogSimEnv): The environment.
+            node_id (str): The node id. 
+            speed (float): The speed.
+            angle (float): The angle (angle in 2D plane).
+            phi (float): The phi (angle in 3D plane).
+        """
+        env.traffic_manager.updateUAVMobilityPatternById(node_id, {'speed': speed, 'angle': angle, 'phi': phi})

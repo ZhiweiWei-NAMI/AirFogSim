@@ -5,7 +5,8 @@ import sys
 
 def load_config(path):
     with open(path, 'r') as file:
-        return yaml.safe_load(file)
+        config = yaml.safe_load(file)
+        return config
     
 
 # 1. Load the configuration file
@@ -13,8 +14,8 @@ config_path = sys.argv[1] if len(sys.argv) > 1 else 'config.yaml'
 config = load_config(config_path)
 
 # 2. Create the environment
-env = AirFogSimEnv(config, interactive_mode='graphic')
-# env = AirFogSimEnv(config, interactive_mode=None)
+# env = AirFogSimEnv(config, interactive_mode='graphic')
+env = AirFogSimEnv(config, interactive_mode=None)
 
 # 3. Get algorithm module
 algorithm_module = BaseAlgorithmModule()
