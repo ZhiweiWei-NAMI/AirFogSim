@@ -1,12 +1,15 @@
-# AirFogSim: A Light-Weight and Modular Simulator for UAV-Integrated Vehicular Fog Computing
+# Paper: AirFogSim: A Light-Weight and Modular Simulator for UAV-Integrated Vehicular Fog Computing
 ## Abstract:
 Vehicular Fog Computing (VFC) is significantly enhancing the efficiency, safety, and computational capabilities of Intelligent Transportation Systems (ITS), and the integration of Unmanned Aerial Vehicles (UAVs) further elevates these advantages by incorporating flexible and auxiliary services. This evolving UAV-integrated VFC paradigm opens new doors while presenting unique complexities within the cooperative computation framework. Foremost among the challenges, modeling the intricate dynamics of aerial-ground interactive computing networks is a significant endeavor, and the absence of a comprehensive and flexible simulation platform may impede the exploration of this field. Inspired by the pressing need for a versatile tool, this paper provides a lightweight and modular aerial-ground collaborative simulation platform, termed AirFogSim. We present the design and implementation of AirFogSim, and demonstrate its versatility with five key missions in the domain of UAV-integrated VFC. A multifaceted use case is carried out to validate AirFogSim’s effectiveness, encompassing several integral aspects of the proposed AirFogSim, including UAV trajectory, task offloading, resource allocation, and blockchain. In general, AirFogSim is envisioned to set a new precedent in the UAV-integrated VFC simulation, bridge the gap between theoretical design and practical validation, and pave the way for future intelligent transportation domains. 
+
 ![image](https://github.com/ZhiweiWei-NAMI/AirFogSim/assets/153070550/0e28ce03-8eed-40e7-8f9d-a85e067df575)
 
 ## Setup:
-1. Install [SUMO](https://sourceforge.net/projects/sumo/files/sumo/) (tested version is 1.8.0), and set the Environment variable. If enter sumo in command line:
-`(airfogsim) (base) weizhiwei:~/data/airfogsim_code/$ sumo`
-the result should be:
+1. Install [SUMO](https://sourceforge.net/projects/sumo/files/sumo/) (tested version is 1.8.0), and set the Environment variable. Once suceed, enter `sumo` in command line as:
+```
+(airfogsim) (base) weizhiwei:~/data/airfogsim_code/$ sumo
+```
+there should be:
 ```
 Eclipse SUMO sumo Version 1.8.0
  Build features: Windows-6.3.9600 AMD64 MSVC 18.0.40629.0 Release Proj GUI SWIG
