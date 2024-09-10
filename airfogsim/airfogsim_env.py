@@ -397,10 +397,12 @@ class AirFogSimEnv():
     def _updateBlockchain(self):
         """Update the blockchain for the entities.
         """
+        # 现在的问题是区块链不会因为transaction的数目而增加区块，transaction没有被成功记录到rsu上
+        # 添加新的输出指标
         self.payAndPunish(self.revenue_and_punishment_for_tasks)
         self.blockchain_manager.generateToMineBlocks(self.simulation_time)
         miner_and_revenues = self.blockchain_manager.chooseMiner()
-        self.blockchain_manager.Mining(miner_and_revenues, self.simulation_interval, self.simulation_time)
+        self.blockchain_manager.Mining(miner_and_revenues, self.simulation_interval, self.simulation_time)  
     
     def payAndPunish(self, revenue_and_punishment_for_tasks):
         """
@@ -413,7 +415,8 @@ class AirFogSimEnv():
             node_id = info_dict['node_id']
             amount = info_dict['amount']
             node = self._getNodeById(node_id)
-            node.setRevenue(amount)
+            if node is not None:
+                node.setRevenue(amount)
             self.blockchain_manager.addTransaction(f"({node_id}, {task_id}, {amount})")
 
     def getVehicleIds(self):
