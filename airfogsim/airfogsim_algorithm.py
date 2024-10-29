@@ -13,7 +13,9 @@ class BaseAlgorithmModule:
         self.rewardScheduler = AirFogSimScheduler.getRewardScheduler()
         self.taskScheduler = AirFogSimScheduler.getTaskScheduler()
         self.blockchainScheduler = AirFogSimScheduler.getBlockchainScheduler()
-        # self.missionScheduler = AirFogSimScheduler.getMissionScheduler()
+        self.missionScheduler = AirFogSimScheduler.getMissionScheduler()
+        self.sensorScheduler=AirFogSimScheduler.getSensorScheduler()
+        self.trafficScheduler=AirFogSimScheduler.getTrafficScheduler()
 
 
     def initialize(self, env:AirFogSimEnv):
@@ -23,8 +25,9 @@ class BaseAlgorithmModule:
             env (AirFogSimEnv): The environment object.
         """
         self.taskScheduler.setTaskGenerationModel(env, 'Poisson')
-        self.taskScheduler.setTaskNodePossibility(env, node_types=['vehicle'], max_num=30, threshold_poss=0.5)
-        self.rewardScheduler.setRewardModel(env, 'log(1+(task_deadline-task_delay))')
+        self.taskScheduler.setTaskNodePossibility(env, node_types=['vehicle','UAV'], max_num=30, threshold_poss=0.5)
+        # self.rewardScheduler.setRewardModel(env, 'log(1+(task_deadline-task_delay))')
+        self.rewardScheduler.setRewardModel(env, '"5 * log(10, 1 + _mission_deadline) * (1 / (1 + exp(-_mission_deadline / (_mission_finish_time - _mission_start_time))) - 1 / (1 + exp(-1)))"')
 
     def scheduleStep(self, env:AirFogSimEnv):
         """The algorithm logic. Should be implemented by the subclass.
@@ -38,14 +41,40 @@ class BaseAlgorithmModule:
         self.scheduleMission(env)
 
     def scheduleMission(self, env:AirFogSimEnv):
-        """The mission scheduling logic. Should be implemented by the subclass. Default is random.
+        """The mission scheduling logic. Should be implemented by the subclass. Default is selecting the idle sensor with highest accuracy.
         
         Args:
             env (AirFogSimEnv): The environment object.
 
-        @TODO: Implement the mission scheduling logic.
         """
-        pass
+        new_missions_profile=self.missionScheduler.getToBeAssignedMissionsProfile(env)
+        delete_missions_profile=[]
+        for mission_profile in new_missions_profile:
+            mission_sensor_type=mission_profile['mission_sensor_type']
+            mission_accuracy=mission_profile['mission_accuracy']
+            appointed_node_id,appointed_sensor_id,appointed_sensor_accuracy=self.sensorScheduler.getAppointedSensor(env,mission_sensor_type,mission_accuracy)
+
+            if appointed_node_id!=None and appointed_sensor_id!=None:
+                mission_profile['appointed_node_id'] = appointed_node_id
+                mission_profile['appointed_sensor_id'] = appointed_sensor_id
+                mission_profile['appointed_sensor_accuracy'] = appointed_sensor_accuracy
+                mission_profile['mission_start_time'] = self.trafficScheduler.getCurrentTime(env)
+                for _ in mission_profile['mission_routes']:
+                    task_set=[]
+                    mission_task_profile={
+                        'task_node_id':appointed_node_id,
+                        'task_deadline':mission_profile['mission_deadline'],
+                        'arrival_time':mission_profile['mission_arrival_time']
+                    }
+                    new_task=self.taskScheduler.generateTaskOfMission(env,mission_task_profile)
+                    task_set.append(new_task)
+                    mission_profile['mission_task_sets'].append(task_set)
+                self.missionScheduler.generateAndAddMission(env,mission_profile)
+
+                delete_missions_profile.append(mission_profile)
+        self.missionScheduler.deleteBeAssignedMissionsProfile(delete_missions_profile)
+
+
         # 1. generate mission (according to Poisson)
         # missionScheduler = AirFogSimScheduler.getMissionScheduler()
         # mission_profiles = [{
@@ -110,7 +139,7 @@ class BaseAlgorithmModule:
             assigned_node_info = self.entityScheduler.getNodeInfoById(env, assigned_node_id)
             self.compScheduler.setComputingWithNodeCPU(env, task_id, 0.3) # allocate cpu 0.3
 
-    def getReward(self, env:AirFogSimEnv):
+    def getRewardByTask(self, env:AirFogSimEnv):
         """The reward calculation logic. Should be implemented by the subclass. Default is calculating reward of done tasks in last time.
         
         Args:
@@ -123,4 +152,19 @@ class BaseAlgorithmModule:
         reward = 0
         for task_info in last_step_succ_task_infos:
             reward += self.rewardScheduler.getRewardByTask(env, task_info)
+        return reward
+
+    def getRewardByMission(self, env: AirFogSimEnv):
+        """The reward calculation logic. Should be implemented by the subclass. Default is calculating reward of done missions in last time.
+
+        Args:
+            env (AirFogSimEnv): The environment object.
+
+        Returns:
+            float: The reward value.
+        """
+        last_step_succ_task_infos = self.missionScheduler.getLastStepSuccMissionInfos(env)
+        reward = 0
+        for mission_info in last_step_succ_task_infos:
+            reward += self.rewardScheduler.getRewardByMission(env, mission_info)
         return reward

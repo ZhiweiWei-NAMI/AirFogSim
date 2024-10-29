@@ -1,5 +1,8 @@
 from .scheduler import *
 import inspect
+
+
+
 class AirFogSimScheduler:
     """The scheduler for AirFogSimEnv. It provides communication, computation, task generation, blockchain scheduler. Agent interacts with this class to get the state, reward, and done signal.
     """
@@ -88,3 +91,30 @@ class AirFogSimScheduler:
             EntityScheduler: The entity scheduler.
         """
         return EntityScheduler()
+
+    @staticmethod
+    def getMissionScheduler():
+        """Get the misssion scheduler for the environment. It schedules the mission for the task nodes.
+
+        Returns:
+            MissionScheduler: The mission scheduler.
+        """
+        return MissionScheduler()
+
+    @staticmethod
+    def getSensorScheduler():
+        """Get the sensor scheduler for the environment. It schedules the sensors for the task nodes and missions.
+
+        Returns:
+            SensorScheduler: The sensor scheduler.
+        """
+        return SensorScheduler()
+
+    @staticmethod
+    def getTrafficScheduler():
+        """Get the traffic scheduler for the environment.
+
+        Returns:
+            TrafficScheduler: The traffic scheduler.
+        """
+        return TrafficScheduler()

@@ -398,7 +398,13 @@ class TaskManager:
     def _generateTaskInfo(self, task_node_id, arrival_time):
         self._task_id += 1
         return Task(task_id = f'Task_{self._task_id}', task_node_id = task_node_id, task_cpu = self._generateCPU(), task_size = self._generateSize(), task_deadline = self._generateDeadline(), task_priority = self._generatePriority(), task_arrival_time = arrival_time)
-    
+
+    def generateTaskInfoOfMission(self,task_node_id,task_deadline,arrival_time):
+        self._task_id += 1
+        return Task(task_id=f'Task_{self._task_id}', task_node_id=task_node_id, task_cpu=self._generateCPU(),
+                    task_size=self._generateSize(), task_deadline=task_deadline,
+                    task_priority=self._generatePriority(), task_arrival_time=arrival_time)
+
     def _generateTasks(self, task_node_ids_kwardsDict, cur_time, simulation_interval):
         # 1. Move the tasks from the to_generate_task_infos to the todo_tasks according to the current time
         for task_node_id, task_infos in self._to_generate_task_infos.items():
@@ -475,10 +481,10 @@ class TaskManager:
             task_manager.generateAndCheckTasks(['vehicle1', 'vehicle2'], 10.3, 1.5)
         """
         todo_task_number = self._generateTasks(task_node_ids_kwardsDict, cur_time, simulation_interval)
-        self._checkTasks(cur_time)
+        self.checkTasks(cur_time)
         return todo_task_number
 
-    def _checkTasks(self, cur_time):
+    def checkTasks(self, cur_time):
         # 1. Check the todo tasks
         for task_node_id, task_infos in self._to_offload_tasks.items():
             for task_info in task_infos.copy():

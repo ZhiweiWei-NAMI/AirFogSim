@@ -2,6 +2,7 @@ from .manager.traffic_manager import TrafficManager
 from .manager.task_manager import TaskManager
 from .manager.channel_manager import ChannelManager
 from .manager.block_manager import BlockchainManager
+from .manager.sensor_manager import SensorManager
 from .entities.vehicle import Vehicle
 from .entities.rsu import RSU
 from .entities.uav import UAV
@@ -53,6 +54,16 @@ class AirFogSimEnv():
         self.simulation_interval = config['simulation']['simulation_interval'] # TTI
         self.traffic_interval = config['simulation']['traffic_interval']
 
+        self.config_sensing={}
+        self.config_sensing['sensors_per_node']=config['sensing_profile']['sensors_per_node']
+        self.config_sensing['node_type']=config['sensing_profile']['node_type']
+        self.config_sensing['sensor_type_num']=config['sensing_profile']['sensor_type_num']
+
+        self.config_mission={}
+        self.config_mission['duration_range']=config['mission_profile']['duration_range']
+        self.config_mission['sensor_accuracy_range'] = config['mission_profile']['sensor_accuracy_range']
+
+
         assert self.traffic_interval >= self.simulation_interval, "The traffic interval should be greater than or equal to the simulation interval!"
 
 
@@ -66,7 +77,8 @@ class AirFogSimEnv():
         self._initRSUsAndCloudServers()
         self.task_manager = TaskManager(predictable_seconds=self.traffic_interval) # suppose tasks are generated every traffic interval
         self.channel_manager = ChannelManager(n_RSU=self.traffic_manager.getNumberOfRSUs(), n_UAV=self.traffic_manager.getNumberOfUAVs(), n_Veh=self.traffic_manager.getNumberOfVehicles(), RSU_positions=self.traffic_manager.getRSUPositions(), simulation_interval=self.simulation_interval)
-        self.mission_manager = MissionManager()
+        self.mission_manager = MissionManager(self.config_mission)
+        self.sensor_manager=SensorManager(self.config_sensing,self.traffic_manager)
         self.blockchain_manager = BlockchainManager(self.RSUs)
         
         self.max_task_node_num = 0
@@ -80,7 +92,7 @@ class AirFogSimEnv():
         # ----------------decisions, managed by schedulers----------------
         self.vehicle_mobility_patterns = {} # dict, key是vehicle_id, value是mobility pattern={speed}
         self.uav_mobility_patterns = {} # dict, key是uav_id, value是mobility pattern={angle, phi, speed}
-        self.new_missions_for_nodes = {} # dict, key是node_id, value是mission
+        self.new_missions = [] # missions list
         self.activated_offloading_tasks_with_RB_Nos = {} # dict, key是task_id, value 是RB的list
         self.compute_tasks_with_cpu = {} # dict, key是task_id, value是对应assigned node分配的cpu
         self.task_node_ids = [] # list, 存储所有的task node id。可以在每个决策时隙更新，即每个车辆在不同的时候可能是fog node或task node。注意，每次生成的任务数量是按照"predictable_seconds"来预先存储的，所以可能t=0.1s时，车辆是task node，t=0.2s时，车辆是fog node，但是此时还有该车辆的任务需要进行卸载或计算。
@@ -153,14 +165,15 @@ class AirFogSimEnv():
             self._updateComputation()
             # 6. Update the storage (cache, memory, etc.)
             self._updateStorage()
-            # 7. Update the task
-            self._updateTask()
-            # 8. Update the battery
-            self._updateBattery()
-            # 9. Update the blockchain
-            self._updateBlockchain()
-            # 10. Update the mission (such as crowd sensing, data collection, etc.) and add new missions for the entities.
+            # 7. Update the mission (such as crowd sensing, data collection, etc.) and add new missions for the entities.
             self._updateMission()
+            # 8. Update the task
+            self._updateTask()
+            # 9. Update the battery
+            self._updateBattery()
+            # 10. Update the blockchain
+            self._updateBlockchain()
+
             # Update the simulation time
             self.simulation_time += self.simulation_interval
         # ensure the simulation time is the same as the traffic time
@@ -171,10 +184,10 @@ class AirFogSimEnv():
         """Update the mission for the entities.
         """
         # check the location duration of each waypoint in the mission; check the task execution at each waypoint; check the mission deadline
-        self.mission_manager.updateMissions(self.simulation_interval, self.simulation_time, self._getNodeById)
-        for node_id, mission in self.new_missions_for_nodes.items():
-            # the task for mission is executed locally instead of being offloaded
-            self.mission_manager.addMission(node_id, mission, self.task_manager, self.simulation_time)
+        self.mission_manager.updateMissions(self.simulation_interval, self.simulation_time, self._getNodeById,self.sensor_manager,self.task_manager)
+        for mission in self.new_missions:
+            self.mission_manager.addMission(mission, self.sensor_manager)
+            self.new_missions.remove(mission)
 
     def _updateAuthPrivacy(self):
         """Update the authentication and privacy for the entities.
@@ -381,11 +394,12 @@ class AirFogSimEnv():
     def _updateTask(self):
         """Update and generate the task for the entities. 
         """
-        task_node_ids_kwardsDict = {}
-        for task_node_ids in self.task_node_ids:
-            task_node_ids_kwardsDict[task_node_ids] = self._getNodeById(task_node_ids).getTaskProfile()
-        # generate task for each task node. It generates the future tasks, and stored in "to_generate_tasks" in the task manager. These tasks are viewed as ``predictable'' tasks.
-        self.task_manager.generateAndCheckTasks(task_node_ids_kwardsDict, self.simulation_time, self.simulation_interval)
+        # task_node_ids_kwardsDict = {}
+        # for task_node_ids in self.task_node_ids:
+        #     task_node_ids_kwardsDict[task_node_ids] = self._getNodeById(task_node_ids).getTaskProfile()
+        # # generate task for each task node. It generates the future tasks, and stored in "to_generate_tasks" in the task manager. These tasks are viewed as ``predictable'' tasks.
+        # self.task_manager.generateAndCheckTasks(task_node_ids_kwardsDict, self.simulation_time, self.simulation_interval)
+        self.task_manager.checkTasks(self.simulation_time)
 
     def _updateBattery(self):
         """Update the battery for the entities.

@@ -3,11 +3,12 @@ import numpy as np
 import yaml
 import sys
 
+
 def load_config(path):
     with open(path, 'r') as file:
         config = yaml.safe_load(file)
         return config
-    
+
 
 # 1. Load the configuration file
 config_path = sys.argv[1] if len(sys.argv) > 1 else 'config.yaml'
@@ -24,7 +25,7 @@ accumulated_reward = 0
 while not env.isDone():
     algorithm_module.scheduleStep(env)
     env.step()
-    accumulated_reward += algorithm_module.getRewardByTask(env)
+    accumulated_reward += algorithm_module.getRewardByMission(env)
     print(f"Simulation time: {env.simulation_time}, ACC_Reward: {accumulated_reward}", end='\r')
     env.render()
 env.close()
