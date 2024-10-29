@@ -46,3 +46,28 @@ fog_profile:
     cpu: 1 # CPU capacity of cloud servers
     memory: 1 # Memory capacity of cloud servers
     storage: 1 # Storage capacity of cloud servers
+
+config_sensing:
+  sensors_per_node: 4 # The maximum number of sensors on a node
+  node_type: ['UAV','vehicle']
+  sensor_type_num: 4
+
+config_mission:
+  UAV_height: 100
+  duration_range: [50,100]
+  task_size_range: [5,10]
+  sensor_accuracy_range: [0,1]
+  predictable_seconds: 5
+  mission_generation_model: "Poisson" # supported model:['Poisson', 'Uniform', 'Normal', 'Exponential']
+  generation_model_args:
+    Poisson:
+      lambda: 1
+    Uniform:
+      low: 0
+      high: 1
+    Normal:
+      mean: 0
+      std: 1
+    Exponential:
+      beta: 1
+

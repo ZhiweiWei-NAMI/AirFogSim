@@ -7,7 +7,8 @@ class RewardScheduler(BaseScheduler):
     """
     REWARD_MODEL = None
     SYMOBOLS = None
-    ACCEPTED_SYMBOLS = ['energy', 'task_ratio', 'task_deadline', 'task_delay']
+    ACCEPTED_SYMBOLS = ['energy', 'task_ratio', 'task_deadline', 'task_delay',
+                        '_mission_duration_sum','_mission_arrival_time','_mission_start_time','_mission_deadline','_mission_finish_time'] # mission_duration is an array
 
     @staticmethod
     def setRewardModel(env, expression):
@@ -62,4 +63,30 @@ class RewardScheduler(BaseScheduler):
         # 替换表达式中的符号为实际的参数值
         subs = {RewardScheduler.SYMOBOLS[env][key]: float(kwargs[key]) for key in RewardScheduler.SYMOBOLS[env]}
         return RewardScheduler.REWARD_MODEL[env].evalf(subs=subs)
-    
+
+    @staticmethod
+    def getRewardByMission(env, mission_info: dict):
+        """Compute the reward of the task.
+
+        Args:
+            env (AirFogSimEnv): The environment.
+            mission_info (dict): The mission information (the dict is output of the 'to_dict' function in mission object).
+        """
+        if RewardScheduler.REWARD_MODEL is None:
+            raise ValueError("Reward model is not set, please set the reward model first.")
+        if RewardScheduler.SYMOBOLS is None:
+            raise ValueError("Symbols are not set, please set the reward model first.")
+        if env not in RewardScheduler.REWARD_MODEL or env not in RewardScheduler.SYMOBOLS:
+            raise ValueError(f"Reward model is not set for {env}, please set the reward model first.")
+        mission = env.mission_manager.getDoneMissionByMissionNodeAndMissionId(mission_info['appointed_node_id'], mission_info['mission_id'])
+        # 调用task.getXXX()获取任务信息
+        kwargs = {key: mission.__getattribute__(key) for key in RewardScheduler.SYMOBOLS[env]}
+
+        # 获取任务信息，需要是还没有
+        if not all(param in kwargs for param in RewardScheduler.SYMOBOLS[env]):
+            missing = list(set(RewardScheduler.SYMOBOLS[env]) - set(kwargs))
+            raise ValueError(f"Missing parameters for reward computation: {missing}")
+
+        # 替换表达式中的符号为实际的参数值
+        subs = {RewardScheduler.SYMOBOLS[env][key]: float(kwargs[key]) for key in RewardScheduler.SYMOBOLS[env]}
+        return RewardScheduler.REWARD_MODEL[env].evalf(subs=subs)

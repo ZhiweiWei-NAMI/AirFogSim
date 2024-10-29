@@ -27,7 +27,7 @@ while not env.isDone():
     for env in envs:
         algorithm_module.scheduleStep(env)
         env.step()
-        accumulated_reward[env.airfogsim_label] += algorithm_module.getReward(env)
+        accumulated_reward[env.airfogsim_label] += algorithm_module.getRewardByTask(env)
     if cnt % 10 == 0:
         print(f"Simulation time: {env.simulation_time}, ACC_Reward: {accumulated_reward}")
 for env in envs:

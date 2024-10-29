@@ -29,7 +29,8 @@ class Task:
         self._assigned_to = None
         self._decided_route = [] # the decided route for offloading
         self._routes = [task_node_id] # arrived node list
-        self._to_offload_route = [] # the route to offload the task. If task is computed, i.e., _compute_size >= _task_cpu, the list denotes the route the returned data should be transmitted.
+        self._to_offload_route = [] # the route to offload the task.
+        self._to_return_route=[] # If task is computed, i.e., _compute_size >= _task_cpu, the list denotes the route the returned data should be transmitted.
         self._decided_offload_time = [] # the decided offload time
         self._routed_time = [task_arrival_time] # the time that the task is routed to the node
         self._start_to_transmit_time = 0
@@ -62,6 +63,9 @@ class Task:
                 task_dict[key] = value
         return task_dict
 
+    def isStarted(self):
+        return self._last_compute_time>0
+
     def startToCompute(self, time):
         """Set the start time to compute the task and set to_offload_route as to_return_route.
 
@@ -76,11 +80,12 @@ class Task:
 
         Args:
             current_time (float): The current time.
+            
         """
         self._start_to_return_time = current_time
         self._last_return_time = current_time
         if self._required_returned_size > 0:
-            self._to_offload_route = [self._task_node_id] # the route to offload the task. If task is computed, i.e., _compute_size >= _task_cpu, the list denotes the route the returned data should be transmitted.
+            self._to_offload_route = self._to_return_route # the route to offload the task. If task is computed, i.e., _compute_size >= _task_cpu, the list denotes the route the returned data should be transmitted.
         else:
             self._to_offload_route = []
 
@@ -134,6 +139,14 @@ class Task:
             farther_mission (Mission): The farther mission.
         """
         self._farther_mission = farther_mission
+
+    def setToReturnRoute(self,to_return_route):
+        """Set the to return route.
+
+        Args:
+            to_return_route (list): The route to return. Each element is the node ID.
+        """
+        self._to_return_route=to_return_route
 
     def wait_to_ddl(self, current_time):
         """Check if the task is out of deadline.

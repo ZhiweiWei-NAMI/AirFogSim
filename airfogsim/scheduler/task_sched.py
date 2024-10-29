@@ -103,7 +103,7 @@ class TaskScheduler(BaseScheduler):
     
     @staticmethod
     def getLastStepSuccTaskInfos(env):
-        """Get the task infos for the environment to offload.
+        """Get the success task infos for last timeslot.
 
         Args:
             env (AirFogSimEnv): The AirFogSim environment.
@@ -118,3 +118,10 @@ class TaskScheduler(BaseScheduler):
             if task.isFinished() and task.getLastOperationTime() >= last_step:
                 task_info_list.append(task.to_dict())
         return task_info_list
+
+    @staticmethod
+    def generateTaskOfMission(env,mission_task_profile):
+        task_node_id=mission_task_profile['task_node_id']
+        task_deadline=mission_task_profile['task_deadline']
+        arrival_time=mission_task_profile['arrival_time']
+        return env.task_manager.generateTaskInfoOfMission(task_node_id,task_deadline,arrival_time)
