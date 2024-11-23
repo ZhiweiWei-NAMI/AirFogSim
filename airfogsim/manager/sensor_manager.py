@@ -1,22 +1,21 @@
 import random
 from ..entities.sensor import Sensor
 
-from traffic_manager import TrafficManager
-
 
 class SensorManager:
     """ Sensor Manager is responsible for generating and deploying sensors and managing the sensor status.
     """
-    NODE_TYPE = ['vehicle', 'UAV', 'RSU']
-    STATE=['idle','busy','all']
+    NODE_TYPE = ['vehicle', 'UAV']
+    STATE = ['idle', 'busy', 'unavailable']
+    ACCURACY_RANGE = [0.5,0.6,0.7,0.8,0.9, 1.00]
 
     def __init__(self, config_sensing, traffic_manager):
         assert set(config_sensing['node_type']).issubset(
             SensorManager.NODE_TYPE), 'The node type is not supported. Only support {}'.format(SensorManager.NODE_TYPE)
-        self._sensors = {} # key: node_id, value: list of sensors
-        self._busy_sensors = {} # key: node_id, value: list of busy sensors
-        self._idle_sensors = {} # key: node_id, value: list of idle sensors
-        self._unavailable_sensors = {} # key: node_id, value: list of unavailable sensors
+        self._config_sensing = config_sensing
+        self._busy_sensors = {}  # key: node_id, value: list of busy sensors
+        self._idle_sensors = {}  # key: node_id, value: list of idle sensors
+        self._unavailable_sensors = {}  # key: node_id, value: list of unavailable sensors
         self._sensor_id_counter = 0
         self._sensors_per_node = config_sensing['sensors_per_node']
         self._node_type = config_sensing['node_type']
@@ -24,50 +23,74 @@ class SensorManager:
         self._initializeSensors(traffic_manager)
 
     def __getNewSensorId(self):
+        new_id=self._sensor_id_counter
         self._sensor_id_counter += 1
-        return self._sensor_id_counter
+        return new_id
 
-    def _initializeSensors(self, traffic_manager: TrafficManager):
+    def _initializeSensors(self, traffic_manager):
         UAV_numbers = traffic_manager.getNumberOfUAVs()
         UAV_infos = traffic_manager.getUAVTrafficInfos()
         vehicle_numbers = traffic_manager.getNumberOfVehicles()
         vehicle_infos = traffic_manager.getVehicleTrafficInfos()
 
-        self._generateSensors(UAV_infos)
-        self._generateSensors(vehicle_infos)
+        for UAV_id in UAV_infos.keys():
+            self._initializeSensorsForNode(UAV_id)
+        for vehicle_id in vehicle_infos.keys():
+            self._initializeSensorsForNode(vehicle_id)
 
-    def _generateSensors(self, node_infos):
-        for node_id, _ in node_infos:
-            self._sensors[node_id]=[]
-            for idx in range(self._sensors_per_node):
-                new_sensor_type = 'Sensor_type_' + str(random.randint(1, self._sensor_type_num))
-                new_sensor_accuracy = random.random()  # 随机生成0-1之间的精度
-                new_sensor_id = 'Sensor_' + str(self.__getNewSensorId())
-                new_sensor = Sensor(new_sensor_id, new_sensor_type, new_sensor_accuracy, node_id)
-                self._sensors[node_id].append(new_sensor)
-                self._idle_sensors[node_id].append(new_sensor)
+    def _initializeSensorsForNode(self, node_id):
+        self._idle_sensors[node_id] = self._idle_sensors.get(node_id,[])
+        assert len(self._idle_sensors[node_id])==0
+        for idx in range(self._sensors_per_node):
+            new_sensor_type = 'Sensor_type_' + str(random.randint(1, self._sensor_type_num))
+            new_sensor_accuracy = random.choice(SensorManager.ACCURACY_RANGE)  # 随机生成0-1之间的离散精度
+            new_sensor_id = 'Sensor_' + str(self.__getNewSensorId())
+            new_sensor = Sensor(new_sensor_id, new_sensor_type, new_sensor_accuracy, node_id)
+            self._idle_sensors[node_id].append(new_sensor)
 
-    def _getSensor(self,sensors_dict, sensor_id):
-        target_sensor=None
-        target_node_id=None
-        for node_id, sensors in sensors_dict:
+    def _getIdleSensorById(self, sensor_id):
+        target_sensor = None
+        target_node_id = None
+        for node_id, sensors in self._idle_sensors.items():
             for sensor in sensors:
-                if sensor.getSensorId()==sensor_id:
-                    target_sensor= sensor
-                    target_node_id=node_id
-        return target_node_id,target_sensor
+                # print('node_id',node_id,'sensor_id:',sensor.getSensorId())
+                if sensor.getSensorId() == sensor_id:
+                    target_sensor = sensor
+                    target_node_id = node_id
+        return target_node_id, target_sensor
 
-    def _addSensor(self,sensors_dict, node_id,sensor):
-        if node_id not in sensors_dict:
-            sensors_dict[node_id]=[]
-            sensors_dict[node_id].append(sensor)
+    def _getBusySensorById(self, sensor_id):
+        target_sensor = None
+        target_node_id = None
+        for node_id, sensors in self._busy_sensors.items():
+            for sensor in sensors:
+                # print('node_id', node_id, 'sensor_id:', sensor.getSensorId())
+                if sensor.getSensorId() == sensor_id:
+                    target_sensor = sensor
+                    target_node_id = node_id
+        return target_node_id, target_sensor
 
-    def _removeSensor(self,sensors_dict, node_id,sensor):
-        if node_id not in sensors_dict:
-            return
-        else:
-            sensors_dict[node_id].remove(sensor)
+    def _getUnavailableSensorById(self, sensor_id):
+        target_sensor = None
+        target_node_id = None
+        for node_id, sensors in self._unavailable_sensors.items():
+            for sensor in sensors:
+                # print('node_id',node_id,'sensor_id:',sensor.getSensorId())
+                if sensor.getSensorId() == sensor_id:
+                    target_sensor = sensor
+                    target_node_id = node_id
+        return target_node_id, target_sensor
 
+    def _addSensor(self, sensors_dict, node_id, sensor):
+        sensors_dict[node_id] = sensors_dict.get(node_id, [])
+        sensors_dict[node_id].append(sensor)
+
+    def _removeSensor(self, sensors_dict, node_id, sensor_id):
+        assert node_id in sensors_dict
+        sensors_dict[node_id] = [sensor for sensor in sensors_dict[node_id] if sensor.getSensorId() != sensor_id]
+
+    def initializeSensorsByNodeId(self, node_id):
+        self._initializeSensorsForNode(node_id)
 
     def startUseById(self, sensor_id):
         """start use the sensor.
@@ -80,11 +103,20 @@ class SensorManager:
         Examples:
             sensor_manager.startUseById('Sensor_1')
         """
-        node_id,sensor=self._getSensor(self._sensors,sensor_id)
-        assert sensor != None
+
+        node_id, sensor = self._getIdleSensorById(sensor_id)
+        # print('idle:', node_id, sensor)
+        # if sensor is None:
+        #     node_id2, sensor2 = self._getBusySensorById(sensor_id)
+        #     print('busy:', node_id2, sensor2)
+        #     if sensor2 is None:
+        #         node_id2, sensor2 = self._getUnavailableSensorById(sensor_id)
+        #         print('un:', node_id2, sensor2)
+
+        assert sensor is not None
         sensor.startUse()
-        self._removeSensor(self._idle_sensors,node_id,sensor_id)
-        self._addSensor(self._busy_sensors,node_id,sensor_id)
+        self._removeSensor(self._idle_sensors, node_id, sensor_id)
+        self._addSensor(self._busy_sensors, node_id, sensor)
 
     def endUseById(self, sensor_id):
         """stop use the sensor.
@@ -97,11 +129,37 @@ class SensorManager:
         Examples:
             sensor_manager.stopUseById('Sensor_1')
         """
-        node_id,sensor = self._getSensor(self._sensors, sensor_id)
-        assert sensor != None
+        node_id, sensor = self._getBusySensorById(sensor_id)
+        assert sensor is not None
         sensor.endUse()
-        self._removeSensor(self._busy_sensors,node_id,sensor_id)
-        self._addSensor(self._idle_sensors,node_id, sensor_id)
+        self._removeSensor(self._busy_sensors, node_id, sensor_id)
+        self._addSensor(self._idle_sensors, node_id, sensor)
+
+    def _setUnavailableById(self, sensor_id):
+        """make the sensor unavailable.
+
+        Args:
+            sensor_id (str): The sensor id.
+
+        Returns:
+
+        """
+
+        node_id, sensor = self._getIdleSensorById(sensor_id)
+        if sensor is not None:
+            sensor.disable()
+            self._removeSensor(self._idle_sensors, node_id, sensor_id)
+            self._addSensor(self._unavailable_sensors, node_id, sensor)
+            return
+
+        node_id, sensor = self._getBusySensorById(sensor_id)
+        if sensor is not None:
+            sensor.disable()
+            self._removeSensor(self._busy_sensors, node_id, sensor_id)
+            self._addSensor(self._unavailable_sensors, node_id, sensor)
+            return
+
+        assert sensor is not None, f'{sensor_id} is not exist'
 
     def getUsableById(self, sensor_id):
         """check if the sensor is usable.
@@ -114,46 +172,97 @@ class SensorManager:
         Examples:
             sensor_manager.getUsableById('Sensor_1')
         """
-        _,sensor = self._getSensor(self._sensors, sensor_id)
-        assert sensor != None
-        return sensor.isUsable()
+        _, sensor = self._getIdleSensorById(sensor_id)
+        if sensor is not None:
+            return sensor.isUsable()
 
-    def setAvailavleById(self, sensor_id, available):
-        """set available state of sensor.
+        _, sensor = self._getBusySensorById(sensor_id)
+        if sensor is not None:
+            return sensor.isUsable()
 
-        Args:
-            sensor_id (str): The sensor id.
-            available (bool): If the sensor is available
+        assert sensor is not None, f'{sensor_id} is not exist'
 
-        Returns:
+    def getSensorsByStateAndType(self, state, type):
+        assert state in SensorManager.STATE, 'The state is not supported. Only support {}'.format(SensorManager.STATE)
+        sensors_dict = {}
+        target_sensors_dict = {}
 
-        Examples:
-            sensor_manager.getUsableById('Sensor_1')
-        """
-        _,sensor = self._getSensor(self._sensors, sensor_id)
-        assert sensor != None
-        sensor.setAvailable(available)
-
-    def getSensorsByType(self,state,type):
-        assert state in SensorManager.STATE,'The state is not supported. Only support {}'.format(SensorManager.STATE)
-        target_sensors_dict={}
-        if state=='idle':
-            sensors_dict=self._idle_sensors
-        elif state=='busy':
+        if state == 'idle':
+            sensors_dict = self._idle_sensors
+        elif state == 'busy':
             sensors_dict = self._busy_sensors
-        elif state=='all':
-            sensors_dict = self._sensors
+        elif state == 'unavailable':
+            sensors_dict = self._unavailable_sensors
 
-        for node_id,sensors in sensors_dict:
-            target_sensors_dict[node_id]=[]
+        for node_id, sensors in sensors_dict.items():
+            target_sensors_dict[node_id] = []
             for sensor in sensors:
-                if sensor.getSensorType()==type:
+                if sensor.getSensorType() == type:
                     target_sensors_dict[node_id].append(sensor)
-            if len(target_sensors_dict[node_id])==0:
+            if len(target_sensors_dict[node_id]) == 0:
                 target_sensors_dict.pop(node_id)
-        return target_sensors_dict if len(target_sensors_dict)>0 else None
+        return target_sensors_dict
 
+    def getUsingSensorsNumByNodeId(self, node_id):
+        sensor_list = self._busy_sensors.get(node_id, [])
+        for sensor in sensor_list:
+            assert sensor.isUsing()
+        return len(sensor_list)
 
+    def disableByNodeId(self, node_id):
+        sensor_list = self._idle_sensors.get(node_id, [])
+        for sensor in sensor_list:
+            self._setUnavailableById(sensor.getSensorId())
 
+        sensor_list = self._busy_sensors.get(node_id, [])
+        for sensor in sensor_list:
+            self._setUnavailableById(sensor.getSensorId())
 
+    def getBusySensorsNum(self):
+        num = 0
+        for node_id, sensors in self._busy_sensors.items():
+            num += len(sensors)
+        return num
 
+    def getIdleSensorsNum(self):
+        num = 0
+        for node_id, sensors in self._idle_sensors.items():
+            num += len(sensors)
+        return num
+
+    def getUnavailableSensorsNum(self):
+        num = 0
+        for node_id, sensors in self._unavailable_sensors.items():
+            num += len(sensors)
+        return num
+
+    def getAccuracyById(self, sensor_id):
+        for node_id, sensors in self._idle_sensors.items():
+            for sensor in sensors:
+                if sensor.getSensorId() == sensor_id:
+                    return sensor.getSensorAccuracy()
+        for node_id, sensors in self._busy_sensors.items():
+            for sensor in sensors:
+                if sensor.getSensorId() == sensor_id:
+                    return sensor.getSensorAccuracy()
+        for node_id, sensors in self._unavailable_sensors.items():
+            for sensor in sensors:
+                if sensor.getSensorId() == sensor_id:
+                    return sensor.getSensorAccuracy()
+
+    def getNodeIdById(self, sensor_id):
+        for node_id, sensors in self._idle_sensors.items():
+            for sensor in sensors:
+                if sensor.getSensorId() == sensor_id:
+                    return sensor.getDeployedNodeId()
+        for node_id, sensors in self._busy_sensors.items():
+            for sensor in sensors:
+                if sensor.getSensorId() == sensor_id:
+                    return sensor.getDeployedNodeId()
+        for node_id, sensors in self._unavailable_sensors.items():
+            for sensor in sensors:
+                if sensor.getSensorId() == sensor_id:
+                    return sensor.getDeployedNodeId()
+
+    def getConfig(self, name):
+        return self._config_sensing.get(name, None)

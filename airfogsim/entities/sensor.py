@@ -93,7 +93,7 @@ class Sensor:
         Returns:
 
         """
-        assert self.isUsable(),'The sensor cannot be used'#Not within the map range or occupied or damaged
+        assert self.isUsable(),'The sensor cannot be used' # Not within the map range or is occupied or is damaged
         self._is_using=True
 
     def endUse(self):
@@ -106,14 +106,27 @@ class Sensor:
         """
         self._is_using = False
 
-    def setAvailable(self,available):
-        """Set state of sensor(available or unavailable).
+    def disable(self):
+        """Set state of sensor(unavailable).
 
         Args:
 
         Returns:
 
         """
-        self._is_available = available
+        self._is_available = False
+        self._is_using=False
+
+    def activate(self):
+        """Set state of sensor(available).
+
+        Args:
+
+        Returns:
+
+        """
+        self._is_available = True
+        self._is_using=False
+
 
 

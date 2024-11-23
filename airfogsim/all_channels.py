@@ -232,6 +232,19 @@ class V2UChannel:
         # 更新n_Veh
         self.n_Veh += 1
 
+    def remove_UAV_shadow(self, vid, vid_index):
+        '''删除无人机，删除无人机的阴影'''
+        index = vid_index[vid]
+        self.Shadow = np.delete(self.Shadow, index, axis=1)
+        self.n_UAV -= 1
+
+    def add_UAV_shadow(self):
+        '''增加无人机，增加无人机的阴影'''
+        new_shadow = np.random.normal(0, self.shadow_std, size=(self.n_Veh, 1))
+        self.Shadow = np.concatenate((self.Shadow, new_shadow), axis=1)
+        # 更新n_Veh
+        self.n_UAV += 1
+
 
 
     def update_positions(self, veh_positions, uav_positions):
@@ -240,17 +253,18 @@ class V2UChannel:
         self.uav_positions = uav_positions
         
     def update_pathloss(self):
-        if self.n_Veh == 0:
+        if self.n_Veh == 0 or self.n_UAV==0:
             return
         self.PathLoss = self.get_path_loss_matrix(self.veh_positions, self.uav_positions)
+
         # self.PathLoss = np.zeros(shape=(len(self.veh_positions),len(self.uav_positions)))
         # for i in range(len(self.veh_positions)):
         #     for j in range(len(self.uav_positions)):
         #         self.PathLoss[i][j] = self.get_path_loss(self.veh_positions[i], self.uav_positions[j])
                 
     def update_shadow(self, veh_delta_distance_list, uav_delta_distance_list):
-        if len(self.Shadow) != len(veh_delta_distance_list):
-            # 1 如果过去一个时间片的车辆数量发生了变化（只会增加）
+        if len(self.Shadow) != len(veh_delta_distance_list) or self.Shadow.shape[1] != len(uav_delta_distance_list):
+            # 1 如果过去一个时间片的车辆数量发生了变化（只会增加）或无人机数量发生了变化（只会减少）
             Shadow = np.random.normal(0, self.shadow_std, size=(self.n_Veh, self.n_UAV))
             self.Shadow = Shadow
         delta_distance = np.zeros((len(veh_delta_distance_list), len(uav_delta_distance_list)))
@@ -301,7 +315,7 @@ class V2UChannel:
     def get_path_loss_matrix(self, veh_positions, uav_positions):
         veh_positions = np.array(veh_positions)
         uav_positions = np.array(uav_positions)
-        
+
         d1_matrix = np.abs(np.repeat(veh_positions[:, np.newaxis, 0], self.n_UAV, axis=1) - uav_positions[:, 0])
         d2_matrix = np.abs(np.repeat(veh_positions[:, np.newaxis, 1], self.n_UAV, axis=1) - uav_positions[:, 1])
         d_matrix = np.hypot(d1_matrix, d2_matrix) + 0.001
@@ -365,10 +379,25 @@ class U2IChannel:
         self.BS_positions = BS_positions
         self.update_shadow([])
 
+    def remove_UAV_shadow(self, vid, vid_index):
+        '''删除无人机，删除无人机的阴影'''
+        index = vid_index[vid]
+        self.Shadow = np.delete(self.Shadow, index, axis=0)
+        self.n_UAV -= 1
+
+    def add_UAV_shadow(self):
+        '''增加无人机，增加无人机的阴影'''
+        new_shadow = np.random.normal(0, self.shadow_std, size=(1,self.n_BS))
+        self.Shadow = np.concatenate((self.Shadow, new_shadow), axis=0)
+        # 更新n_Veh
+        self.n_UAV += 1
+
     def update_positions(self, UAV_positions):
         self.UAV_positions = UAV_positions
         
     def update_pathloss(self):
+        if self.n_UAV==0:
+            return
         self.PathLoss = np.zeros(shape=(len(self.UAV_positions),len(self.BS_positions)))
         for i in range(len(self.UAV_positions)):
             for j in range(len(self.BS_positions)):
@@ -377,6 +406,10 @@ class U2IChannel:
     def update_shadow(self, delta_distance_list):
         if len(delta_distance_list) == 0:  # initialization
             self.Shadow = np.random.normal(0, self.shadow_std, size=(self.n_UAV, self.n_BS))
+        elif len(self.Shadow) != len(delta_distance_list):  # UAV数量发生变化
+            # 1 如果过去一个时间片的车辆数量发生了变化
+            Shadow = np.random.normal(0, self.shadow_std, size=(self.n_UAV, self.n_BS))
+            self.Shadow = Shadow
         else: 
             delta_distance = np.repeat(delta_distance_list[:,np.newaxis], self.n_BS, axis=1)
             self.Shadow = 10 * np.log10(np.exp(-1*(delta_distance/self.Decorrelation_distance))* (10 ** (self.Shadow / 10)) + np.sqrt(1-np.exp(-2*(delta_distance/self.Decorrelation_distance)))*(10**(np.random.normal(0,self.shadow_std, size=(self.n_UAV, self.n_BS))/10)))
@@ -432,11 +465,30 @@ class U2UChannel:
         self.n_RB = n_RB # RB数量
         self.update_shadow([])
 
+    def remove_UAV_shadow(self, vid, vid_index):
+        '''删除车辆，删除车辆的阴影'''
+        index = vid_index[vid]
+        self.Shadow = np.delete(self.Shadow, index, axis=0)
+        self.Shadow = np.delete(self.Shadow, index, axis=1)
+        self.n_UAV -= 1
+
+    def add_UAV_shadow(self):
+        '''增加车辆，增加车辆的阴影'''
+        new_shadow = np.random.normal(0, self.shadow_std, size=(1, self.n_UAV))
+        self.Shadow = np.concatenate((self.Shadow, new_shadow), axis=0)
+        new_shadow = np.random.normal(0, self.shadow_std, size=(self.n_UAV + 1, 1))
+        self.Shadow = np.concatenate((self.Shadow, new_shadow), axis=1)
+        self.n_UAV += 1
+
+
     def update_positions(self, uav_positions):
         '''更新无人机的位置'''
         self.positions = uav_positions
 
     def update_pathloss(self):
+        if self.n_UAV==0:
+            return
+
         self.PathLoss = np.zeros(shape=(len(self.positions),len(self.positions)))
         for i in range(len(self.positions)):
             for j in range(len(self.positions)):
@@ -450,6 +502,8 @@ class U2UChannel:
             for j in range(len(delta_distance)):
                 delta_distance[i][j] = delta_distance_list[i] + delta_distance_list[j]
         if len(delta_distance_list) == 0: 
+            self.Shadow = np.random.normal(0,self.shadow_std, size=(self.n_UAV, self.n_UAV))
+        elif len(self.Shadow)!=len(delta_distance_list) :
             self.Shadow = np.random.normal(0,self.shadow_std, size=(self.n_UAV, self.n_UAV))
         else:
             self.Shadow = 10 * np.log10(np.exp(-1*(delta_distance/self.decorrelation_distance))* (10 ** (self.Shadow / 10)) + np.sqrt(1-np.exp(-2*(delta_distance/self.decorrelation_distance)))*(10**(np.random.normal(0,self.shadow_std, size=(self.n_UAV, self.n_UAV))/10)))

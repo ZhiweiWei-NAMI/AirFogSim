@@ -13,6 +13,7 @@ class TaskManager:
         self._to_generate_task_infos = {} # use Node Id as the key, and the value is the task info list
         self._to_offload_tasks = {}
         self._to_compute_tasks = {}
+        self._waiting_to_return_tasks = {} # after computing, waiting to set return route
         self._to_return_tasks = {}
         self._done_tasks = {}
         self._failed_tasks = {}
@@ -67,6 +68,7 @@ class TaskManager:
         """
         to_compute_task_list = self._to_compute_tasks.get(node_id, [])
         to_compute_task_list.append(task)
+        task.setAssignedTo(node_id) # 计算节点设为任务产生节点
         task.startToCompute(current_time)
         self._to_compute_tasks[node_id] = to_compute_task_list
 
@@ -141,7 +143,6 @@ class TaskManager:
             allocated_cpu_by_taskId (dict): The allocated CPU by the task id.
             simulation_interval (float): The simulation interval.
             current_time (float): The current time.
-            _getNodeById (function): The function to get the node by ID.
         """
         for node_id, task_infos in self._to_compute_tasks.items():
             for task_info in task_infos.copy(): # task_info is Task
@@ -150,16 +151,18 @@ class TaskManager:
                 task_info.compute(allocated_cpu, simulation_interval, current_time)
                 if task_info.isComputed():
                     self._to_compute_tasks[node_id].remove(task_info)
-                    task_info.startToReturn(current_time)
-                    
-                    if task_info.requireReturn():
-                        self._to_return_tasks[node_id] = self._to_return_tasks.get(node_id, [])
-                        self._to_return_tasks[node_id].append(task_info)
-                    else:
-                        task_node_id = task_info.getTaskNodeId()
-                        self._done_tasks[task_node_id] = self._done_tasks.get(task_node_id, [])
-                        self._done_tasks[task_node_id].append(task_info)
-                        self._recently_done_100_tasks.append(task_info)
+                    self._waiting_to_return_tasks[node_id]=self._waiting_to_return_tasks.get(node_id, [])
+                    self._waiting_to_return_tasks[node_id].append(task_info)
+                    # task_info.startToReturn(current_time)
+                    #
+                    # if task_info.requireReturn():
+                    #     self._to_return_tasks[node_id] = self._to_return_tasks.get(node_id, [])
+                    #     self._to_return_tasks[node_id].append(task_info)
+                    # else:
+                    #     task_node_id = task_info.getTaskNodeId()
+                    #     self._done_tasks[task_node_id] = self._done_tasks.get(task_node_id, [])
+                    #     self._done_tasks[task_node_id].append(task_info)
+                    #     self._recently_done_100_tasks.append(task_info)
 
     def getRecentlyDoneTasks(self):
         """Get the recently done tasks (the maximum number is 100).
@@ -297,6 +300,25 @@ class TaskManager:
                         self._removed_tasks[task_info.getTaskNodeId()] = removed_task_set
                         task_set.remove(task_info)
                         self._to_generate_task_infos[task_node_id] = task_set
+        # remove all related tasks in waiting_to_return_tasks
+        for task_node_id in list(self._waiting_to_return_tasks.keys()):
+            task_set = self._waiting_to_return_tasks.get(task_node_id, [])
+            if task_node_id == to_remove_node_id:
+                for task_info in task_set.copy():
+                    removed_task_set = self._removed_tasks.get(task_info.getTaskNodeId(), [])
+                    removed_task_set.append(task_info)
+                    self._removed_tasks[task_info.getTaskNodeId()] = removed_task_set
+                    task_set.remove(task_info)
+                    self._waiting_to_return_tasks[task_node_id] = task_set
+                del self._waiting_to_return_tasks[task_node_id]
+            else:
+                for task_info in task_set.copy():
+                    if task_info.isRelatedToNode(to_remove_node_id):
+                        removed_task_set = self._removed_tasks.get(task_info.getTaskNodeId(), [])
+                        removed_task_set.append(task_info)
+                        self._removed_tasks[task_info.getTaskNodeId()] = removed_task_set
+                        task_set.remove(task_info)
+                        self._waiting_to_return_tasks[task_node_id] = task_set
 
 
     def setTaskAttributeModel(self, attribute, model, **kwargs):
@@ -397,13 +419,25 @@ class TaskManager:
 
     def _generateTaskInfo(self, task_node_id, arrival_time):
         self._task_id += 1
-        return Task(task_id = f'Task_{self._task_id}', task_node_id = task_node_id, task_cpu = self._generateCPU(), task_size = self._generateSize(), task_deadline = self._generateDeadline(), task_priority = self._generatePriority(), task_arrival_time = arrival_time)
+        return Task(task_id = f'Task_{self._task_id}', task_node_id = task_node_id, task_cpu = self._generateCPU(),
+                    task_size = self._generateSize(), task_deadline = self._generateDeadline(),
+                    task_priority = self._generatePriority(), task_arrival_time = arrival_time)
 
     def generateTaskInfoOfMission(self,task_node_id,task_deadline,arrival_time):
+        """Generate the tasks for mission by the node id.
+
+        Args:
+            task_node_id (str): The task node id.
+            task_deadline (int): The task deadline (timeslot,same as mission deadline).
+            arrival_time (int): The task arrive timeslot.
+
+        Returns:
+            Task: The task.
+        """
         self._task_id += 1
-        return Task(task_id=f'Task_{self._task_id}', task_node_id=task_node_id, task_cpu=self._generateCPU(),
-                    task_size=self._generateSize(), task_deadline=task_deadline,
-                    task_priority=self._generatePriority(), task_arrival_time=arrival_time)
+        return Task(task_id=f'Task_{self._task_id}', task_node_id=task_node_id, task_cpu=0,
+                    task_size=0, task_deadline=task_deadline,task_priority=self._generatePriority(),
+                    task_arrival_time=arrival_time,required_returned_size= self._generateSize())
 
     def _generateTasks(self, task_node_ids_kwardsDict, cur_time, simulation_interval):
         # 1. Move the tasks from the to_generate_task_infos to the todo_tasks according to the current time
@@ -537,3 +571,33 @@ class TaskManager:
                     task_info.offloadTo(target_node_id, route, current_time)
                     return True
         return False
+
+    def getWaitingToReturnTaskInfos(self):
+        """Get waiting to return task infos.
+
+        Args:
+
+        Returns:
+            dict: node_id -> {task:Task,...}
+
+        Examples:
+            task_manager.getWaitingToReturnTaskInfos()
+        """
+        return self._waiting_to_return_tasks
+
+    def setTaskReturnRouteAndStartReturn(self,task_id,route,current_time):
+        to_remove_tasks={}
+        for node_id,task_infos in self._waiting_to_return_tasks.items():
+            for task_info in task_infos:
+                if task_info.getTaskId()==task_id:
+                    task_info.setToReturnRoute(route)
+                    self._to_return_tasks[node_id]=self._to_return_tasks.get(node_id,[])
+                    self._to_return_tasks[node_id].append(task_info)
+                    to_remove_tasks[node_id]=to_remove_tasks.get(node_id,[])
+                    to_remove_tasks[node_id].append(task_info)
+                    task_info.startToReturn(current_time)
+
+        for node_id,task_infos in to_remove_tasks.items():
+            for task_info in task_infos:
+                self._waiting_to_return_tasks[node_id].remove(task_info)
+

@@ -27,6 +27,7 @@ class Task:
         self._task_arrival_time = task_arrival_time
         self._executed_locally = False
         self._assigned_to = None
+        self._returned_to = None
         self._decided_route = [] # the decided route for offloading
         self._routes = [task_node_id] # arrived node list
         self._to_offload_route = [] # the route to offload the task.
@@ -76,7 +77,7 @@ class Task:
         self._last_compute_time = time
 
     def startToReturn(self, current_time):
-        """Set the start time to return the task.
+        """Set the start time to return the task. Used in mission.
 
         Args:
             current_time (float): The current time.
@@ -147,6 +148,7 @@ class Task:
             to_return_route (list): The route to return. Each element is the node ID.
         """
         self._to_return_route=to_return_route
+        self._returned_to=self._to_return_route[-1]
 
     def wait_to_ddl(self, current_time):
         """Check if the task is out of deadline.
@@ -185,6 +187,7 @@ class Task:
         else:
             self._last_transmission_time = current_time
             require_transmit_size = self._task_size
+        # print('task_id:',self._task_id,'mission_id:',self._farther_mission.getMissionId(),'require_transmit_size:',self._required_returned_size,'transmitted_size:',self._transmitted_size)
         if self._transmitted_size >= require_transmit_size:
             self._transmitted_size = 0
             self._routes.append(node_id)
@@ -269,6 +272,14 @@ class Task:
             bool: True if the task is transmitted, False otherwise.
         """
         return self.getCurrentNodeId() == self._assigned_to
+
+    def isTransmittedToReturnedNode(self):
+        """Check if the task is transmitted to the endpoint node of the return path.
+
+        Returns:
+            bool: True if the task is transmitted, False otherwise.
+        """
+        return self.getCurrentNodeId() == self._returned_to
 
     def setTaskFailueCode(self, code):
         """Set the task failure code
