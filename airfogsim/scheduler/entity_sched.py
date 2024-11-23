@@ -45,6 +45,7 @@ class EntityScheduler(BaseScheduler):
         elif type in ['cloud_server', 'c']:
             node = env.cloudServers[env.cloud_server_ids_as_index[idx]]
         return node.to_dict()
+
     
     @staticmethod
     def getAllNodeInfos(env, type_list = ['vehicle', 'uav', 'rsu', 'cloud_server']):
@@ -109,6 +110,28 @@ class EntityScheduler(BaseScheduler):
         return node.to_dict()
 
     @staticmethod
+    def getNodeNumByType(env,type:str):
+        """Get the node num by type.
+
+        Args:
+            env (AirFogSimEnv): The environment.
+            type (str): The type, ['vehicle' or 'v', 'uav' or 'u', 'rsu' or 'r', 'cloud_server' or 'c']
+
+        Returns:
+            int: The node num.
+        """
+        type = type.lower()
+        if type in ['vehicle', 'v']:
+            num = len(env.vehicle_ids_as_index)
+        elif type in ['uav', 'u']:
+            num = len(env.uav_ids_as_index)
+        elif type in ['rsu', 'r']:
+            num = len(env.rsu_ids_as_index)
+        elif type in ['cloud_server', 'c']:
+            num = len(env.cloud_server_ids_as_index)
+        return num
+
+    @staticmethod
     def getNeighborNodeInfosById(env, node_id: str, sorted_by = 'distance', reverse = False, max_num = 10):
         """Get the neighbor node infos by the node id.
 
@@ -154,14 +177,29 @@ class EntityScheduler(BaseScheduler):
         return neighbor_node_infos
 
     @staticmethod
-    def setUAVSpeedAndDirectionByNodeId(env, node_id: str, speed: float, angle: float, phi: float):
-        """Set the UAV speed and direction by the node id.
+    def getNodeTypeById(env,node_id):
+        """Get the node type by the node id.
 
         Args:
             env (AirFogSimEnv): The environment.
-            node_id (str): The node id. 
-            speed (float): The speed.
-            angle (float): The angle (angle in 2D plane).
-            phi (float): The phi (angle in 3D plane).
+            node_id (str): The node id.
+
+        Returns:
+            str: The type of the node. 'V' for vehicle, 'U' for UAV, 'I' for RSU, 'C' for cloud server.
         """
-        env.traffic_manager.updateUAVMobilityPatternById(node_id, {'speed': speed, 'angle': angle, 'phi': phi})
+        return env._getNodeTypeById(node_id)
+
+    @staticmethod
+    def getNodeIdxById(env,node_id):
+        """Get the node index by the node id.
+
+        Args:
+            env (AirFogSimEnv): The environment.
+            node_id (str): The node id.
+
+        Returns:
+            int: The index of the node.
+        """
+        return env._getNodeIdxById(node_id)
+
+

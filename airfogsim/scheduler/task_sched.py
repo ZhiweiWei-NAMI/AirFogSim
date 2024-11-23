@@ -47,6 +47,9 @@ class TaskScheduler(BaseScheduler):
 
         Returns:
             list: The list of task infos.
+
+        Examples:
+            taskSched.getAllToOffloadTaskInfos(env)
         """
         task_dict = env.task_manager.getToOffloadTasks()
         task_info_list = []
@@ -54,18 +57,6 @@ class TaskScheduler(BaseScheduler):
             for task in tasks:
                 task_info_list.append(task.to_dict())
         return task_info_list
-    
-    @staticmethod
-    def setTaskOffloading(env, task_node_id:str, task_id:str, target_node_id:str):
-        """Set the task offloading for the task node.
-
-        Args:
-            env (AirFogSimEnv): The AirFogSim environment.
-            task_node_id (str): The task node id.
-            task_id (str): The task id.
-            target_node_id (str): The target node id.
-        """
-        env.task_manager.offloadTask(task_node_id, task_id, target_node_id, env.simulation_time)
 
     @staticmethod
     def getAllOffloadingTaskInfos(env):
@@ -76,6 +67,9 @@ class TaskScheduler(BaseScheduler):
 
         Returns:
             list: The list of task infos.
+
+        Examples:
+            taskSched.getAllOffloadingTaskInfos(env)
         """
         task_dict = env.task_manager.getOffloadingTasks()
         task_info_list = []
@@ -83,6 +77,21 @@ class TaskScheduler(BaseScheduler):
             for task in tasks:
                 task_info_list.append(task.to_dict())
         return task_info_list
+
+    @staticmethod
+    def setTaskOffloading(env, task_node_id:str, task_id:str, target_node_id:str):
+        """Set the task offloading for the task node.
+
+        Args:
+            env (AirFogSimEnv): The AirFogSim environment.
+            task_node_id (str): The task node id.
+            task_id (str): The task id.
+            target_node_id (str): The target node id.
+
+        Examples:
+            taskSched.setTaskOffloading(env,'UAV_1','Task_1','UAV_3')
+        """
+        env.task_manager.offloadTask(task_node_id, task_id, target_node_id, env.simulation_time)
     
     @staticmethod
     def getAllComputingTaskInfos(env):
@@ -93,6 +102,9 @@ class TaskScheduler(BaseScheduler):
 
         Returns:
             list: The list of task infos.
+
+        Examples:
+            taskSched.getAllComputingTaskInfos(env)
         """
         task_dict = env.task_manager.getComputingTasks()
         task_info_list = []
@@ -110,6 +122,9 @@ class TaskScheduler(BaseScheduler):
 
         Returns:
             list: The list of task infos.
+
+        Examples:
+            taskSched.getLastStepSuccTaskInfos(env)
         """
         recently_done_100_tasks = env.task_manager.getRecentlyDoneTasks()
         last_step = env.simulation_time - env.traffic_interval
@@ -121,7 +136,39 @@ class TaskScheduler(BaseScheduler):
 
     @staticmethod
     def generateTaskOfMission(env,mission_task_profile):
+        """Generate task by profile.
+
+        Args:
+            env (AirFogSimEnv): The AirFogSim environment.
+            mission_task_profile (dict): {task_node_id,task_deadline,arrival_time}
+
+        Returns:
+            Task: Generated task.
+
+        Examples:
+            taskSched.generateTaskOfMission(env,mission_task_profile)
+        """
         task_node_id=mission_task_profile['task_node_id']
         task_deadline=mission_task_profile['task_deadline']
         arrival_time=mission_task_profile['arrival_time']
-        return env.task_manager.generateTaskInfoOfMission(task_node_id,task_deadline,arrival_time)
+        task=env.task_manager.generateTaskInfoOfMission(task_node_id,task_deadline,arrival_time)
+        return task
+
+    @staticmethod
+    def getWaitingToReturnTaskInfos(env):
+        """Get waiting to return task infos.
+
+         Args:
+
+         Returns:
+             dict: node_id -> {task:Task,...}
+
+         Examples:
+             taskSched.getWaitingToReturnTaskInfos(env)
+         """
+        task_infos=env.task_manager.getWaitingToReturnTaskInfos()
+        return task_infos
+
+    @staticmethod
+    def setTaskReturnRoute(env,task_id,return_route):
+        env.task_return_routes[task_id]=return_route

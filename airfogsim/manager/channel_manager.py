@@ -67,6 +67,9 @@ class ChannelManager:
         self.RSU_positions = RSU_positions
         self.simulation_interval = simulation_interval
 
+        self._last_timeslot_receive={} # node_id -> { transmit_size }
+        self._last_timeslot_send = {}  # node_id -> { transmit_size }
+
         self._initialize_Channels()
         self._initialize_Interference_and_active()
         self.resetActiveLinks()
@@ -117,11 +120,11 @@ class ChannelManager:
         Args:
             vehicles (dict): The vehicles in the environment.
             UAVs (dict): The UAVs in the environment.
-            vid_index (dict): The projection from the vehicle id to the index.
-            uav_index (dict): The projection from the UAV id to the index.
+            vid_index (list): The projection from the vehicle id to the index.
+            uav_index (list): The projection from the UAV id to the index.
 
         """
-        if self.n_Veh == 0:
+        if self.n_Veh == 0 or self.n_UAV==0:
             return
         # vid_index is list, each element is vehicle_id, first turn vid_index to dict
         vid_index = {vid: idx for idx, vid in enumerate(vid_index)}
@@ -402,3 +405,27 @@ class ChannelManager:
         self.I2U_Rate = avg_band * self.I2U_Rate
         self.I2V_Rate = avg_band * self.I2V_Rate
         self.I2I_Rate = avg_band * self.I2I_Rate
+
+    def setThisTimeslotTransSize(self,send_size_dict:dict,receive_size_dict:dict):
+        """Set send size and receive size of a node.
+
+        Args:
+            send_size_dict (dict): node_id(str) -> size(int)
+            receive_size_dict (dict): node_id(str) -> size(int)
+        """
+        self._last_timeslot_send=send_size_dict
+        self._last_timeslot_receive=receive_size_dict
+
+    def getThisTimeslotTransSizeByNodeId(self,node_id):
+        """Set send size and receive size of a node.
+
+        Args:
+            node_id (str): Node id
+
+        Returns:
+            send_size (int): Data size that send in this timeslot
+            receive_size (int): Data size that receive in this timeslot
+        """
+        send_size=self._last_timeslot_send.get(node_id,0)
+        receive_size=self._last_timeslot_receive.get(node_id,0)
+        return send_size, receive_size

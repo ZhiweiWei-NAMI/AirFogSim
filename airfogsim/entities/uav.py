@@ -38,6 +38,9 @@ class UAV(TaskNode, FogNode):
         self._angle = uav_traffic_info['angle']
         self._phi = uav_traffic_info['phi']
 
+    def isMoving(self):
+        return self._speed>0
+
     def to_dict(self):
         """Convert the UAV to a dictionary.
 

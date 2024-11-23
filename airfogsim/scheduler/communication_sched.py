@@ -1,3 +1,5 @@
+import numpy as np
+
 from .base_sched import BaseScheduler
 class CommunicationScheduler(BaseScheduler):
     """The communication scheduler for channels.
@@ -26,3 +28,20 @@ class CommunicationScheduler(BaseScheduler):
             RB_nos (list): The list of resource block numbers.
         """
         env.activated_offloading_tasks_with_RB_Nos[task_id] = RB_nos
+
+    @staticmethod
+    def getSumRateByChannelType(env, transmitter_idx, receiver_idx, channel_type):
+        """Get the rate by the channel type.
+
+        Args:
+            transmitter_idx (int): The index of the transmitter corresponding to its type.
+            receiver_idx (int): The index of the receiver corresponding to its type.
+            channel_type (str): The channel type. The channel type can be 'V2V', 'V2I', 'V2U', 'U2U', 'U2V', 'U2I', 'I2U', 'I2V', 'I2I'.
+
+        Returns:
+            float: Sum of communication blocks rate
+        """
+        comm_rate=env.channel_manager.getRateByChannelType( transmitter_idx, receiver_idx, channel_type)
+        return np.sum(comm_rate)
+
+
