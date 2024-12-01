@@ -1,9 +1,13 @@
 from ..enum_const import EnumerateConstants
 from .mission import Mission
+
+
 class Task:
     """ Task is the class that represents the task. 
     """
-    def __init__(self, task_id, task_node_id, task_cpu, task_size, task_deadline, task_priority, task_arrival_time, farther_mission:Mission = None, required_returned_size = 0):
+
+    def __init__(self, task_id, task_node_id, task_cpu, task_size, task_deadline, task_priority, task_arrival_time,
+                 farther_mission: Mission = None, required_returned_size=0):
         """The constructor of the Task class.
 
         Args:
@@ -28,12 +32,12 @@ class Task:
         self._executed_locally = False
         self._assigned_to = None
         self._returned_to = None
-        self._decided_route = [] # the decided route for offloading
-        self._routes = [task_node_id] # arrived node list
-        self._to_offload_route = [] # the route to offload the task.
-        self._to_return_route=[] # If task is computed, i.e., _compute_size >= _task_cpu, the list denotes the route the returned data should be transmitted.
-        self._decided_offload_time = [] # the decided offload time
-        self._routed_time = [task_arrival_time] # the time that the task is routed to the node
+        self._decided_route = []  # the decided route for offloading
+        self._routes = [task_node_id]  # arrived node list
+        self._to_offload_route = []  # the route to offload the task.
+        self._to_return_route = []  # If task is computed, i.e., _compute_size >= _task_cpu, the list denotes the route the returned data should be transmitted.
+        self._decided_offload_time = []  # the decided offload time
+        self._routed_time = [task_arrival_time]  # the time that the task is routed to the node
         self._start_to_transmit_time = 0
         self._last_transmission_time = 0
         self._transmitted_size = 0
@@ -65,7 +69,7 @@ class Task:
         return task_dict
 
     def isStarted(self):
-        return self._last_compute_time>0
+        return self._last_compute_time > 0
 
     def startToCompute(self, time):
         """Set the start time to compute the task and set to_offload_route as to_return_route.
@@ -86,7 +90,9 @@ class Task:
         self._start_to_return_time = current_time
         self._last_return_time = current_time
         if self._required_returned_size > 0:
-            self._to_offload_route = self._to_return_route # the route to offload the task. If task is computed, i.e., _compute_size >= _task_cpu, the list denotes the route the returned data should be transmitted.
+            assert len(self._to_return_route) > 0
+            # Attention, here is shallow copy!
+            self._to_offload_route = self._to_return_route  #the route to offload the task. If task is computed, i.e., _compute_size >= _task_cpu, the list denotes the route the returned data should be transmitted.
         else:
             self._to_offload_route = []
 
@@ -124,7 +130,7 @@ class Task:
             float: The required returned size.
         """
         return self._required_returned_size
-    
+
     def isComputed(self):
         """Check if the task is computed.
 
@@ -133,7 +139,7 @@ class Task:
         """
         return self._computed_size >= self._task_cpu
 
-    def setFartherMission(self, farther_mission:Mission):
+    def setFartherMission(self, farther_mission: Mission):
         """Set the farther mission.
 
         Args:
@@ -141,14 +147,15 @@ class Task:
         """
         self._farther_mission = farther_mission
 
-    def setToReturnRoute(self,to_return_route):
+    def setToReturnRoute(self, to_return_route):
         """Set the to return route.
 
         Args:
             to_return_route (list): The route to return. Each element is the node ID.
         """
-        self._to_return_route=to_return_route
-        self._returned_to=self._to_return_route[-1]
+        assert len(self._to_return_route) == 0 and len(to_return_route) > 0
+        self._to_return_route = to_return_route
+        self._returned_to = self._to_return_route[-1]
 
     def wait_to_ddl(self, current_time):
         """Check if the task is out of deadline.
@@ -160,7 +167,7 @@ class Task:
             bool: True if the task is out of deadline, False otherwise.
         """
         return self._task_arrival_time + self._task_deadline <= current_time
-    
+
     def isReturning(self):
         """Check if the task is returning or offloading.
 
@@ -168,7 +175,7 @@ class Task:
             bool: True if the task is returning, False otherwise.
         """
         return self.isComputed() and self.isTransmitting()
-    
+
     def transmit_to_Node(self, node_id, trans_data, current_time):
         """Transmit the data to the node. Possible to return or offload the task. 
 
@@ -187,12 +194,11 @@ class Task:
         else:
             self._last_transmission_time = current_time
             require_transmit_size = self._task_size
-        # print('task_id:',self._task_id,'mission_id:',self._farther_mission.getMissionId(),'require_transmit_size:',self._required_returned_size,'transmitted_size:',self._transmitted_size)
         if self._transmitted_size >= require_transmit_size:
             self._transmitted_size = 0
             self._routes.append(node_id)
             self._routed_time.append(current_time)
-            del self._to_offload_route[0] # remove the first element
+            del self._to_offload_route[0]  # remove the first element
             return True
         return False
 
@@ -207,7 +213,8 @@ class Task:
         Examples:
             task.offloadTo('node1', ['node2', 'node1'], 10)
         """
-        self._decided_route = [self._task_node_id] + route # the decided route for offloading, starting from the task node
+        self._decided_route = [
+                                  self._task_node_id] + route  # the decided route for offloading, starting from the task node
         self._to_offload_route = route
         assert route[-1] == node_id, "The last node in the route should be the node ID."
         self._assigned_to = node_id
@@ -223,7 +230,7 @@ class Task:
             bool: True if the task is executed locally, False otherwise.
         """
         return self._executed_locally
-    
+
     def getToOffloadRoute(self):
         """Get the route to offload the task.
 
@@ -231,7 +238,7 @@ class Task:
             list: The route to offload the task.
         """
         return self._to_offload_route
-    
+
     def getDecidedOffloadTime(self):
         """Get the decided offload time.
 
@@ -239,7 +246,7 @@ class Task:
             float: The decided offload time.
         """
         return self._decided_offload_time
-    
+
     def getAssignedTo(self):
         """Get the assigned node ID.
 
@@ -247,7 +254,7 @@ class Task:
             str: The assigned node ID.
         """
         return self._assigned_to
-    
+
     def setAssignedTo(self, node_id):
         """Set the assigned node ID.
 
@@ -264,7 +271,7 @@ class Task:
         """
         require_transmit_size = self._task_size if not self.isComputed() else self._required_returned_size
         return self._transmitted_size < require_transmit_size and not self._executed_locally
-    
+
     def isTransmittedToAssignedNode(self):
         """Check if the task is transmitted to the assigned node.
 
@@ -279,7 +286,7 @@ class Task:
         Returns:
             bool: True if the task is transmitted, False otherwise.
         """
-        return self.getCurrentNodeId() == self._returned_to
+        return self._returned_to is not None and self.getCurrentNodeId() == self._returned_to
 
     def setTaskFailueCode(self, code):
         """Set the task failure code
@@ -296,15 +303,16 @@ class Task:
             str: The reason of the task failure.
         """
         return EnumerateConstants.getDescByCode(self._failure_reason_code)
-    
+
     def isFinished(self):
         """Check if the task is finished.
 
         Returns:
             bool: True if the task is finished, False otherwise.
         """
-        return self.isComputed() and len(self._to_offload_route) == 0
-    
+        # return self.isComputed()  and len(self._to_offload_route) == 0
+        return self.isTransmittedToReturnedNode()
+
     @property
     def task_delay(self):
         """Get the delay of the task.
@@ -313,7 +321,7 @@ class Task:
             float: The delay of the task.
         """
         return self._last_return_time - self._task_arrival_time
-    
+
     @property
     def task_deadline(self):
         """Get the deadline of the task.
@@ -331,7 +339,7 @@ class Task:
         """
         last_time = max(self._last_transmission_time, self._last_compute_time, self._last_return_time)
         return last_time
-    
+
     def getTransmittedSize(self):
         """Get the transmitted size.
 
@@ -339,7 +347,7 @@ class Task:
             float: The transmitted size.
         """
         return self._transmitted_size
-    
+
     def getComputedSize(self):
         """Get the computed size.
 
@@ -347,7 +355,7 @@ class Task:
             float: The computed size.
         """
         return self._computed_size
-    
+
     def getComputedRatio(self):
         """Get the computed ratio.
 
@@ -355,7 +363,7 @@ class Task:
             float: The computed ratio.
         """
         return self._computed_size / self._task_cpu
-    
+
     def getTransmittedRatio(self):
         """Get the transmitted ratio.
 
@@ -363,7 +371,7 @@ class Task:
             float: The transmitted ratio.
         """
         return self._transmitted_size / self._task_size
-    
+
     def getRoutedNodeIdsWithTime(self):
         """Get the routed node IDs with time.
 
@@ -371,7 +379,7 @@ class Task:
             list: The routed node IDs with time.
         """
         return self._routes, self._routed_time
-    
+
     def getCurrentNodeId(self):
         """Get the current node ID.
 
@@ -379,7 +387,7 @@ class Task:
             str: The current node ID.
         """
         return self._routes[-1]
-    
+
     def getTaskCPU(self):
         """Get the required task CPU.
 
@@ -387,16 +395,17 @@ class Task:
             float: The task CPU.
         """
         return self._task_cpu
+
     def getLastTransmissionTime(self):
         """Get the last transmission time if the task is transmitted.
         """
         return self._last_transmission_time
-    
+
     def getLastComputeTime(self):
         """Get the last compute time.
         """
         return self._last_compute_time
-        
+
     def getTaskArrivalTime(self):
         """Get the task arrival time.
 
@@ -404,7 +413,7 @@ class Task:
             float: The task arrival time.
         """
         return self._task_arrival_time
-    
+
     def getTaskPriority(self):
         """Get the task priority.
 
@@ -455,10 +464,14 @@ class Task:
             bool: True if the task is related to the node, False otherwise.
         """
         flag = False
-        if self._task_node_id == node_id:
-            flag = True
-        if self._assigned_to == node_id:
-            flag = True
+        # if self._task_node_id == node_id:
+        #     flag = True
+        # if self._assigned_to == node_id:
+        #     flag = True
+        if self.getCurrentNodeId()==node_id:
+            flag=True
         if node_id in self._to_offload_route:
+            flag = True
+        if node_id in self._to_return_route:
             flag = True
         return flag

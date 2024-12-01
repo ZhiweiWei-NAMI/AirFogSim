@@ -151,7 +151,8 @@ class TaskScheduler(BaseScheduler):
         task_node_id=mission_task_profile['task_node_id']
         task_deadline=mission_task_profile['task_deadline']
         arrival_time=mission_task_profile['arrival_time']
-        task=env.task_manager.generateTaskInfoOfMission(task_node_id,task_deadline,arrival_time)
+        return_size=mission_task_profile['return_size']
+        task=env.task_manager.generateTaskInfoOfMission(task_node_id,task_deadline,arrival_time,return_size)
         return task
 
     @staticmethod

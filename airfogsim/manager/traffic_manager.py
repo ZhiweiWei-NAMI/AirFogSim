@@ -147,7 +147,6 @@ class TrafficManager():
             self._UAV_id_counter += 1
             position = (random.uniform(self._x_range[0], self._x_range[1]), random.uniform(self._y_range[0], self._y_range[1]), random.uniform(self._UAV_z_range[0], self._UAV_z_range[1]))
             self._UAV_infos[UAV_id] = {"position": position}
-            # print('init',UAV_id,position)
             row = int((position[1] - self._y_range[0]) / self._grid_width)
             col = int((position[0] - self._x_range[0]) / self._grid_width)
             if row >= 0 and row < self._map_by_grid.shape[0] and col >= 0 and col < self._map_by_grid.shape[1]:

@@ -42,7 +42,7 @@ class BaseAlgorithmModule:
         self.taskScheduler.setTaskNodePossibility(env, node_types=['vehicle', 'UAV'], max_num=30, threshold_poss=0.5)
         # self.rewardScheduler.setRewardModel(env, 'log(1+(task_deadline-task_delay))')
         self.rewardScheduler.setModel(env, 'REWARD',
-                                      '5 * log(10, 1 + _mission_deadline) * (1 / (1 + exp(-_mission_deadline / (_mission_finish_time - _mission_arrival_time))) - 1 / (1 + exp(-1)))')
+                                      '5 * log(10, 1 + (_mission_deadline-_mission_duration_sum)) * (1 / (1 + exp(-(_mission_deadline-_mission_duration_sum) / (_mission_finish_time - _mission_arrival_time-_mission_duration_sum))) - 1 / (1 + exp(-1)))')
         self.rewardScheduler.setModel(env, 'PUNISH', '-1')
 
     def scheduleStep(self, env: AirFogSimEnv):
@@ -106,7 +106,8 @@ class BaseAlgorithmModule:
                     mission_task_profile = {
                         'task_node_id': appointed_node_id,
                         'task_deadline': mission_profile['mission_deadline'],
-                        'arrival_time': mission_profile['mission_arrival_time']
+                        'arrival_time': mission_profile['mission_arrival_time'],
+                        'return_size': mission_profile['mission_size']
                     }
                     new_task = self.taskScheduler.generateTaskOfMission(env, mission_task_profile)
                     task_set.append(new_task)
@@ -249,16 +250,18 @@ class BaseAlgorithmModule:
         """
         last_step_succ_mission_infos = self.missionScheduler.getLastStepSuccMissionInfos(env)
         last_step_fail_mission_infos = self.missionScheduler.getLastStepFailMissionInfos(env)
-        reward = 0
+        sum_reward = 0
+        reward=0
+        punish=0
         for mission_info in last_step_succ_mission_infos:
             mission_reward = self.rewardScheduler.getRewardByMission(env, mission_info)
-            print('mission_id:', mission_info['mission_id'], 'mission_reward:', mission_reward)
             reward += mission_reward
+            sum_reward+=mission_reward
         for mission_info in last_step_fail_mission_infos:
             mission_punish = self.rewardScheduler.getPunishByMission(env, mission_info)
-            print('mission_id:', mission_info['mission_id'], 'mission_punish:', mission_punish)
-            reward += mission_punish
-        return reward
+            punish += mission_punish
+            sum_reward += mission_punish
+        return reward,punish,sum_reward
 
 
 class NVHAUAlgorithmModule(BaseAlgorithmModule):
@@ -343,7 +346,8 @@ class NVHAUAlgorithmModule(BaseAlgorithmModule):
                     mission_task_profile = {
                         'task_node_id': appointed_node_id,
                         'task_deadline': mission_profile['mission_deadline'],
-                        'arrival_time': mission_profile['mission_arrival_time']
+                        'arrival_time': mission_profile['mission_arrival_time'],
+                        'return_size': mission_profile['mission_size']
                     }
                     new_task = self.taskScheduler.generateTaskOfMission(env, mission_task_profile)
                     task_set.append(new_task)
@@ -437,7 +441,7 @@ class NVHAUAlgorithmModule(BaseAlgorithmModule):
                     return_route = [nearest_r_id]
                 else:
                     raise TypeError('Node type is invalid')
-                print('return:',task.getTaskId(),return_route)
+
                 self.taskScheduler.setTaskReturnRoute(env, task.getTaskId(), return_route)
 
     def scheduleTraffic(self, env: AirFogSimEnv):

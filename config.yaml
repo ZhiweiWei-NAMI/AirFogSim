@@ -1,7 +1,7 @@
 
 simulation:
   vehicle_count: 100
-  max_simulation_time: 3600
+  max_simulation_time: 1000
   simulation_interval: 0.1 # in seconds, for transmission, computation, task generation and assignment, etc.
   traffic_interval: 0.5 # in seconds, for traffic simulation. Remember to set the same value in the SUMO configuration file; otherwise, the simulation will not work properly
   
@@ -56,10 +56,11 @@ sensing:
 
 mission:
   UAV_height: 100
-  duration_range: [2,5]
-  task_size_range: [5,10]
+  TTL_range: [100,200]
+  duration_range: [5,10]
+  mission_size_range: [10,20]
   sensor_accuracy_range: [0,1]
-  distance_threshold: 200
+  distance_threshold: 150
   predictable_seconds: 2
   mission_generation_model: "Poisson" # supported model:['Poisson', 'Uniform', 'Normal', 'Exponential']
   generation_model_args:
@@ -75,9 +76,9 @@ mission:
       beta: 1
 
 energy:
-  initial_energy_range: [1000,2000]
-  fly_unit_cost: 5
-  hover_unit_cost: 5
+  initial_energy_range: [48000,52000]
+  fly_unit_cost: 2.5
+  hover_unit_cost: 1.2
   sensing_unit_cost: 0.5
   receive_unit_cost: 0.1
   send_unit_cost: 0.1

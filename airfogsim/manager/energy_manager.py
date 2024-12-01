@@ -37,7 +37,6 @@ class EnergyManager:
         self._UAVs_energy_info[node_id]=UAV_energy_info
 
     def updateEnergy(self):
-        return
         to_remove_UAVs_info={} # UAV_id -> { energy,is_flying,is_hovering,is_sensing,is_receiving,is_sending}
         for UAV_id,UAV_energy_info in self._UAVs_energy_info.items():
             to_consume_energy=0

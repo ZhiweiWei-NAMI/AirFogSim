@@ -69,7 +69,6 @@ class Mission:
         for i in range(len(self._mission_routes)):
             if self._mission_stayed_time[i] < self._mission_duration[i]:
                 if np.linalg.norm(np.array(xyz) - np.array(self._mission_routes[i])) < self._distance_threshold:
-                    # print('mission_id:',self._mission_id,'mission_duration:',self._mission_duration[i],'mission_stayed_time:',self._mission_stayed_time[i])
                     self._mission_stayed_time[i] += time_step
                     self._last_stayed_time[i] = current_time
                     break
@@ -85,12 +84,14 @@ class Mission:
             for task in taskset:
                 if not task.isFinished():
                     task_flag = False
-                    break
         return all(self._mission_stayed_time >= self._mission_duration) and task_flag
 
-    def isSensingFinished(self,index):
-        assert index<len(self._mission_routes)
-        return self._mission_stayed_time[index]>self._mission_duration[index]
+    def isSensingFinished(self,index=None):
+        if index is None:
+            return all(self._mission_stayed_time>self._mission_duration)
+        else:
+            assert index<len(self._mission_routes)
+            return self._mission_stayed_time[index]>self._mission_duration[index]
 
     def isRelatedToNode(self, node_id):
         """Check if the mission is related to the node. (The mission is related to the node if the mission is
@@ -104,7 +105,7 @@ class Mission:
             bool: True if the task is related to the node, False otherwise.
         """
         flag = False
-        if self._appointed_node_id==node_id:
+        if self._appointed_node_id==node_id and not self.isSensingFinished():
             flag=True
         for taskset in self._mission_task_sets:
             for task in taskset:

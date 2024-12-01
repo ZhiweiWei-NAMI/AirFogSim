@@ -1,4 +1,4 @@
-from airfogsim import AirFogSimEnv, BaseAlgorithmModule,NVHAUAlgorithmModule
+from airfogsim import AirFogSimEnv, BaseAlgorithmModule,NVHAUAlgorithmModule,AirFogSimEvaluation
 import numpy as np
 import yaml
 import sys
@@ -21,12 +21,17 @@ env = AirFogSimEnv(config, interactive_mode='graphic')
 # 3. Get algorithm module
 algorithm_module = NVHAUAlgorithmModule()
 algorithm_module.initialize(env)
-accumulated_reward = 0
+
+# 4. Create the evaluation module
+evaluation_module=AirFogSimEvaluation()
+
 while not env.isDone():
     algorithm_module.scheduleStep(env)
     env.step()
-    accumulated_reward += algorithm_module.getRewardByMission(env)
-    # print(f"Simulation time: {env.simulation_time}, ACC_Reward: {accumulated_reward}", end='\r')
-    print(f"Simulation time: {env.simulation_time}, ACC_Reward: {accumulated_reward}")
+    # accumulated_reward += algorithm_module.getRewardByMission(env)
+    # # print(f"Simulation time: {env.simulation_time}, ACC_Reward: {accumulated_reward}", end='\r')
+    # print(f"Simulation time: {env.simulation_time}, ACC_Reward: {accumulated_reward}")
     env.render()
+    evaluation_module.updateEvaluationIndicators(env,algorithm_module)
+    evaluation_module.printEvaluation()
 env.close()

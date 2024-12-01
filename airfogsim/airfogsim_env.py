@@ -29,6 +29,8 @@ class AirFogSimEnv():
             config (dict): The configuration of the environment. Please follow standard YAML format.
             interactive_mode (str, optional): The interactive mode. 'graphic' or 'text'. Defaults to None.
         """
+        self.force_quit=False
+
         self.vehicles = {}
         self.vehicle_ids_as_index = []  # vehicle ids as a list, used for indexing
         self.removed_vehicles = []
@@ -109,6 +111,14 @@ class AirFogSimEnv():
         self.update_AI_models = {}  # dict, key是node_id, value是{"model_name": AI model}
         self.task_return_routes = {}  # dict, key是task_id, value是route=[node_id_1,node_id_2,...]
 
+        # ----------------indicators, managed by evaluation----------------
+        self.channel = {'time': 0, 'data_size': 0}
+        self.V2U_channel={'time':0,'data_size':0}
+        self.V2I_channel = {'time': 0, 'data_size': 0}
+        self.U2I_channel = {'time': 0, 'data_size': 0}
+
+
+
     def mountVisualizer(self, mode='graphic'):
         """Mount the visualizer to the environment.
 
@@ -151,7 +161,7 @@ class AirFogSimEnv():
         Returns:
             bool: The done signal. True if the episode is done, False otherwise.
         """
-        return self.simulation_time >= self.max_simulation_time
+        return self.simulation_time >= self.max_simulation_time or self.force_quit==True
 
     def step(self):
         """The step function of the environment. It simulates the environment for one time step.
@@ -169,10 +179,11 @@ class AirFogSimEnv():
         for _ in range(sim_step_per_traffic_step):
             # 3. Update the authentication and privacy
             self._updateAuthPrivacy()
-            # 4. Update the mission (such as crowd sensing, data collection, etc.) and add new missions for the entities.
-            self._updateMission()
             # 5. Update the task
             self._updateTask()
+            # 4. Update the mission (such as crowd sensing, data collection, etc.) and add new missions for the entities.
+            self._updateMission()
+
             # 6. Update the communication (wireless, V2V, V2I, V2U, etc.) for fog computing nodes.
             self._updateWirelessCommunication()
             # 7. Update the communication (wired, backhaul, fronthaul, etc.) for cloud computing network nodes.
@@ -199,11 +210,6 @@ class AirFogSimEnv():
         new_vehicle_id_list = self.traffic_manager.getNewVehicleIds()
         for new_vehicle_id in new_vehicle_id_list:
             self.sensor_manager.initializeSensorsByNodeId(new_vehicle_id)
-
-        # print('BusySensorsNum', self.sensor_manager.getBusySensorsNum())
-        # print('IdleSensorsNum', self.sensor_manager.getIdleSensorsNum())
-        # print('UnavailableSensorsNum', self.sensor_manager.getUnavailableSensorsNum())
-        # print('')
 
     def _updateMission(self):
         """
@@ -288,6 +294,20 @@ class AirFogSimEnv():
             rx_size_dict[rx_id] = rx_size
 
             task.transmit_to_Node(rx_id, trans_data, self.simulation_time)
+
+            self.channel['time'] += self.simulation_interval
+            self.channel['data_size'] += trans_data
+            if channel_type=='V2I':
+                self.V2I_channel['time']+=self.simulation_interval
+                self.V2I_channel['data_size'] +=trans_data
+            elif channel_type=='V2U':
+                self.V2U_channel['time']+=self.simulation_interval
+                self.V2U_channel['data_size'] +=trans_data
+            elif channel_type=='U2I':
+                self.U2I_channel['time']+=self.simulation_interval
+                self.U2I_channel['data_size'] +=trans_data
+
+
             if task.isTransmittedToReturnedNode():
                 tmp_succeed_tasks.append(task_profile)
 
@@ -357,6 +377,7 @@ class AirFogSimEnv():
             node = self.RSUs.get(node_id, None)
         if node is None:
             node = self.cloudServers.get(node_id, None)
+        assert node is not None
         return node
 
     def _allocate_communication_RBs(self, activated_offloading_tasks_with_RB_Nos: dict):
@@ -470,6 +491,9 @@ class AirFogSimEnv():
         n_RSUs = len(self.RSUs)
         self.uav_ids_as_index = list(self.UAVs.keys())
         self.channel_manager.updateNodes(n_vehicles, n_UAVs, n_RSUs)
+
+        if n_UAVs==0:
+            self.force_quit=True
 
     def _updateBlockchain(self):
         """Update the blockchain for the entities.
@@ -658,7 +682,7 @@ class AirFogSimEnv():
         to_delete_vehicle_ids = list(set(existing_vehicle_ids) - set(certain_vehicle_ids))
         for vehicle_id in to_delete_vehicle_ids.copy():
             self._removeVehicle(vehicle_id)
-        n_Vehicles = len(self.vehicles)
+        n_vehicles = len(self.vehicles)
         n_UAVs = len(self.UAVs)
         n_RSUs = len(self.RSUs)
         self.vehicle_ids_as_index = list(self.vehicles.keys())
@@ -666,7 +690,11 @@ class AirFogSimEnv():
         self.rsu_ids_as_index = list(self.RSUs.keys())
         self.cloud_server_ids_as_index = list(self.cloudServers.keys())
 
-        self.channel_manager.updateNodes(n_Vehicles, n_UAVs, n_RSUs)
+        self.channel_manager.updateNodes(n_vehicles, n_UAVs, n_RSUs)
+
+        if n_UAVs==0:
+            self.force_quit=True
+
 
     def _removeVehicle(self, vehicle_id):
         """Remove the vehicle safely by the given id. The tasks, missions and sensors of the vehicle will be removed as well.
@@ -708,3 +736,15 @@ class AirFogSimEnv():
                     self.new_missions.remove(mission)
             del self.UAVs[UAV_id]
             self.removed_UAVs.append(UAV_id)
+
+    def getChannelAvgRate(self,channel_type=None):
+        if channel_type is None:
+            return self.channel['data_size']/self.channel['time'] if self.channel['time']!=0 else 0
+
+        assert channel_type in ['V2U','V2I','U2I']
+        if channel_type=='V2U':
+            return self.V2U_channel['data_size'] / self.V2U_channel['time'] if self.V2U_channel['time']!=0 else 0
+        elif channel_type=='V2I':
+            return self.V2I_channel['data_size'] / self.V2I_channel['time'] if self.V2I_channel['time']!=0 else 0
+        elif channel_type=='U2I':
+            return self.U2I_channel['data_size'] / self.U2I_channel['time'] if self.U2I_channel['time']!=0 else 0
