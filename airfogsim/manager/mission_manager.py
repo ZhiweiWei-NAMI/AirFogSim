@@ -26,8 +26,9 @@ class MissionManager:
         self._x_range = self._config_mission.get("x_range", [0, 1000])
         self._y_range = self._config_mission.get("y_range", [0, 1000])
         self._UAV_height = self._config_mission.get('UAV_height', 100)
-        self._duration_range = self._config_mission.get('duration_range', [50, 100])
-        self._task_size_range = self._config_mission.get('task_size_range', [5, 10])
+        self._TTL_range=self._config_mission.get('TTL_range', [100,200])
+        self._duration_range = self._config_mission.get('duration_range', [5, 10])
+        self._mission_size_range = self._config_mission.get('mission_size_range', [10, 20])
         self._sensor_accuracy_range = self._config_mission.get('sensor_accuracy_range', [0, 1])
         self._predictable_seconds = self._config_mission.get('predictable_seconds', 5)
         self._mission_generation_model = self._config_mission['mission_generation_model']
@@ -42,7 +43,7 @@ class MissionManager:
 
     def _generateBasicMissionProfile(self):
         new_mission_profile = {}
-        new_mission_profile['mission_id'] = self.__getNewMissionId()
+        new_mission_profile['mission_id'] = f'Mission_{self.__getNewMissionId()}'
         x = random.uniform(self._x_range[0], self._x_range[1])
         y = random.uniform(self._y_range[0], self._y_range[1])
         new_mission_profile['appointed_node_id'] = None
@@ -51,13 +52,12 @@ class MissionManager:
         new_mission_profile['mission_routes'] = [(x, y, self._UAV_height)]
         start, end = self._duration_range
         new_mission_profile['mission_duration'] = [random.randint(start, end)]
-        size_min, size_max = self._task_size_range
+        size_min, size_max = self._mission_size_range
         new_mission_profile['mission_size'] = random.randint(size_min, size_max)
         new_mission_profile['mission_sensor_type'] = 'Sensor_type_' + str(random.randint(1, self._sensor_type_num))
         new_mission_profile['mission_accuracy'] = random.random()  # 随机生成0-1之间的精度
         new_mission_profile['mission_start_time'] = None
-        new_mission_profile['mission_deadline'] = random.randint(sum(new_mission_profile['mission_duration']) + 100,
-                                                                 sum(new_mission_profile['mission_duration']) + 200) # TTL
+        new_mission_profile['mission_deadline'] = random.randint(self._TTL_range[0],self._TTL_range[1]) # TTL
         new_mission_profile[
             'mission_task_sets'] = []  # Each point to sensing have a task set, each set have several tasks
         new_mission_profile['mission_arrival_time'] = None
@@ -150,27 +150,6 @@ class MissionManager:
             current_time (float): The current time.
             _getNodeById (function): The function to get the node by ID.
         """
-        executing_missions = 0
-        for node_id in self._executing_missions:
-            for mission in self._executing_missions[node_id]:
-                executing_missions += 1
-                # print('mission_id',mission.getMissionId())
-        success_missions = 0
-        for node_id in self._success_missions:
-            for mission in self._success_missions[node_id]:
-                success_missions += 1
-        failed_missions = 0
-        for node_id in self._failed_missions:
-            for mission in self._failed_missions[node_id]:
-                failed_missions += 1
-        print('to_generate_missions:', len(self._to_generate_missions_profile))
-        print('executing_missions:', executing_missions)
-        print('success_missions:', success_missions)
-        print('failed_missions:', failed_missions)
-        print('early_failed_missions:', len(self._early_failed_missions))
-        # print(self._to_generate_missions_profile)
-        print('')
-
         self._checkMissions(current_time, sensor_manager)
 
         for node_id in self._executing_missions:
@@ -178,7 +157,6 @@ class MissionManager:
             for mission in self._executing_missions[node_id]:
                 sensor_id = mission.getAppointedSensorId()
                 node = _getNodeById(node_id)
-                # print('node_id:',node_id,'mission_id:',mission.getMissionId(),'sensor_id:',sensor_id,'sensor_type:',mission.getMissionSensorType(),'accuracy:',mission.getRequiredAccuracy(),mission.getActualAccuracy())
                 mission.updateMission(time_step, current_time, node)
 
                 # Task start only when sensing is completed
@@ -209,7 +187,6 @@ class MissionManager:
             to_remove = []
             for mission in self._executing_missions[node_id]:
                 sensor_id = mission.getAppointedSensorId()
-                # print('node_id:',node_id,'mission_id:',mission.getMissionId(),'sensor_id:',sensor_id,'sensor_type:',mission.getMissionSensorType(),'accuracy:',mission.getRequiredAccuracy(),mission.getActualAccuracy())
                 if mission.outOfDeadline(current_time):
                     mission.setMissionFinishTime(current_time)  # set finish time (when failed)
                     failed_missions_on_node = self._failed_missions.get(node_id, [])
@@ -302,6 +279,36 @@ class MissionManager:
                 return mission
         return None
 
+    def getToGenerateMissionNum(self):
+        """Get the to generate missions total number.
+
+        Returns:
+            int: The total count of to generate missions.
+        """
+        return len(self._to_generate_missions_profile)
+
+    def getExecutingMissionNum(self):
+        """Get the executing missions total number.
+
+        Returns:
+            int: The total count of executing missions.
+        """
+        executing_count = 0
+        for node_id in self._executing_missions:
+            executing_count += len(self._executing_missions[node_id])
+        return executing_count
+
+    def getSuccessMissionNum(self):
+        """Get the success missions total number.
+
+        Returns:
+            int: The total count of success missions.
+        """
+        success_count = 0
+        for node_id in self._success_missions:
+            success_count += len(self._success_missions[node_id])
+        return success_count
+
     def getFailedMissionNum(self):
         """Get the failed missions total number.
 
@@ -309,10 +316,17 @@ class MissionManager:
             int: The total count of failed missions.
         """
         failed_count = 0
-        for node_id in self._success_missions:
+        for node_id in self._failed_missions:
             failed_count += len(self._failed_missions[node_id])
-
         return failed_count
+
+    def getEarlyFailedMissionNum(self):
+        """Get the early failed missions total number.
+
+        Returns:
+            int: The total count of early failed missions.
+        """
+        return len(self._early_failed_missions)
 
     def getMissionCompletionRatio(self):
         """Get the mission completion ratio.
@@ -326,6 +340,7 @@ class MissionManager:
         for node_id in self._success_missions:
             success_count += len(self._success_missions[node_id])
             total_count += len(self._success_missions[node_id]) + len(self._failed_missions.get(node_id, []))
+        total_count+= len(self._early_failed_missions)
         ratio = success_count / total_count if total_count > 0 else 0.0
         return ratio, total_count
 

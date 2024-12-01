@@ -423,7 +423,7 @@ class TaskManager:
                     task_size = self._generateSize(), task_deadline = self._generateDeadline(),
                     task_priority = self._generatePriority(), task_arrival_time = arrival_time)
 
-    def generateTaskInfoOfMission(self,task_node_id,task_deadline,arrival_time):
+    def generateTaskInfoOfMission(self,task_node_id,task_deadline,arrival_time,return_size):
         """Generate the tasks for mission by the node id.
 
         Args:
@@ -437,7 +437,7 @@ class TaskManager:
         self._task_id += 1
         return Task(task_id=f'Task_{self._task_id}', task_node_id=task_node_id, task_cpu=0,
                     task_size=0, task_deadline=task_deadline,task_priority=self._generatePriority(),
-                    task_arrival_time=arrival_time,required_returned_size= self._generateSize())
+                    task_arrival_time=arrival_time,required_returned_size= return_size)
 
     def _generateTasks(self, task_node_ids_kwardsDict, cur_time, simulation_interval):
         # 1. Move the tasks from the to_generate_task_infos to the todo_tasks according to the current time

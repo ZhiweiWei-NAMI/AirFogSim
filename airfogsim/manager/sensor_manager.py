@@ -53,7 +53,6 @@ class SensorManager:
         target_node_id = None
         for node_id, sensors in self._idle_sensors.items():
             for sensor in sensors:
-                # print('node_id',node_id,'sensor_id:',sensor.getSensorId())
                 if sensor.getSensorId() == sensor_id:
                     target_sensor = sensor
                     target_node_id = node_id
@@ -64,7 +63,6 @@ class SensorManager:
         target_node_id = None
         for node_id, sensors in self._busy_sensors.items():
             for sensor in sensors:
-                # print('node_id', node_id, 'sensor_id:', sensor.getSensorId())
                 if sensor.getSensorId() == sensor_id:
                     target_sensor = sensor
                     target_node_id = node_id
@@ -75,7 +73,6 @@ class SensorManager:
         target_node_id = None
         for node_id, sensors in self._unavailable_sensors.items():
             for sensor in sensors:
-                # print('node_id',node_id,'sensor_id:',sensor.getSensorId())
                 if sensor.getSensorId() == sensor_id:
                     target_sensor = sensor
                     target_node_id = node_id
@@ -105,14 +102,6 @@ class SensorManager:
         """
 
         node_id, sensor = self._getIdleSensorById(sensor_id)
-        # print('idle:', node_id, sensor)
-        # if sensor is None:
-        #     node_id2, sensor2 = self._getBusySensorById(sensor_id)
-        #     print('busy:', node_id2, sensor2)
-        #     if sensor2 is None:
-        #         node_id2, sensor2 = self._getUnavailableSensorById(sensor_id)
-        #         print('un:', node_id2, sensor2)
-
         assert sensor is not None
         sensor.startUse()
         self._removeSensor(self._idle_sensors, node_id, sensor_id)
