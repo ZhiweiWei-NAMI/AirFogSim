@@ -181,14 +181,15 @@ class TkinterLayout(tk.Tk, BaseLayout):
     def draw_time(self):
         if self.canvas_time_image is not None:
             self.canvas.delete(self.canvas_time_image)
-        posx = 0.7 * self.canvas_width
-        posy = 0.8 * self.canvas_height
+        posx = 0.65 * self.canvas_width
+        posy = 0.9 * self.canvas_height
         # simulation delay 只显示小数点后两位
         self.simulation_delay = time.time() - self.last_updated_time
         self.canvas_time_image = self.canvas.create_text(posx, posy,
-                                                         text="Time: {} Vehicle Num: {} Step-wise Simulation Delay: {} ms".format(
+                                                         text="Time: {} Vehicle Num: {} UAV Num: {} \n Step-wise Simulation Delay: {} ms".format(
                                                              self._env.simulation_time,
                                                              len(self._env.vehicle_ids_as_index),
+                                                             len(self._env.uav_ids_as_index),
                                                              round(self.simulation_delay * 1000, 3)), anchor=tk.NW)
         self.last_updated_time = time.time()
 
