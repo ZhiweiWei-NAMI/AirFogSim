@@ -15,12 +15,13 @@ class TrafficManager():
         self._max_n_vehicles = config_traffic.get("max_n_vehicles", 100)
         self._x_range = config_traffic.get("x_range", [0, 1000]) # set in airfogsim_env.py according to used area map
         self._y_range = config_traffic.get("y_range", [0, 1000]) # set in airfogsim_env.py according to used area map
-        self._UAV_z_range = config_traffic.get("UAV_z_range", [50, 300])
-        self._UAV_speed_range=config_traffic.get("UAV_speed_range",[8,10])
+        self._UAV_z_range = config_traffic.get("UAV_z_range", [100, 200])
+        self._UAV_speed_range=config_traffic.get("UAV_speed_range",[20,40])
         self._max_n_UAVs = config_traffic.get("max_n_UAVs", 10)
-        self._RSU_positions = config_traffic.get("RSU_positions", [])
+        self._RSU_positions = config_traffic.get("RSU_positions", [[0,0,0]])
         self._max_n_cloudServers = config_traffic.get("max_n_cloudServers", 1)
         self._arrival_lambda = config_traffic.get("arrival_lambda", 1)
+        self._distance_threshold = config_traffic.get("distance_threshold", 1)
 
         self._traci_connection = traci_connection
 

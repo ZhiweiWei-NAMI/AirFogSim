@@ -12,8 +12,9 @@ class Mission:
                 appointed_sensor_id (str): The appointed sensor ID.
                 mission_routes (list): The list of routes.
                 mission_duration (list): The duration of the mission (each value represent the time need to stay at each point).
+                mission_size (float): The required return size of the mission.
                 mission_sensor_type (str): The sensor type of the mission.
-                mission_sensor_accuracy (float): The sensor accuracy needed for the mission.
+                mission_accuracy (float): The sensor accuracy needed for the mission.
                 mission_start_time (float): The start time of the mission.
                 mission_deadline (float): The deadline of the mission (time to live, TTL).
                 mission_task_sets (list): The list of tasks.

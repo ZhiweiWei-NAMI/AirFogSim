@@ -29,7 +29,7 @@ class AirFogSimEnv():
             config (dict): The configuration of the environment. Please follow standard YAML format.
             interactive_mode (str, optional): The interactive mode. 'graphic' or 'text'. Defaults to None.
         """
-        self.force_quit=False
+        self.force_quit = False
 
         self.vehicles = {}
         self.vehicle_ids_as_index = []  # vehicle ids as a list, used for indexing
@@ -94,7 +94,7 @@ class AirFogSimEnv():
 
         self.max_task_node_num = 0
         self.task_node_types = []
-        self.task_node_threshold_poss = 0.0
+        self.task_node_threshold_poss = 1.0  # All vehicles and UAVs are task nodes
 
         self._visualizer = None
         if interactive_mode is not None:
@@ -103,6 +103,7 @@ class AirFogSimEnv():
         # ----------------decisions, managed by schedulers----------------
         self.vehicle_mobility_patterns = {}  # dict, key是vehicle_id, value是mobility pattern={speed}
         self.uav_mobility_patterns = {}  # dict, key是uav_id, value是mobility pattern={angle, phi, speed}
+        self.uav_routes={} # dict, key是uav_id,value是route -> [{position -> [x,y,z]},{to_stay_time -> time}],...]
         self.new_missions = []  # missions list
         self.activated_offloading_tasks_with_RB_Nos = {}  # dict, key是task_id, value 是RB的list
         self.compute_tasks_with_cpu = {}  # dict, key是task_id, value是对应assigned node分配的cpu
@@ -113,11 +114,9 @@ class AirFogSimEnv():
 
         # ----------------indicators, managed by evaluation----------------
         self.channel = {'time': 0, 'data_size': 0}
-        self.V2U_channel={'time':0,'data_size':0}
+        self.V2U_channel = {'time': 0, 'data_size': 0}
         self.V2I_channel = {'time': 0, 'data_size': 0}
         self.U2I_channel = {'time': 0, 'data_size': 0}
-
-
 
     def mountVisualizer(self, mode='graphic'):
         """Mount the visualizer to the environment.
@@ -161,7 +160,7 @@ class AirFogSimEnv():
         Returns:
             bool: The done signal. True if the episode is done, False otherwise.
         """
-        return self.simulation_time >= self.max_simulation_time or self.force_quit==True
+        return self.simulation_time >= self.max_simulation_time or self.force_quit == True
 
     def step(self):
         """The step function of the environment. It simulates the environment for one time step.
@@ -297,16 +296,15 @@ class AirFogSimEnv():
 
             self.channel['time'] += self.simulation_interval
             self.channel['data_size'] += trans_data
-            if channel_type=='V2I':
-                self.V2I_channel['time']+=self.simulation_interval
-                self.V2I_channel['data_size'] +=trans_data
-            elif channel_type=='V2U':
-                self.V2U_channel['time']+=self.simulation_interval
-                self.V2U_channel['data_size'] +=trans_data
-            elif channel_type=='U2I':
-                self.U2I_channel['time']+=self.simulation_interval
-                self.U2I_channel['data_size'] +=trans_data
-
+            if channel_type == 'V2I':
+                self.V2I_channel['time'] += self.simulation_interval
+                self.V2I_channel['data_size'] += trans_data
+            elif channel_type == 'V2U':
+                self.V2U_channel['time'] += self.simulation_interval
+                self.V2U_channel['data_size'] += trans_data
+            elif channel_type == 'U2I':
+                self.U2I_channel['time'] += self.simulation_interval
+                self.U2I_channel['data_size'] += trans_data
 
             if task.isTransmittedToReturnedNode():
                 tmp_succeed_tasks.append(task_profile)
@@ -492,8 +490,8 @@ class AirFogSimEnv():
         self.uav_ids_as_index = list(self.UAVs.keys())
         self.channel_manager.updateNodes(n_vehicles, n_UAVs, n_RSUs)
 
-        if n_UAVs==0:
-            self.force_quit=True
+        if n_UAVs == 0:
+            self.force_quit = True
 
     def _updateBlockchain(self):
         """Update the blockchain for the entities.
@@ -692,9 +690,8 @@ class AirFogSimEnv():
 
         self.channel_manager.updateNodes(n_vehicles, n_UAVs, n_RSUs)
 
-        if n_UAVs==0:
-            self.force_quit=True
-
+        if n_UAVs == 0:
+            self.force_quit = True
 
     def _removeVehicle(self, vehicle_id):
         """Remove the vehicle safely by the given id. The tasks, missions and sensors of the vehicle will be removed as well.
@@ -737,14 +734,14 @@ class AirFogSimEnv():
             del self.UAVs[UAV_id]
             self.removed_UAVs.append(UAV_id)
 
-    def getChannelAvgRate(self,channel_type=None):
+    def getChannelAvgRate(self, channel_type=None):
         if channel_type is None:
-            return self.channel['data_size']/self.channel['time'] if self.channel['time']!=0 else 0
+            return self.channel['data_size'] / self.channel['time'] if self.channel['time'] != 0 else 0
 
-        assert channel_type in ['V2U','V2I','U2I']
-        if channel_type=='V2U':
-            return self.V2U_channel['data_size'] / self.V2U_channel['time'] if self.V2U_channel['time']!=0 else 0
-        elif channel_type=='V2I':
-            return self.V2I_channel['data_size'] / self.V2I_channel['time'] if self.V2I_channel['time']!=0 else 0
-        elif channel_type=='U2I':
-            return self.U2I_channel['data_size'] / self.U2I_channel['time'] if self.U2I_channel['time']!=0 else 0
+        assert channel_type in ['V2U', 'V2I', 'U2I']
+        if channel_type == 'V2U':
+            return self.V2U_channel['data_size'] / self.V2U_channel['time'] if self.V2U_channel['time'] != 0 else 0
+        elif channel_type == 'V2I':
+            return self.V2I_channel['data_size'] / self.V2I_channel['time'] if self.V2I_channel['time'] != 0 else 0
+        elif channel_type == 'U2I':
+            return self.U2I_channel['data_size'] / self.U2I_channel['time'] if self.U2I_channel['time'] != 0 else 0
