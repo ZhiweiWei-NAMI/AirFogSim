@@ -1,10 +1,13 @@
+import copy
+
 import numpy as np
 
 from .base_sched import BaseScheduler
 
+
 class TrafficScheduler(BaseScheduler):
     @staticmethod
-    def getConfig(env,name):
+    def getConfig(env, name):
         return env.traffic_manager.getConfig(name)
 
     @staticmethod
@@ -12,8 +15,13 @@ class TrafficScheduler(BaseScheduler):
         return env.traffic_manager.getCurrentTime()
 
     @staticmethod
-    def getDistanceBetweenNodesById(env,node_id_1,node_id_2):
-        return env.getDistanceBetweenNodesById(node_id_1,node_id_2)
+    def getTrafficInterval(env):
+        return env.traffic_interval
+
+    @staticmethod
+    def getDistanceBetweenNodesById(env, node_id_1, node_id_2):
+        return env.getDistanceBetweenNodesById(node_id_1, node_id_2)
+
     @staticmethod
     def getUAVTrafficInfos(env):
         return env.traffic_manager.getUAVTrafficInfos()
@@ -22,25 +30,28 @@ class TrafficScheduler(BaseScheduler):
     def getRSUTrafficInfos(env):
         return env.traffic_manager.getRSUInfos()
 
+
+
+
     @staticmethod
-    def setUAVMobilityPatterns(env,UAV_mobility_patterns):
-        organized_patterns={}
-        for UAV_id,UAV_mobile_pattern in UAV_mobility_patterns.items():
-            organized_patterns[UAV_id]={}
-            organized_patterns[UAV_id]['angle']=UAV_mobile_pattern['angle']
-            organized_patterns[UAV_id]['phi']=UAV_mobile_pattern['phi']
-            organized_patterns[UAV_id]['speed']=UAV_mobile_pattern['speed']
-        env.uav_mobility_patterns =organized_patterns
+    def setUAVMobilityPatterns(env, UAV_mobility_patterns):
+        organized_patterns = {}
+        for UAV_id, UAV_mobile_pattern in UAV_mobility_patterns.items():
+            organized_patterns[UAV_id] = {}
+            organized_patterns[UAV_id]['angle'] = UAV_mobile_pattern['angle']
+            organized_patterns[UAV_id]['phi'] = UAV_mobile_pattern['phi']
+            organized_patterns[UAV_id]['speed'] = UAV_mobile_pattern['speed']
+        env.uav_mobility_patterns = organized_patterns
 
     @staticmethod
     def getVehicleInfosInRange(env, target_position, distance_threshold):
-        vehicle_infos=env.traffic_manager.getVehicleTrafficInfos()
-        candidate_vehicle_infos={}
-        for vehicle_id,vehicle_info in vehicle_infos.items():
-            vehicle_position=vehicle_info['position']
-            distance=np.linalg.norm(np.array(target_position) - np.array(vehicle_position))
-            if distance<=distance_threshold:
-                candidate_vehicle_infos[vehicle_id]=vehicle_info
+        vehicle_infos = env.traffic_manager.getVehicleTrafficInfos()
+        candidate_vehicle_infos = {}
+        for vehicle_id, vehicle_info in vehicle_infos.items():
+            vehicle_position = vehicle_info['position']
+            distance = np.linalg.norm(np.array(target_position) - np.array(vehicle_position))
+            if distance <= distance_threshold:
+                candidate_vehicle_infos[vehicle_id] = vehicle_info
         return candidate_vehicle_infos
 
     # @staticmethod
@@ -56,4 +67,25 @@ class TrafficScheduler(BaseScheduler):
     #     """
     #     env.traffic_manager.updateUAVMobilityPatternById(node_id, {'speed': speed, 'angle': angle, 'phi': phi})
 
+    @staticmethod
+    def getNextPositionOfUav(env, UAV_id):
+        route = env.uav_routes.get(UAV_id, [])
+        if len(route) == 0:
+            return None
+        else:
+            return copy.deepcopy(route[0]['position'])
 
+    @staticmethod
+    def addUAVRoute(env, UAV_id, pos_with_time):
+        route = env.uav_routes.get(UAV_id, [])
+        route.append(pos_with_time)
+        env.uav_routes[UAV_id] = route
+
+    @staticmethod
+    def updateRoute(env, UAV_id, stay_time):
+        route = env.uav_routes.get(UAV_id, [])
+        assert len(route) > 0, f"Route length of {UAV_id} should larger than 0."
+        route[0]['to_stay_time'] = max(route[0]['to_stay_time'] - stay_time, 0)
+        if route[0]['to_stay_time'] <= 0:
+            del route[0]
+        env.uav_routes[UAV_id] = route

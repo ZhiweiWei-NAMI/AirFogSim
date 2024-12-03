@@ -1,10 +1,8 @@
-
-
 class EnumerateConstants:
     TASK_FAIL_OUT_OF_DDL = 0
     TASK_FAIL_OUT_OF_TTI = 1
     TASK_FAIL_OUT_OF_NODE = 2
-    
+
     CONSENSUS_POW = 11
     CONSENSUS_POS = 12
 
@@ -30,3 +28,10 @@ class EnumerateConstants:
             return "Proof of stake."
         else:
             return "Unknown code."
+
+
+class NodeTypeEnum:
+    CLOUD_SERVER = 0
+    RSU = 1
+    VEHICLE = 2
+    UAV = 3
