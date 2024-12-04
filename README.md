@@ -4,6 +4,34 @@ Vehicular Fog Computing (VFC) is significantly enhancing the efficiency, safety,
 
 ![image](https://github.com/ZhiweiWei-NAMI/AirFogSim/assets/153070550/0e28ce03-8eed-40e7-8f9d-a85e067df575)
 
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## How to use Real Data?
+<!-- 在config.yaml中sumo-export_tripinfo设置为True，设置tripinfo_output，可以在指定位置输出tripinfo_output.xml文件 -->
+First, you need to set the `sumo-export_tripinfo` to `True` in `config.yaml`, and set the `tripinfo_output` to the path you want to save the `tripinfo_output.xml` file. The code is like:
+```yaml
+sumo:
+  sumo_config: "./sumo_wujiaochang/osm.sumocfg"
+  sumo_osm: "./sumo_wujiaochang/osm_bbox.osm.xml"
+  sumo_net: "./sumo_wujiaochang/osm.net.xml"
+  sumo_port: 8813
+  export_tripinfo: True # 如果true，则导出tripinfo.xml文件（很大）
+  tripinfo_output: "./sumo_wujiaochang/tripinfo.xml"
+```
+Then, you can run the simulator to generate the `tripinfo_output.xml` file. After that, you should transform the `tripinfo_output.xml` file to the `tripinfo_output.csv` file. The code is like:
+```
+(airfogsim) (base) weizhiwei:~/data/airfogsim_code/$ python airfogsim/utils/xml2csv.py ./sumo_wujiaochang/tripinfo.xml
+```
+This will generate the `tripinfo_output.csv` file in the same directory. Then, you can use the real data in the simulator via yaml settings. The code is like:
+```yaml
+traffic:
+  traffic_mode: "real" # "real" or "SUMO"
+  tripinfo: "./sumo_wujiaochang/tripinfo.csv" # The path to the SUMO tripinfo file
+```
+
+
 ## Setup:
 1. Install [SUMO](https://sourceforge.net/projects/sumo/files/sumo/) (tested version is 1.8.0), and set the Environment variable. Once suceed, enter `sumo` in command line as:
 ```
