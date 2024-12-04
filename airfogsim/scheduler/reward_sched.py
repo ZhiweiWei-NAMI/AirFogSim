@@ -1,6 +1,7 @@
 from sympy import symbols, log, sympify
 from sympy.core.sympify import SympifyError
 from .base_sched import BaseScheduler
+from sympy import Symbol
 
 class RewardScheduler(BaseScheduler):
     """The reward scheduler for the reinforcement learning agents. Provide static methods to compute the reward for the reinforcement learning agents. Use sympy to parse the reward expression and compute the reward for each task node. According to test, the efficiency of evalf is similar to direct symbolic computation.
@@ -10,15 +11,16 @@ class RewardScheduler(BaseScheduler):
     ACCEPTED_MODEL=['REWARD','PUNISH']
     REWARD_SYMOBOLS = None
     PUNISH_SYMOBOLS=None
-    ACCEPTED_SYMBOLS = ['energy', 'task_ratio', 'task_deadline', 'task_delay',
+    ACCEPTED_SYMBOLS = ['energy', 'task_deadline', 'task_delay',
                         '_mission_duration_sum','_mission_arrival_time','_mission_start_time','_mission_deadline','_mission_finish_time'] # mission_duration is an array
 
     @staticmethod
-    def setModel(env,model_type, expression):
+    def setModel(env, model_type, expression):
         """Set the reward model for the reinforcement learning agents. Note that reward is computed for each task node, according to the QoE metrics defined in the expression. The QoE metrics include task delay, energy consumption, and task ratio. This metric is updated each step for each task node.
         
         Args:
             env (AirFogSimEnv): The environment.
+            model_type (str): The model type. The model type can be 'REWARD' or 'PUNISH'.
             expression (str): The reward expression. The expression should be a valid sympy expression
 
         Raises:
@@ -69,7 +71,13 @@ class RewardScheduler(BaseScheduler):
             raise ValueError(f"Reward model is not set for {env}, please set the reward model first.")
         task = env.task_manager.getDoneTaskByTaskNodeAndTaskId(task_info['task_node_id'], task_info['task_id'])
         # 调用task.getXXX()获取任务信息
-        kwargs = {key: task.__getattribute__(key) for key in RewardScheduler.REWARD_SYMOBOLS[env]}
+        kwargs = {}
+        for key in RewardScheduler.REWARD_SYMOBOLS[env]:
+            if hasattr(task, key):
+                kwargs[key]=task.__getattribute__(key)
+            elif Symbol(key) in RewardScheduler.REWARD_MODEL[env].free_symbols:
+                # 如果__getattribute__找不到对应的属性，并且该属性在表达式REWARD_MODEL[env]中，则报错
+                raise ValueError(f"Missing parameters '{key}' for reward model computation '{RewardScheduler.REWARD_MODEL[env]}'")
 
         # 获取任务信息，需要是还没有
         if not all(param in kwargs for param in RewardScheduler.REWARD_SYMOBOLS[env]):

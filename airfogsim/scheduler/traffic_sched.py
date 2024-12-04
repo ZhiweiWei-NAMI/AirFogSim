@@ -30,9 +30,6 @@ class TrafficScheduler(BaseScheduler):
     def getRSUTrafficInfos(env):
         return env.traffic_manager.getRSUInfos()
 
-
-
-
     @staticmethod
     def setUAVMobilityPatterns(env, UAV_mobility_patterns):
         organized_patterns = {}
