@@ -39,7 +39,6 @@ class TrafficManager():
 
         self._traffic_interval = config_traffic.get("traffic_interval", 1)
         self._tripinfo = None
-        self._org_tripinfo = None
         if traci_connection is not None:
             assert traci_connection.simulation.getDeltaT() == self._traffic_interval, "The traffic interval should be the same as the simulation interval."
         else:
@@ -50,7 +49,6 @@ class TrafficManager():
                 self._tripinfo = pd.read_csv(tripinfo_path, sep=";", usecols=['vehicle_id', 'data_timestep', 'vehicle_x', 'vehicle_y', 'vehicle_speed', 'vehicle_angle', 'vehicle_route'])
                 # dropnan
                 self._tripinfo = self._tripinfo.dropna()
-                self._org_tripinfo = self._tripinfo.copy()
             else:
                 raise ValueError("The tripinfo path is not set in the config_traffic.")
         
@@ -90,15 +88,32 @@ class TrafficManager():
         self._initialize_RSUs()
         self._initialize_cloudServers()
         self._initialize_UAVs()
-        self._tripinfo = self._org_tripinfo.copy() if self._org_tripinfo is not None else None
 
-    def getIndexesByNodeId(self, node_id):
+    def getMapIndexByNodeId(self, node_id):
         # row_idx, col_idx = np.where(self._map_by_grid == node_id)
         for row in range(self._map_by_grid.shape[0]):
             for col in range(self._map_by_grid.shape[1]):
                 if node_id in self._map_by_grid[row, col]:
                     return row, col
         return None, None
+    
+    def getVehicleTrafficInfosByMapIndex(self, row, col):
+        row = min(max(0, row), self._map_by_grid.shape[0] - 1)
+        col = min(max(0, col), self._map_by_grid.shape[1] - 1)
+        vehicle_ids = self._map_by_grid[row, col]
+        vehicle_infos = self.getVehicleInfoByIds(vehicle_ids)
+        return vehicle_infos
+    
+    def getMapIndexesByTargetPositionAndRange(self, target_position, range):
+        row = int((target_position[1] - self._y_range[0]) / self._grid_width)
+        col = int((target_position[0] - self._x_range[0]) / self._grid_width)
+        row_range = int(range / self._grid_width)
+        col_range = int(range / self._grid_width)
+        row_start = max(0, row - row_range)
+        row_end = min(self._map_by_grid.shape[0], row + row_range + 1)
+        col_start = max(0, col - col_range)
+        col_end = min(self._map_by_grid.shape[1], col + col_range + 1)
+        return row_start, row_end, col_start, col_end
 
     @property
     def map_by_grid(self):
@@ -397,17 +412,13 @@ class TrafficManager():
             angle = self._UAV_infos[UAV_id].get("angle", 0)
             phi = self._UAV_infos[UAV_id].get("phi", 0)
             # new position of UAV need to be uodated by hand
-            new_position = (org_position[0] + speed * np.cos(angle) * np.cos(phi) * self._traffic_interval,
-                            org_position[1] + speed * np.sin(angle) * np.cos(phi) * self._traffic_interval,
-                            org_position[2] + speed * np.sin(phi) * self._traffic_interval)
-            self._UAV_infos[UAV_id]["position"] = new_position
-            self._UAV_infos[UAV_id] = {"position": new_position, "speed": speed, "last_speed": speed, "angle": angle,
-                                       "phi": phi, "acceleration": acceleration}
+            new_position = (org_position[0] + speed * np.cos(angle) * np.cos(phi) * self._traffic_interval, org_position[1] + speed * np.sin(angle) * np.cos(phi) * self._traffic_interval, org_position[2] + speed * np.sin(phi) * self._traffic_interval)
+            new_position = [float(i) for i in new_position]
+            self._UAV_infos[UAV_id] = {"position": new_position, "speed": speed, "last_speed": speed, "angle": angle, "phi": phi, "acceleration": acceleration}
         self._update_route_ids()
         self._update_map_by_grid()
 
     def _update_map_by_grid(self):
-
         self._map_by_grid = np.empty((self._map_by_grid.shape[0], self._map_by_grid.shape[1]), dtype=object)
         for i in range(self._map_by_grid.shape[0]):
             for j in range(self._map_by_grid.shape[1]):
