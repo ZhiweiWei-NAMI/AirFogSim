@@ -162,8 +162,6 @@ class ChannelManagerCP:
             uav_index (list): The projection from the UAV id to the index.
 
         """
-        if self.n_Veh == 0 or self.n_UAV==0:
-            return
         # vid_index is list, each element is vehicle_id, first turn vid_index to dict
         vid_index = {vid: idx for idx, vid in enumerate(vid_index)}
         uav_index = {uav: idx for idx, uav in enumerate(uav_index)}
@@ -316,6 +314,7 @@ class ChannelManagerCP:
             txidx = task_profile['tx_idx']
             rxidx = task_profile['rx_idx']
             power_db = None
+            # 计算信号；并且把干扰减去，这样保证接收端的信号强度是正确的
             if channel_type == 'V2V':
                 rb_nos = self.V2V_active_links[txidx, rxidx, :]
                 addMatrix(V2V_Signal, self.V2V_power_dB, self.V2VChannel_with_fastfading, rb_nos, txidx, rxidx)
@@ -361,6 +360,7 @@ class ChannelManagerCP:
                 addMatrix(I2I_Signal, self.I2I_power_dB, self.I2IChannel_with_fastfading, rb_nos, txidx, rxidx)
                 subMatrix(interference_power_matrix_itx_x2i, self.I2I_power_dB, self.I2IChannel_with_fastfading, rb_nos, txidx, rxidx)
                 power_db = self.I2I_power_dB
+            # 计算干扰
             if channel_type[0] == 'V':
                 addTwoMatrix(interference_power_matrix_vtx_x2i, power_db, self.V2IChannel_with_fastfading, rb_nos, txidx)
                 addTwoMatrix(interference_power_matrix_vtx_x2v, power_db, self.V2VChannel_with_fastfading, rb_nos, txidx)
