@@ -118,3 +118,12 @@ class AirFogSimScheduler:
             TrafficScheduler: The traffic scheduler.
         """
         return TrafficScheduler()
+
+    @staticmethod
+    def getAlgorithmScheduler():
+        """Get the algorithm scheduler for the environment.
+
+        Returns:
+            AlgorithmScheduler: The algorithm scheduler.
+        """
+        return AlgorithmScheduler()

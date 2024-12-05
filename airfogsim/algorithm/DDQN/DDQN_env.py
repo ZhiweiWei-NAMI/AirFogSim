@@ -36,18 +36,18 @@ class DDQN_Env:
                                 self.eps_end, self.eps_dec, self.target_update, self.buffer_size, self.train_min_size,
                                 self.tau, self.device)
 
-    def getAction(self, state):
+    def getAction(self, state, mask):
         # 状态state时做动作选择，action为动作索引
-        is_random, max_q_value, action = self.agent.take_action(state)
+        is_random, max_q_value, action = self.agent.take_action(state,mask)
         # 平滑处理最大state_value
         self.max_q_value = max_q_value * (1 - self.smooth_factor) + self.max_q_value * self.smooth_factor
         # 保存每次迭代的最大state_value
         # self.max_q_value_list.append(self.max_q_value)
         return is_random,self.max_q_value,action
 
-    def addExperience(self, state, action, reward, next_state, done):
+    def addExperience(self, state, action,mask, reward, next_state,next_mask, done):
         # 添加经验池
-        self.agent.remember(state, action, reward, next_state, done)
+        self.agent.remember(state, action,mask, reward, next_state,next_mask, done)
 
     def train(self):
         self.agent.update()

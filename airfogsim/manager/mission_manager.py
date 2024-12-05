@@ -49,7 +49,7 @@ class MissionManager:
         new_mission_profile['appointed_node_id'] = None
         new_mission_profile['appointed_sensor_id'] = None
         new_mission_profile['appointed_sensor_accuracy'] = None
-        new_mission_profile['mission_routes'] = [(x, y, self._UAV_height)]
+        new_mission_profile['mission_routes'] = [[x, y, self._UAV_height]]
         start, end = self._duration_range
         new_mission_profile['mission_duration'] = [random.randint(start, end)]
         size_min, size_max = self._mission_size_range

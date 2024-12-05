@@ -19,16 +19,16 @@ class ReplayBuffer:
         self.train_min_size = train_min_size
 
     # 填充经验池
-    def add(self, state, action, reward, next_state, done):
-        self.buffer.append((state, action, reward, next_state, done))
+    def add(self, state, action, mask, reward, next_state, next_mask, done):
+        self.buffer.append((state, action, mask, reward, next_state, next_mask, done))
 
     # 随机采样batch组样本数据
     def sample(self, batch_size):
         transitions = random.sample(self.buffer, batch_size)
         # 分别取出这些数据，*获取list中的所有值
-        state, action, reward, next_state, done = zip(*transitions)
+        state, action, mask, reward, next_state, next_mask, done = zip(*transitions)
         # 将state变成数组，后面方便计算
-        return np.array(state), action, reward, np.array(next_state), done
+        return np.array(state), action, mask, reward, np.array(next_state), next_mask, done
 
     # 队列的长度
     def size(self):
@@ -72,7 +72,7 @@ class Double_DQN:
     # （1）初始化
     def __init__(self, n_states, n_hiddens, n_actions,
                  learning_rate, gamma, epsilon, eps_end, eps_dec,
-                 target_update, buffer_size,train_min_size, tau, device):
+                 target_update, buffer_size, train_min_size, tau, device):
         # 属性分配
         self.n_states = n_states
         self.n_hiddens = n_hiddens
@@ -84,7 +84,7 @@ class Double_DQN:
         self.eps_dec = eps_dec
         self.target_update = target_update
         self.buffer_size = buffer_size
-        self.train_min_size=train_min_size
+        self.train_min_size = train_min_size
         self.tau = tau
         self.device = device
         # 记录迭代次数
@@ -99,7 +99,7 @@ class Double_DQN:
         self.optimizer = torch.optim.Adam(params=self.q_net.parameters(), lr=self.learning_rate)
 
         # 经验池
-        self.memory = ReplayBuffer(buffer_size=self.buffer_size,train_min_size=self.tr)
+        self.memory = ReplayBuffer(buffer_size=self.buffer_size, train_min_size=self.tr)
 
         # 更新目标网络
         self.update_network_parameters(tau=self.tau)
@@ -115,27 +115,29 @@ class Double_DQN:
         for q_target_params, q_params in zip(self.target_q_net.parameters(), self.q_net.parameters()):
             q_target_params.data.copy_(tau * q_params + (1 - tau) * q_target_params)
 
-    def remember(self, state, action, reward, next_state, done):
-        self.memory.add(state, action, reward, next_state, done)
+    def remember(self, state, action, mask, reward, next_state, next_mask, done):
+        self.memory.add(state, action, mask, reward, next_state, next_mask, done)
 
     # 动作选择
-    def take_action(self, state):
+    def take_action(self, state, masks):
         # numpy[n_states]-->[1, n_states]-->Tensor
         state = torch.Tensor(state[np.newaxis, :])
-        # 获取当前状态下采取各动作的reward
-        actions_value = self.q_net(state)
+        # 获取当前状态下采取各动作的q值
+        q_values = self.q_net(state)
+        # 非法动作置为最小值
+        masked_q_values = torch.where(masks, q_values, torch.tensor(float('-inf')))
         # 对每个样本找到最大 Q 值对应的动作的索引
-        max_q_value, max_action_index = torch.max(actions_value, dim=-1)
+        max_q_value, max_action_index = torch.max(masked_q_values, dim=-1)
         # 如果小于贪婪系数就取最大值reward最大的动作
         if np.random.random() < self.epsilon:
             is_random = False
             # 获取reward最大值对应的动作索引
-            action = actions_value.argmax().item()
+            action = masked_q_values.argmax().item()
         # 如果大于贪婪系数就随即探索
         else:
             is_random = True
             action = np.random.randint(self.n_actions)
-        return is_random,max_q_value,action
+        return is_random, max_q_value, action
 
     def decrement_epsilon(self):
         if self.epsilon > self.eps_min:
@@ -155,22 +157,27 @@ class Double_DQN:
     def update(self):
         if not self.memory.ready():
             return
-        states, actions, rewards, next_states, terminals = self.memory.sample()
+        states, actions, masks, rewards, next_states, next_masks, dones, = self.memory.sample()
 
         # 当前状态，array_shape=[b,4]
         states = torch.tensor(states, dtype=torch.float)
         # 当前状态的动作，tuple_shape=[b]==>[b,1]
         actions = torch.tensor(actions, dtype=torch.int64).view(-1, 1)
+        # 动作掩码（布尔张量，True为有效动作，False为无效动作）
+        masks = torch.tensor(masks, dtype=torch.float).view(-1, 1)
         # 选择当前动作的奖励, tuple_shape=[b]==>[b,1]
         rewards = torch.tensor(rewards, dtype=torch.float).view(-1, 1)
         # 下一个时刻的状态array_shape=[b,4]
         next_states = torch.tensor(next_states, dtype=torch.float)
+        # 动作掩码（布尔张量，True为有效动作，False为无效动作）
+        next_masks = torch.tensor(next_masks, dtype=torch.float).view(-1, 1)
         # 是否到达目标 tuple_shape=[b,1]
-        dones = torch.tensor(terminals, dtype=torch.float).view(-1, 1)
+        dones = torch.tensor(dones, dtype=torch.float).view(-1, 1)
 
         with torch.no_grad():
             next_q_values = self.q_net.forward(next_states)
-            max_next_actions = torch.argmax(next_q_values, dim=-1)
+            next_masked_q_values = torch.where(next_masks, next_q_values, torch.tensor(float('-inf')))
+            max_next_actions = torch.argmax(next_masked_q_values, dim=-1)
             next_target_q_values = self.target_q_net.forward(next_states)
             q_targets = rewards + self.gamma * next_target_q_values.gather(1, max_next_actions) * (1 - dones)
         q_values = self.q_net(states).gather(1, actions)

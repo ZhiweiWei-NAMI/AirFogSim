@@ -1,11 +1,13 @@
 import traci
 import numpy as np
 import random
+
+
 class TrafficManager():
     """The traffic manager class. It manages both vehicle traffic and UAV traffic. It also manipulates the positions of the vehicles, UAVs, RSUs, and cloud servers.
     """
 
-    def __init__(self, config_traffic, traci_connection:traci.connection):
+    def __init__(self, config_traffic, traci_connection: traci.connection):
         """Initialize the traffic manager.
 
         Args:
@@ -13,27 +15,27 @@ class TrafficManager():
         """
         self._config_traffic = config_traffic
         self._max_n_vehicles = config_traffic.get("max_n_vehicles", 100)
-        self._x_range = config_traffic.get("x_range", [0, 1000]) # set in airfogsim_env.py according to used area map
-        self._y_range = config_traffic.get("y_range", [0, 1000]) # set in airfogsim_env.py according to used area map
+        self._x_range = config_traffic.get("x_range", [0, 1000])  # set in airfogsim_env.py according to used area map
+        self._y_range = config_traffic.get("y_range", [0, 1000])  # set in airfogsim_env.py according to used area map
         self._UAV_z_range = config_traffic.get("UAV_z_range", [100, 200])
-        self._UAV_speed_range=config_traffic.get("UAV_speed_range",[20,40])
+        self._UAV_speed_range = config_traffic.get("UAV_speed_range", [20, 40])
         self._max_n_UAVs = config_traffic.get("max_n_UAVs", 10)
-        self._RSU_positions = config_traffic.get("RSU_positions", [[0,0,0]])
+        self._RSU_positions = config_traffic.get("RSU_positions", [[0, 0, 0]])
         self._max_n_cloudServers = config_traffic.get("max_n_cloudServers", 1)
         self._arrival_lambda = config_traffic.get("arrival_lambda", 1)
         self._distance_threshold = config_traffic.get("distance_threshold", 1)
 
         self._traci_connection = traci_connection
 
-        self._vehicle_infos = {} # vehicle_id -> {position, speed, routeId}
-        self._UAV_infos = {} # uav_id -> {position, speed, acceleration, angle, phi}
-        self._RSU_infos = {} # rsu_id -> {position, id}
+        self._vehicle_infos = {}  # vehicle_id -> {position, speed, routeId}
+        self._UAV_infos = {}  # uav_id -> {position, speed, acceleration, angle, phi}
+        self._RSU_infos = {}  # rsu_id -> {position, id}
         self._cloudServer_infos = {}
-        self._new_added_vehicle_ids=[] # The latest(this time slot) added vehicle's id
+        self._new_added_vehicle_ids = []  # The latest(this time slot) added vehicle's id
 
-        self._sumo_route_ids = [] # all route ids in SUMO, further information can be gained by traci_connection.route.getEdges(route_id)
-        self._sumo_edges = {} # each edge is a series of lanes in SUMO, edgeId -> [laneId1, laneId2, ...]
-        self._sumo_laneIds = [] # all lane ids in SUMO
+        self._sumo_route_ids = []  # all route ids in SUMO, further information can be gained by traci_connection.route.getEdges(route_id)
+        self._sumo_edges = {}  # each edge is a series of lanes in SUMO, edgeId -> [laneId1, laneId2, ...]
+        self._sumo_laneIds = []  # all lane ids in SUMO
 
         self._traffic_interval = traci_connection.simulation.getDeltaT()
 
@@ -63,7 +65,7 @@ class TrafficManager():
     @property
     def map_by_grid(self):
         return self._map_by_grid.copy()
-    
+
     @property
     def grid_width(self):
         return self._grid_width
@@ -86,6 +88,21 @@ class TrafficManager():
         """
         return self._RSU_positions
 
+    def getRSUPosition(self, RSU_id):
+        RSU_info = self._RSU_infos.get(RSU_id, None)
+        assert RSU_info is not None
+        return RSU_info['position']
+
+    def getVehiclePosition(self, vehicle_id):
+        vehicle_info = self._vehicle_infos.get(vehicle_id, None)
+        assert vehicle_info is not None
+        return vehicle_info['position']
+
+    def getUAVPosition(self, UAV_id):
+        UAV_info = self._UAV_infos.get(UAV_id, None)
+        assert UAV_info is not None
+        return UAV_info['position']
+
     def getNumberOfRSUs(self):
         """Get the number of RSUs.
 
@@ -93,7 +110,7 @@ class TrafficManager():
             int: The number of RSUs.
         """
         return len(self._RSU_infos)
-    
+
     def getNumberOfCloudServers(self):
         """Get the number of cloud servers.
 
@@ -101,7 +118,7 @@ class TrafficManager():
             int: The number of cloud servers.
         """
         return len(self._cloudServer_infos)
-    
+
     def getNumberOfUAVs(self):
         """Get the number of UAVs.
 
@@ -109,7 +126,7 @@ class TrafficManager():
             int: The number of UAVs.
         """
         return len(self._UAV_infos)
-    
+
     def getNumberOfVehicles(self):
         """Get the number of vehicles.
 
@@ -139,19 +156,30 @@ class TrafficManager():
             position = (0, 0, 0)
             self._cloudServer_infos[cloudServer_id] = {"position": position, "id": cloudServer_id}
 
-
     def _initialize_UAVs(self):
         """Initialize the UAV information with random positions in the given range.
         """
         for _ in range(self._max_n_UAVs):
             UAV_id = "UAV_" + str(self._UAV_id_counter)
             self._UAV_id_counter += 1
-            position = (random.uniform(self._x_range[0], self._x_range[1]), random.uniform(self._y_range[0], self._y_range[1]), random.uniform(self._UAV_z_range[0], self._UAV_z_range[1]))
+            position = (
+                random.uniform(self._x_range[0], self._x_range[1]), random.uniform(self._y_range[0], self._y_range[1]),
+                random.uniform(self._UAV_z_range[0], self._UAV_z_range[1]))
             self._UAV_infos[UAV_id] = {"position": position}
             row = int((position[1] - self._y_range[0]) / self._grid_width)
             col = int((position[0] - self._x_range[0]) / self._grid_width)
             if row >= 0 and row < self._map_by_grid.shape[0] and col >= 0 and col < self._map_by_grid.shape[1]:
                 self._map_by_grid[row, col].append(UAV_id)
+
+    def completeStrId(self, id_num, node_type):
+        assert node_type in ['R', 'V', 'U']
+        if node_type == 'R':
+            str_id = "RSU_" + str(id_num)
+        elif node_type == 'V':
+            str_id = "vehicle_" + str(id_num)
+        elif node_type == 'U':
+            str_id = "UAV_" + str(id_num)
+        return str_id
 
     def _initialize_edges_and_lanes(self):
         """Initialize the edges information.
@@ -196,7 +224,7 @@ class TrafficManager():
         valid_edges = self.valid_edges
         while True:
             try:
-                from_edge, to_edge = random.sample(valid_edges, 2) 
+                from_edge, to_edge = random.sample(valid_edges, 2)
                 route = traci.simulation.findRoute(from_edge, to_edge)
                 while len(route.edges) == 0:
                     from_edge, to_edge = random.sample(valid_edges, 2)
@@ -204,11 +232,11 @@ class TrafficManager():
                 break
             except traci.exceptions.TraCIException as e:
                 pass
-            
+
         self._traci_connection.route.add(route_id, route.edges)
         self._route_id_counter += 1
         return route_id
-    
+
     def updateVehicleMobilityPatterns(self, vehicle_mobility_patterns):
         """Update the vehicle mobility patterns.
 
@@ -242,11 +270,11 @@ class TrafficManager():
     def stepSimulation(self):
         """Step the simulation for one step. Generate vehicles according to Poisson distribution, limit the number of vehicles, and update the route ids.
         """
-        to_generate_vehicles = int(np.random.poisson(self._arrival_lambda*self._traffic_interval))
+        to_generate_vehicles = int(np.random.poisson(self._arrival_lambda * self._traffic_interval))
         current_n_vehicles = self._traci_connection.vehicle.getIDCount()
         to_generate_vehicles = min(to_generate_vehicles, self._max_n_vehicles - current_n_vehicles)
         self._new_added_vehicle_ids = []  # Clear the list in each step.
-        if to_generate_vehicles > 0 :
+        if to_generate_vehicles > 0:
             for _ in range(to_generate_vehicles):
                 vehicle_id = "vehicle_" + str(self._vehicle_id_counter)
                 self._new_added_vehicle_ids.append(vehicle_id)
@@ -265,7 +293,8 @@ class TrafficManager():
             acceleration = self._traci_connection.vehicle.getAcceleration(vehicle_id)
             angle = self._traci_connection.vehicle.getAngle(vehicle_id)
             position3d = (position[0], position[1], 0)
-            self._vehicle_infos[vehicle_id] = {"position": position3d, "speed": speed, "acceleration": acceleration, "angle": angle, "routeId": route_id, 'id': vehicle_id}
+            self._vehicle_infos[vehicle_id] = {"position": position3d, "speed": speed, "acceleration": acceleration,
+                                               "angle": angle, "routeId": route_id, 'id': vehicle_id}
 
         for UAV_id in self._UAV_infos:
             org_position = self._UAV_infos[UAV_id]["position"]
@@ -277,14 +306,17 @@ class TrafficManager():
             angle = self._UAV_infos[UAV_id].get("angle", 0)
             phi = self._UAV_infos[UAV_id].get("phi", 0)
             # new position of UAV need to be uodated by hand
-            new_position = (org_position[0] + speed * np.cos(angle) * np.cos(phi) * self._traffic_interval, org_position[1] + speed * np.sin(angle) * np.cos(phi) * self._traffic_interval, org_position[2] + speed * np.sin(phi) * self._traffic_interval)
+            new_position = (org_position[0] + speed * np.cos(angle) * np.cos(phi) * self._traffic_interval,
+                            org_position[1] + speed * np.sin(angle) * np.cos(phi) * self._traffic_interval,
+                            org_position[2] + speed * np.sin(phi) * self._traffic_interval)
             self._UAV_infos[UAV_id]["position"] = new_position
-            self._UAV_infos[UAV_id] = {"position": new_position, "speed": speed, "last_speed": speed, "angle": angle, "phi": phi, "acceleration": acceleration}
+            self._UAV_infos[UAV_id] = {"position": new_position, "speed": speed, "last_speed": speed, "angle": angle,
+                                       "phi": phi, "acceleration": acceleration}
         self._update_route_ids()
         self._update_map_by_grid()
 
     def _update_map_by_grid(self):
-        
+
         self._map_by_grid = np.empty((self._map_by_grid.shape[0], self._map_by_grid.shape[1]), dtype=object)
         for i in range(self._map_by_grid.shape[0]):
             for j in range(self._map_by_grid.shape[1]):
@@ -315,7 +347,7 @@ class TrafficManager():
             dict: The vehicle traffics, including the vehicle id, position, speed, angle, acceleration, and current routeId.
         """
         return self._vehicle_infos
-    
+
     def getUAVTrafficInfos(self):
         """Get the UAV traffics at the given simulation time. The trajectory of the UAVs is controlled by their missions
 
@@ -323,7 +355,7 @@ class TrafficManager():
             dict: The UAV traffics, including the UAV id, position, acceleration, speed, angle, and phi.
         """
         return self._UAV_infos
-    
+
     def getRSUInfos(self):
         """Get the RSU information.
 
@@ -331,7 +363,7 @@ class TrafficManager():
             dict: The RSU information, including the RSU id and position
         """
         return self._RSU_infos
-    
+
     def getCloudServerInfos(self):
         """Get the cloud server information.
 
@@ -347,7 +379,7 @@ class TrafficManager():
             list: The Id list of vehicles.
         """
         return self._new_added_vehicle_ids
-    
+
     def getCurrentTime(self):
         """Get the current simulation time.
 
@@ -356,14 +388,14 @@ class TrafficManager():
         """
         return self._traci_connection.simulation.getTime()
 
-    def removeUAV(self,UAV_id):
-        assert UAV_id in self._UAV_infos.keys(),'UAV_id not in _UAV_infos'
+    def removeUAV(self, UAV_id):
+        assert UAV_id in self._UAV_infos.keys(), 'UAV_id not in _UAV_infos'
         del self._UAV_infos[UAV_id]
 
-    def checkIsRemovingByUAVId(self,UAV_id):
-        UAV_info=self._UAV_infos[UAV_id]
+    def checkIsRemovingByUAVId(self, UAV_id):
+        UAV_info = self._UAV_infos[UAV_id]
         assert UAV_id in self._UAV_infos.keys(), 'UAV_id not in _UAV_infos'
-        return UAV_info['speed']>0
+        return UAV_info['speed'] > 0
 
-    def getConfig(self,name):
-        return self._config_traffic.get(name,None)
+    def getConfig(self, name):
+        return self._config_traffic.get(name, None)

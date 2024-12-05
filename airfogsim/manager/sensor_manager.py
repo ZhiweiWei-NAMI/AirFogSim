@@ -48,6 +48,9 @@ class SensorManager:
             new_sensor = Sensor(new_sensor_id, new_sensor_type, new_sensor_accuracy, node_id)
             self._idle_sensors[node_id].append(new_sensor)
 
+    def completeSensorId(self,id_num):
+        return 'Sensor_' + str(id_num)
+
     def _getIdleSensorById(self, sensor_id):
         target_sensor = None
         target_node_id = None

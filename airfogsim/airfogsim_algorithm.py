@@ -2,7 +2,7 @@ import random
 
 from .airfogsim_scheduler import AirFogSimScheduler
 from .airfogsim_env import AirFogSimEnv
-# from .algorithm.DDQN.DDQN_env import  DDQN_Env
+from .algorithm.DDQN.DDQN_env import DDQN_Env
 import numpy as np
 
 
@@ -32,6 +32,7 @@ class BaseAlgorithmModule:
         self.missionScheduler = AirFogSimScheduler.getMissionScheduler()
         self.sensorScheduler = AirFogSimScheduler.getSensorScheduler()
         self.trafficScheduler = AirFogSimScheduler.getTrafficScheduler()
+        self.algorithmScheduler = AirFogSimScheduler.getAlgorithmScheduler()
 
     def initialize(self, env: AirFogSimEnv):
         """Initialize the algorithm with the environment. Should be implemented by the subclass. Including setting the task generation model, setting the reward model, etc.
@@ -91,9 +92,11 @@ class BaseAlgorithmModule:
         new_missions_profile = self.missionScheduler.getToBeAssignedMissionsProfile(env, cur_time)
         delete_mission_profile_ids = []
         excluded_sensor_ids = []
+
         for mission_profile in new_missions_profile:
             mission_sensor_type = mission_profile['mission_sensor_type']
             mission_accuracy = mission_profile['mission_accuracy']
+
             appointed_node_id, appointed_sensor_id, appointed_sensor_accuracy = self.sensorScheduler.getLowestAccurateIdleSensorOnUAV(
                 env, mission_sensor_type, mission_accuracy, excluded_sensor_ids)
 
@@ -489,9 +492,9 @@ class DDQNAlgorithmModule(BaseAlgorithmModule):
 
     def __init__(self):
         super().__init__()
-        self.n_state=1530
-        self.n_action=110
-        # self.DDQN_env=DDQN_Env(self.n_state,self.n_action)
+        self.n_state = 830
+        self.n_action = 10
+        self.DDQN_env = DDQN_Env(self.n_state, self.n_action)
 
     def initialize(self, env: AirFogSimEnv):
         """Initialize the algorithm with the environment. Including setting the task generation model, setting the reward model, etc.
@@ -524,24 +527,31 @@ class DDQNAlgorithmModule(BaseAlgorithmModule):
             env (AirFogSimEnv): The environment object.
 
         """
-        return
+
         cur_time = self.trafficScheduler.getCurrentTime(env)
         new_missions_profile = self.missionScheduler.getToBeAssignedMissionsProfile(env, cur_time)
         delete_mission_profile_ids = []
         excluded_sensor_ids = []
+
+        UAVs_state = self.algorithmScheduler.getNodeStates(env, 'U')
+        vehicles_state = self.algorithmScheduler.getNodeStates(env, 'V')
+        RSUs_state = self.algorithmScheduler.getNodeStates(env, 'R')
+
         for mission_profile in new_missions_profile:
             mission_sensor_type = mission_profile['mission_sensor_type']
             mission_accuracy = mission_profile['mission_accuracy']
+            mission_position = mission_profile['route'][0]
 
-            if random.random() < UAV_probability:
-                appointed_node_id, appointed_sensor_id, appointed_sensor_accuracy = self.sensorScheduler.getLowestAccurateIdleSensorOnUAV(
-                    env, mission_sensor_type, mission_accuracy, excluded_sensor_ids)
-            else:
-                sensing_position = mission_profile['mission_routes'][0]
-                distance_threshold = self.missionScheduler.getConfig(env, 'distance_threshold')
-                vehicle_infos = self.trafficScheduler.getVehicleInfosInRange(env, sensing_position, distance_threshold)
-                appointed_node_id, appointed_sensor_id, appointed_sensor_accuracy = self.sensorScheduler.getNearestIdleSensorInNodes(
-                    env, mission_sensor_type, mission_accuracy, sensing_position, vehicle_infos, excluded_sensor_ids)
+            mission_state = self.algorithmScheduler.getMissionStates(env, mission_profile)
+            nearest_10_sensors_state,mask = self.algorithmScheduler.getNearest10SensorStates(env, mission_sensor_type,
+                                                                                        mission_accuracy,
+                                                                                        mission_position,
+                                                                                        excluded_sensor_ids)
+
+            state = np.array([UAVs_state, vehicles_state, RSUs_state, mission_state, nearest_10_sensors_state])
+            state = state.flatten().reshape(1, -1)
+            action_index = self.DDQN_env.getAction(state,mask)
+            appointed_node_id, appointed_sensor_id, appointed_sensor_accuracy = self.algorithmScheduler.getSensorInfoByAction(action_index, nearest_10_sensors_state)
 
             if appointed_node_id != None and appointed_sensor_id != None:
                 mission_profile['appointed_node_id'] = appointed_node_id

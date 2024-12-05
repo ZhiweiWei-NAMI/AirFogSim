@@ -9,3 +9,4 @@ from .entity_sched import EntityScheduler
 from .mission_sched import MissionScheduler
 from .sensor_sched import SensorScheduler
 from .traffic_sched import TrafficScheduler
+from .algorithm_sched import AlgorithmScheduler
