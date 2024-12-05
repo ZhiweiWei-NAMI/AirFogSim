@@ -18,7 +18,7 @@ visualization:
   icon_path: "./icon"
 
 traffic:
-  traffic_mode: "SUMO" # "real" or "SUMO"
+  traffic_mode: "real" # "real" or "SUMO"
   tripinfo: "./sumo_wujiaochang/tripinfo.csv" # The path to the SUMO tripinfo file
   traffic_interval: 0.5 # in seconds, for traffic simulation. Remember to set the same value in the SUMO configuration file; otherwise, the simulation will not work properly
   UAV_z_range: [100, 100] # The range of z coordinates for UAVs

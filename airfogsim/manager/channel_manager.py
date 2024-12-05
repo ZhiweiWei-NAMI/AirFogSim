@@ -73,9 +73,7 @@ class ChannelManager:
         self._initialize_Channels()
         self._initialize_Interference_and_active()
         self.resetActiveLinks()
-
-
-
+        
     def _initialize_Channels(self):
         self.V2VChannel = V2VChannel(self.n_Veh, self.n_RB)  # number of vehicles
         self.V2IChannel = V2IChannel(self.n_Veh, self.n_RSU, self.n_RB, self.RSU_positions)
@@ -131,7 +129,6 @@ class ChannelManager:
         uav_index = {uav: idx for idx, uav in enumerate(uav_index)}
         self._renew_channel(vehicles, UAVs, vid_index, uav_index)
         self._update_small_fading()
-        # 为什么要减去快速衰落?
         V2VChannel_with_fastfading = np.repeat(self.V2VChannel_abs[:, :, np.newaxis], self.n_RB, axis=2)
         self.V2VChannel_with_fastfading = V2VChannel_with_fastfading - self.V2VChannel.FastFading
         V2IChannel_with_fastfading = np.repeat(self.V2IChannel_abs[:, :, np.newaxis], self.n_RB, axis=2)

@@ -30,6 +30,9 @@ class TrafficScheduler(BaseScheduler):
     def getRSUTrafficInfos(env):
         return env.traffic_manager.getRSUInfos()
 
+
+
+
     @staticmethod
     def setUAVMobilityPatterns(env, UAV_mobility_patterns):
         organized_patterns = {}
@@ -42,13 +45,17 @@ class TrafficScheduler(BaseScheduler):
 
     @staticmethod
     def getVehicleInfosInRange(env, target_position, distance_threshold):
+        target_position = [target_position[0], target_position[1], 0]
         vehicle_infos = env.traffic_manager.getVehicleTrafficInfos()
         candidate_vehicle_infos = {}
-        for vehicle_id, vehicle_info in vehicle_infos.items():
-            vehicle_position = vehicle_info['position']
-            distance = np.linalg.norm(np.array(target_position) - np.array(vehicle_position))
-            if distance <= distance_threshold:
-                candidate_vehicle_infos[vehicle_id] = vehicle_info
+        vehicle_ids_list = list(vehicle_infos.keys())
+        vehicle_positions = [vehicle_infos[vehicle_id]['position'] for vehicle_id in vehicle_ids_list]
+        vehicle_positions = np.asarray(vehicle_positions)
+        distances = np.linalg.norm(vehicle_positions - np.asarray(target_position), axis=1)
+        selected_vehicle_ids = np.where(distances <= distance_threshold)[0]
+        for idx in selected_vehicle_ids:
+            vehicle_id = vehicle_ids_list[idx]
+            candidate_vehicle_infos[vehicle_id] = vehicle_infos[vehicle_id]
         return candidate_vehicle_infos
 
     # @staticmethod

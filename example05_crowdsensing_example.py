@@ -1,10 +1,13 @@
+import os
+os.environ['useCUPY'] = 'False'
+print('useCUPY:',os.environ['useCUPY'])
+# When n_RB < 50, numpy is better than cupy; When n_RB >= 50, cupy is better than numpy.
+
 from airfogsim import AirFogSimEnv, BaseAlgorithmModule,NVHAUAlgorithmModule,AirFogSimEvaluation
 import numpy as np
 import yaml
 import sys
-
 from pyinstrument import Profiler
-
 
 def load_config(path):
     with open(path, 'r') as file:
@@ -37,7 +40,6 @@ while not env.isDone():
     print(f"Simulation time: {env.simulation_time}", end='\r')
     # print(f"Simulation time: {env.simulation_time}, ACC_Reward: {accumulated_reward}")
     env.render()
-    print(f"Simulation time: {env.simulation_time}", end='\r')
     # evaluation_module.printEvaluation()
 env.close()
 
