@@ -99,7 +99,7 @@ class Double_DQN:
         self.optimizer = torch.optim.Adam(params=self.q_net.parameters(), lr=self.learning_rate)
 
         # 经验池
-        self.memory = ReplayBuffer(buffer_size=self.buffer_size, train_min_size=self.tr)
+        self.memory = ReplayBuffer(buffer_size=self.buffer_size, train_min_size=self.train_min_size)
 
         # 更新目标网络
         self.update_network_parameters(tau=self.tau)
@@ -120,6 +120,8 @@ class Double_DQN:
 
     # 动作选择
     def take_action(self, state, masks):
+        print("State content:", state)
+        print("State dtype:", np.array(state).dtype)
         # numpy[n_states]-->[1, n_states]-->Tensor
         state = torch.Tensor(state[np.newaxis, :])
         # 获取当前状态下采取各动作的q值

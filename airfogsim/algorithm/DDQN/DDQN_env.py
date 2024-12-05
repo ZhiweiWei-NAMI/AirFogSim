@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from DDQN_model import Double_DQN
+from .DDQN_model import Double_DQN
 
 class DDQN_Env:
 

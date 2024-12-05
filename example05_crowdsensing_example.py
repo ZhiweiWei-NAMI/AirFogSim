@@ -3,7 +3,7 @@ os.environ['useCUPY'] = 'False'
 print('useCUPY:',os.environ['useCUPY'])
 # When n_RB < 50, numpy is better than cupy; When n_RB >= 50, cupy is better than numpy.
 
-from airfogsim import AirFogSimEnv, BaseAlgorithmModule,NVHAUAlgorithmModule,AirFogSimEvaluation
+from airfogsim import AirFogSimEnv, BaseAlgorithmModule,NVHAUAlgorithmModule,DDQNAlgorithmModule,AirFogSimEvaluation
 import numpy as np
 import yaml
 import sys
@@ -22,26 +22,31 @@ profiler.start()
 config_path = sys.argv[1] if len(sys.argv) > 1 else 'config.yaml'
 config = load_config(config_path)
 
-# 2. Create the environment
-# env = AirFogSimEnv(config, interactive_mode='graphic')
-env = AirFogSimEnv(config, interactive_mode=None)
+# 2. Get algorithm module
+algorithm_module = DDQNAlgorithmModule()
 
-# 3. Get algorithm module
-algorithm_module = NVHAUAlgorithmModule()
-algorithm_module.initialize(env)
+episode=200
+for i in range(episode):
+    # 3. Create the new environment
+    env = AirFogSimEnv(config, interactive_mode='graphic')
+    # env = AirFogSimEnv(config, interactive_mode=None)
 
-# 4. Create the evaluation module
-evaluation_module=AirFogSimEvaluation()
+    # 4. Initialize the algorithm module (initialize in every episode)
+    algorithm_module.initialize(env)
 
-while not env.isDone():
-    algorithm_module.scheduleStep(env)
-    env.step()
-    # accumulated_reward += algorithm_module.getRewardByMission(env)
-    print(f"Simulation time: {env.simulation_time}", end='\r')
-    # print(f"Simulation time: {env.simulation_time}, ACC_Reward: {accumulated_reward}")
-    env.render()
-    # evaluation_module.printEvaluation()
-env.close()
+    # 5. Create the evaluation module
+    evaluation_module=AirFogSimEvaluation()
+
+    while not env.isDone():
+        algorithm_module.scheduleStep(env)
+        env.step()
+        # accumulated_reward += algorithm_module.getRewardByMission(env)
+        # print(f"Simulation time: {env.simulation_time}", end='\r')
+        # print(f"Simulation time: {env.simulation_time}, ACC_Reward: {accumulated_reward}")
+        env.render()
+        algorithm_module.updateExperience(env)
+        evaluation_module.printEvaluation()
+    env.close()
 
 # 结束性能监控并打印报告
 profiler.stop()

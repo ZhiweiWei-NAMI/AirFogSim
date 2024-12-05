@@ -19,6 +19,7 @@ class TrafficManager():
         self._UAV_z_range = config_traffic.get("UAV_z_range", [100, 200])
         self._UAV_speed_range = config_traffic.get("UAV_speed_range", [20, 40])
         self._max_n_UAVs = config_traffic.get("max_n_UAVs", 10)
+        self._max_n_UAVs = config_traffic.get("max_n_RSUs", 1)
         self._RSU_positions = config_traffic.get("RSU_positions", [[0, 0, 0]])
         self._max_n_cloudServers = config_traffic.get("max_n_cloudServers", 1)
         self._arrival_lambda = config_traffic.get("arrival_lambda", 1)
@@ -204,7 +205,7 @@ class TrafficManager():
         """Initialize the cloud server information.
         """
         for _ in range(self._max_n_cloudServers):
-            cloudServer_id = "cloudServer_" + str(self._RSU_id_counter)
+            cloudServer_id = "CloudServer_" + str(self._RSU_id_counter)
             self._cloudServer_id_counter += 1
             position = (0, 0, 0)
             self._cloudServer_infos[cloudServer_id] = {"position": position, "id": cloudServer_id}

@@ -45,7 +45,6 @@ class TrafficScheduler(BaseScheduler):
 
     @staticmethod
     def getVehicleInfosInRange(env, target_position, distance_threshold):
-        target_position = [target_position[0], target_position[1], 0]
         vehicle_infos = env.traffic_manager.getVehicleTrafficInfos()
         candidate_vehicle_infos = {}
         vehicle_ids_list = list(vehicle_infos.keys())

@@ -18,6 +18,9 @@ class AlgorithmScheduler(BaseScheduler):
              algoSched.getNodeState(env,'U')
          """
         assert node_type in ['V','R','U']
+        v_max_num=100
+        u_max_num = 10
+        r_max_num = 4
         state = []
         if node_type=='V':
             vehicle_infos=env.traffic_manager.getVehicleTrafficInfos()
@@ -25,7 +28,7 @@ class AlgorithmScheduler(BaseScheduler):
                 index = int(vehicle_id.split('_')[-1])  # 转换为整数
                 node_type=NodeTypeEnum.VEHICLE
                 position=vehicle_info['position']
-                vehicle_state=[index,node_type,position]
+                vehicle_state=[index,node_type,*position]# 注意position解包
                 state.append(vehicle_state)
         elif node_type=='U':
             UAV_infos=env.traffic_manager.getUAVTrafficInfos()
@@ -33,7 +36,7 @@ class AlgorithmScheduler(BaseScheduler):
                 index = int(UAV_id.split('_')[-1])  # 转换为整数
                 node_type=NodeTypeEnum.UAV
                 position=UAV_info['position']
-                UAV_state=[index,node_type,position]
+                UAV_state=[index,node_type,*position] # 注意position解包
                 state.append(UAV_state)
         elif node_type == 'R':
             RSU_infos = env.traffic_manager.getRSUInfos()
@@ -41,7 +44,7 @@ class AlgorithmScheduler(BaseScheduler):
                 index = int(RSU_id.split('_')[-1])  # 转换为整数
                 node_type = NodeTypeEnum.RSU
                 position = RSU_info['position']
-                RSU_state = [index, node_type, position]
+                RSU_state = [index, node_type, *position]# 注意position解包
                 state.append(RSU_state)
         state_array=np.array(state).flatten()
         state_array.reshape(1,-1)
@@ -49,34 +52,36 @@ class AlgorithmScheduler(BaseScheduler):
 
     @staticmethod
     def getMissionStates(env,mission_profile):
-        index=mission_profile['mission_id']
+        index = int(mission_profile['mission_id'].split('_')[-1])  # 转换为整数
         accuracy = mission_profile['mission_accuracy']
-        sensor_type = mission_profile['mission_sensor_type']
+        sensor_type = int(mission_profile['mission_sensor_type'].split('_')[-1])  # 转换为整数
         return_size = mission_profile['mission_size']
         arrive_time = mission_profile['mission_arrival_time']
         deadline = mission_profile['mission_deadline']
         duration = sum(mission_profile['mission_duration'])
-        position = mission_profile['mission_routes']
+        position = mission_profile['mission_routes'][0]
         distance_threshold = mission_profile['distance_threshold']
-        state=[index,accuracy,sensor_type,return_size,arrive_time,deadline,duration,position,distance_threshold]
+        state=[index,accuracy,sensor_type,return_size,arrive_time,deadline,duration,*position,distance_threshold]
         state_array=np.array(state).flatten()
         state_array.reshape(1,-1)
         return state_array
 
     @staticmethod
     def getNearest10SensorStates(env,sensor_type,lower_bound_accuracy,target_position,excluded_sensor_ids):
-        candidate_sensors = env.sensor_manager.getSensorsByStateAndType('idle', sensor_type)
+        sensor_max_num=10
 
+        candidate_sensors = env.sensor_manager.getSensorsByStateAndType('idle', sensor_type)
         sensor_states=[]
+
         # Choose the sensor with the highest accuracy among the idle sensors
         for node_id, sensors in candidate_sensors.items():
             sensors = candidate_sensors.get(node_id, [])
             node_type=env._getNodeTypeById(node_id)
             if node_type=='V':
-                node_position = env.traffic_manager.getVehiclePosition(env,node_id)
+                node_position = env.traffic_manager.getVehiclePosition(node_id)
                 node_type=NodeTypeEnum.VEHICLE
             elif node_type=='U':
-                node_position=env.traffic_manager.getUAVPosition(env,node_id)
+                node_position=env.traffic_manager.getUAVPosition(node_id)
                 node_type = NodeTypeEnum.UAV
             distance = np.linalg.norm(np.array(target_position) - np.array(node_position))
             for sensor in sensors:
@@ -87,14 +92,14 @@ class AlgorithmScheduler(BaseScheduler):
                     accuracy = sensor.getSensorAccuracy()
                     sensor_states.append([distance,index,sensor_type,accuracy,node_index,node_type])
         sensor_states_sorted = sorted(sensor_states, key=lambda x: x[0])
-        action_num=10
+
         top_10_sensor_states = []
-        for item in sensor_states_sorted[:10]:
+        for item in sensor_states_sorted[:sensor_max_num]:
             top_10_sensor_states.extend([item[1:]])
         sensor_dim = len(sensor_states_sorted[0][1:])
-        valid_action_num=len(top_10_sensor_states)
-        mask = np.array([True] * valid_action_num + [False] * (action_num - valid_action_num))
-        while len(top_10_sensor_states) < 10:
+        valid_sensor_num=len(top_10_sensor_states)
+        mask = np.array([True] * valid_sensor_num + [False] * (sensor_max_num - valid_sensor_num))
+        while len(top_10_sensor_states) < sensor_max_num:
             top_10_sensor_states.append([0] * sensor_dim)  # 补充零
         state_array=np.array(top_10_sensor_states).flatten()
         state_array.reshape(1,-1)

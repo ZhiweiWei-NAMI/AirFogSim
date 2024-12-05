@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="e602f890-1e94-45d2-a6d5-c612b9de4d18" name="变更" comment="">
+      <change beforePath="$PROJECT_DIR$/airfogsim/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/airfogsim/airfogsim_algorithm.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/airfogsim_algorithm.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/airfogsim/algorithm/DDQN/DDQN_env.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/algorithm/DDQN/DDQN_env.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/airfogsim/algorithm/DDQN/DDQN_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/algorithm/DDQN/DDQN_model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/airfogsim/entities/mission.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/entities/mission.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/airfogsim/manager/mission_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/manager/mission_manager.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/airfogsim/manager/traffic_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/manager/traffic_manager.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/airfogsim/scheduler/algorithm_sched.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/scheduler/algorithm_sched.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/airfogsim/scheduler/traffic_sched.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/scheduler/traffic_sched.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/example05_crowdsensing_example.py" beforeDir="false" afterPath="$PROJECT_DIR$/example05_crowdsensing_example.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectId" id="2ldzNpMgwXwy3rKHAIJ2vngLlHK" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="E:\陈嘉瑞的文件夹\同济大学\科研\车联网雾计算\研究\仿真\AirFogSim\airfogsim\algorithm\DDQN" />
+      <recent name="E:\陈嘉瑞的文件夹\同济大学\科研\车联网雾计算\研究\仿真\AirFogSim\airfogsim\algorithm" />
+      <recent name="E:\陈嘉瑞的文件夹\同济大学\科研\车联网雾计算\研究\仿真\AirFogSim\airfogsim" />
+    </key>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="应用程序级" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="默认任务">
+      <changelist id="e602f890-1e94-45d2-a6d5-c612b9de4d18" name="变更" comment="" />
+      <created>1725524704670</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1725524704670</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>

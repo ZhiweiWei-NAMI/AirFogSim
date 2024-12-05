@@ -69,7 +69,9 @@ class Mission:
         xyz = node.getPosition()
         for i in range(len(self._mission_routes)):
             if self._mission_stayed_time[i] < self._mission_duration[i]:
-                if np.linalg.norm(np.array(xyz) - np.array(self._mission_routes[i])) < self._distance_threshold:
+                xyz_2d=xyz[:2]
+                route_2d=self._mission_routes[i][:2]
+                if np.linalg.norm(np.array(xyz_2d) - np.array(route_2d)) < self._distance_threshold:
                     self._mission_stayed_time[i] += time_step
                     self._last_stayed_time[i] = current_time
                     break
