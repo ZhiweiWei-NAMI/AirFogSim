@@ -173,3 +173,18 @@ class TaskScheduler(BaseScheduler):
     @staticmethod
     def setTaskReturnRoute(env,task_id,return_route):
         env.task_return_routes[task_id]=return_route
+
+    @staticmethod
+    def getSuccessTaskNum(env):
+        """Get the number of the success tasks.
+
+        Args:
+            env (AirFogSimEnv): The AirFogSim environment.
+
+        Returns:
+            int: The number of the success tasks.
+
+        Examples:
+            taskSched.getSuccessTaskNum(env)
+        """
+        return len(env.task_manager.getDoneTasks())

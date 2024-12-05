@@ -27,6 +27,19 @@ class TaskManager:
         self.setTaskAttributeModel('Deadline', deadline_model, **kwargs)
         self.setTaskAttributeModel('Priority', priority_model, **kwargs)
 
+    def getDoneTasks(self):
+        """Get the done task info list.
+
+        Returns:
+            list: The list of the done task info.
+        """
+        done_tasks = []
+        for task_node_id, task_infos in self._done_tasks.items():
+            for task_info in task_infos:
+                done_tasks.append(task_info)
+        return done_tasks
+
+
     def getDoneTaskByTaskNodeAndTaskId(self, task_node_id, task_id):
         """Get the done task by the task node id and the task id.
 
