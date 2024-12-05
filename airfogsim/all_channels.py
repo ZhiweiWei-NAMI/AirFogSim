@@ -94,6 +94,8 @@ class V2VChannel:
             return
         veh_positions = self.positions
         self.PathLoss = self.pathloss_callback(veh_positions, veh_positions, self.frequency_ranges)
+        for i in range(self.PathLoss.shape[0]):
+            self.PathLoss[i, i, :] = 0
 
     # 考虑到车辆数量变动，需要更新上一时刻的阴影，删除的车辆阴影删除，新增的车辆阴影增加
     def remove_vehicle_shadow(self, v_index):
@@ -284,6 +286,8 @@ class U2UChannel:
             self.PathLoss = cp.zeros((self.n_UAV, self.n_UAV, self.n_RB))
             return
         self.PathLoss = self.pathloss_callback(self.positions, self.positions, self.frequency_ranges)
+        for i in range(self.PathLoss.shape[0]):
+            self.PathLoss[i, i, :] = 0
                 
     def update_shadow(self, delta_distance_list):
         '''输入距离变化，计算阴影变化，基于3GPP的规范'''
@@ -320,6 +324,9 @@ class I2IChannel:
             self.PathLoss = cp.zeros((self.n_BS, self.n_BS, self.n_RB))
             return
         self.PathLoss = self.pathloss_callback(self.positions, self.positions, self.frequency_ranges)
+        # 对角线置为0
+        for i in range(self.PathLoss.shape[0]):
+            self.PathLoss[i, i, :] = 0
                 
     def update_shadow(self):
         '''更新阴影'''
