@@ -147,7 +147,7 @@ class EntityScheduler(BaseScheduler):
         assert sorted_by in ['distance', 'cpu'], "sorted_by should be 'distance' or 'cpu'"
         node = env._getNodeById(node_id)
         node_ids_map = env.traffic_manager.map_by_grid # numpy array
-        row_idx, col_idx = env.traffic_manager.getIndexesByNodeId(node_id)
+        row_idx, col_idx = env.traffic_manager.getMapIndexByNodeId(node_id)
         if row_idx is None or col_idx is None:
             return []
         # bfs from row_idx, col_idx，search for max_num nodes

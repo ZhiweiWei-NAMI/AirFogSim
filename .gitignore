@@ -1,4 +1,4 @@
 # Logs
 *.log
-
+*.run
 **/__pycache__/

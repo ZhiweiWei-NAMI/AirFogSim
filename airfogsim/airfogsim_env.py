@@ -1,6 +1,6 @@
 from .manager.traffic_manager import TrafficManager
 from .manager.task_manager import TaskManager
-from .manager.channel_manager import ChannelManager
+from .manager.channel_manager_cp import ChannelManagerCP
 from .manager.block_manager import BlockchainManager
 from .manager.sensor_manager import SensorManager
 from .manager.energy_manager import EnergyManager
@@ -83,7 +83,7 @@ class AirFogSimEnv():
         self._initRSUsAndCloudServers()
         self.task_manager = TaskManager(
             predictable_seconds=self.traffic_interval)  # suppose tasks are generated every traffic interval
-        self.channel_manager = ChannelManager(n_RSU=self.traffic_manager.getNumberOfRSUs(),
+        self.channel_manager = ChannelManagerCP(n_RSU=self.traffic_manager.getNumberOfRSUs(),
                                               n_UAV=self.traffic_manager.getNumberOfUAVs(),
                                               n_Veh=self.traffic_manager.getNumberOfVehicles(),
                                               RSU_positions=self.traffic_manager.getRSUPositions(),
@@ -502,7 +502,7 @@ class AirFogSimEnv():
         n_UAVs = len(self.UAVs)
         n_RSUs = len(self.RSUs)
         self.uav_ids_as_index = list(self.UAVs.keys())
-        self.channel_manager.updateNodes(n_vehicles, n_UAVs, n_RSUs)
+        self.channel_manager.updateNodes(n_vehicles, n_UAVs, n_RSUs, [], 0)
 
         if n_UAVs == 0:
             self.force_quit = True
@@ -670,9 +670,11 @@ class AirFogSimEnv():
         uav_traffic_infos = self.traffic_manager.getUAVTrafficInfos()
         existing_vehicle_ids = list(self.vehicles.keys())
         certain_vehicle_ids = list(vehicle_traffic_infos.keys())
+        added_veh_nums = 0
 
         for vehicle_id, vehicle_traffic_info in vehicle_traffic_infos.items():
             if vehicle_id not in self.vehicles:
+                added_veh_nums += 1
                 self.vehicles[vehicle_id] = self._initVehicle(vehicle_traffic_info,
                                                               fog_profile=self.fog_profile['vehicle'])
                 # check if the vehicle_id should be in the task_node_ids
@@ -695,8 +697,11 @@ class AirFogSimEnv():
             self.UAVs[uav_id].update(uav_traffic_info, self.simulation_time)
 
         to_delete_vehicle_ids = list(set(existing_vehicle_ids) - set(certain_vehicle_ids))
+        removed_veh_indexes = []
         for vehicle_id in to_delete_vehicle_ids.copy():
-            self._removeVehicle(vehicle_id)
+            vehicle_index = self._removeVehicle(vehicle_id)
+            removed_veh_indexes.append(vehicle_index)
+
         n_vehicles = len(self.vehicles)
         n_UAVs = len(self.UAVs)
         n_RSUs = len(self.RSUs)
@@ -705,7 +710,7 @@ class AirFogSimEnv():
         self.rsu_ids_as_index = list(self.RSUs.keys())
         self.cloud_server_ids_as_index = list(self.cloudServers.keys())
 
-        self.channel_manager.updateNodes(n_vehicles, n_UAVs, n_RSUs)
+        self.channel_manager.updateNodes(n_vehicles, n_UAVs, n_RSUs, removed_veh_indexes, added_veh_nums)
 
         if n_UAVs == 0:
             self.force_quit = True
@@ -716,19 +721,22 @@ class AirFogSimEnv():
         Args:
             vehicle_id (str): The id of the vehicle.
         """
+        vehicle_index = 0
         if vehicle_id in self.task_node_ids:
             self.task_node_ids.remove(vehicle_id)
         if vehicle_id in self.vehicles:
             self.task_manager.removeTasksByNodeId(vehicle_id)
             self.mission_manager.failExecutingMissionsByNodeId(vehicle_id, self.simulation_time)
             self.sensor_manager.disableByNodeId(vehicle_id)
-            self.vehicle_ids_as_index.remove(vehicle_id)
+            vehicle_index = self.vehicle_ids_as_index.index(vehicle_id)
+            del self.vehicle_ids_as_index[vehicle_index]
             for mission in self.new_missions.copy():
                 if mission.getAppointedNodeId() == vehicle_id:
                     self.mission_manager.failNewMission(mission, self.simulation_time)
                     self.new_missions.remove(mission)
             del self.vehicles[vehicle_id]
             self.removed_vehicles.append(vehicle_id)
+        return vehicle_index
 
     def _removeUAV(self, UAV_id):
         """Remove the UAV safely by the given id. The tasks, missions and sensors of the UAV will be removed as well.
