@@ -15,10 +15,10 @@ class BlockchainScheduler(BaseScheduler):
         Returns:
             bool: The flag to indicate whether the consensus is scheduled successfully.
         """
-        if BlockchainScheduler.IS_OPEN and env.blockchain is not None:
-            if consensus in [EnumerateConstants.CONSENSUS_POS, EnumerateConstants.CONSENSUS_POW]:
-                env.blockchain_manager.setBlockchainConsensus(consensus)
-                return True
+        
+        if consensus in [EnumerateConstants.CONSENSUS_POS, EnumerateConstants.CONSENSUS_POW]:
+            env.blockchain_manager.setBlockchainConsensus(consensus)
+            return True
         return False
     
     @staticmethod
@@ -35,7 +35,7 @@ class BlockchainScheduler(BaseScheduler):
         return EnumerateConstants.getDescByCode(env.blockchain_manager.getBlockchainConsensus())
 
     @staticmethod
-    def getSizeByBlockIdx(env,idx:int):
+    def getBlockSizeByIndex(env,idx:int):
         """
           Get the transaction size of the specific block.
 
@@ -85,5 +85,36 @@ class BlockchainScheduler(BaseScheduler):
         """
         return env.blockchain_manager.getBlockchain().length
     
+ 
+    @staticmethod
+    def getTransactionsPerSecond(env):
+        """
+        Calculate the transactions per second (TPS) based on the total number of transactions and the blockchain's total time.
+
+        Args:
+            env
+
+        Returns:
+            float: The transactions per second.
+        """
+        return env.blockchain_manager.getTransactionsPerSecond()
+    
+        
+    @staticmethod
+    def getBlockchainSize(env):
+        """
+        Get the total size of the blockchain in bytes.
+
+        Args:
+            env
+
+        Returns:
+            int: The total size of the blockchain.
+        """
+        return env.blockchain_manager.getBlockchainSize()
+    
+        
+
+        
 
 

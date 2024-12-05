@@ -34,11 +34,11 @@ while not env.isDone():
     algorithm_module.scheduleStep(env)
     env.step()
     # accumulated_reward += algorithm_module.getRewardByMission(env)
-    # # print(f"Simulation time: {env.simulation_time}, ACC_Reward: {accumulated_reward}", end='\r')
+    print(f"Simulation time: {env.simulation_time}", end='\r')
     # print(f"Simulation time: {env.simulation_time}, ACC_Reward: {accumulated_reward}")
     env.render()
-    evaluation_module.updateEvaluationIndicators(env,algorithm_module)
-    evaluation_module.printEvaluation()
+    print(f"Simulation time: {env.simulation_time}", end='\r')
+    # evaluation_module.printEvaluation()
 env.close()
 
 # 结束性能监控并打印报告

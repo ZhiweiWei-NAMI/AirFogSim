@@ -1,4 +1,6 @@
 import hashlib
+import sys
+import time
 from ..enum_const import EnumerateConstants
 class Block():
     """ Block is the class that represents the block in the blockchain. 
@@ -28,6 +30,17 @@ class Block():
         """
         return len(self.block_transactions)
 
+    def getBlockSize(self):
+        """Calculate the size of the block based on transactions and metadata.
+
+        Returns:
+            int: The size of the block in bytes.
+        """
+        # Calculate size of transactions and metadata (timestamp, previous hash, index)
+        transactions_size = sum(sys.getsizeof(tx) for tx in self.block_transactions)
+        metadata_size = sys.getsizeof(self.block_timestamp) + sys.getsizeof(self.block_previous_hash) + sys.getsizeof(self.block_index) + sys.getsizeof(self.block_hash)
+        return transactions_size + metadata_size
+    
     def get_hash(self):
         """Creates the unique hash for the block using sha256.
 
@@ -58,7 +71,7 @@ class Blockchain():
         self.transaction_threshold = transaction_threshold
         self.consensus_type = consensus
         self.chain = [self.create_genesis_block()]
-        print("区块链初始化完成, 共识机制为: ", EnumerateConstants.getDescByCode(consensus))
+        print("The initialization of the blockchain is completed, and the consensus mechanism is: ", EnumerateConstants.getDescByCode(consensus))
         self.to_mine_blocks = []
     
     @property
@@ -135,3 +148,13 @@ class Blockchain():
             None.
         """
         self.mine_time_threshold = threshold
+
+    def getTotalTransactions(self):
+        """Get the total number of transactions in the blockchain.
+
+        Returns:
+            int: The total number of transactions.
+        """
+        return sum(block.getTransactionNum() for block in self.chain)
+
+    

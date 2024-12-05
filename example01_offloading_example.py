@@ -2,6 +2,7 @@ from airfogsim import AirFogSimEnv, BaseAlgorithmModule
 import numpy as np
 import yaml
 import sys
+from airfogsim.scheduler import RewardScheduler
 
 def load_config(path):
     with open(path, 'r') as file:
@@ -14,12 +15,13 @@ config_path = sys.argv[1] if len(sys.argv) > 1 else 'config.yaml'
 config = load_config(config_path)
 
 # 2. Create the environment
-env = AirFogSimEnv(config, interactive_mode='graphic')
-# env = AirFogSimEnv(config, interactive_mode=None)
+# env = AirFogSimEnv(config, interactive_mode='graphic')
+env = AirFogSimEnv(config, interactive_mode=None)
 
 # 3. Get algorithm module
 algorithm_module = BaseAlgorithmModule()
 algorithm_module.initialize(env)
+RewardScheduler.setModel(env, 'REWARD', '-energy')
 accumulated_reward = 0
 while not env.isDone():
     algorithm_module.scheduleStep(env)

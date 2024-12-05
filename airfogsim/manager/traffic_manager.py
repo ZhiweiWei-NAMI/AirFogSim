@@ -1,8 +1,7 @@
 import traci
 import numpy as np
 import random
-
-
+import pandas as pd
 class TrafficManager():
     """The traffic manager class. It manages both vehicle traffic and UAV traffic. It also manipulates the positions of the vehicles, UAVs, RSUs, and cloud servers.
     """
@@ -26,6 +25,7 @@ class TrafficManager():
         self._distance_threshold = config_traffic.get("distance_threshold", 1)
 
         self._traci_connection = traci_connection
+        self._current_time = 0.0
 
         self._vehicle_infos = {}  # vehicle_id -> {position, speed, routeId}
         self._UAV_infos = {}  # uav_id -> {position, speed, acceleration, angle, phi}
@@ -37,8 +37,23 @@ class TrafficManager():
         self._sumo_edges = {}  # each edge is a series of lanes in SUMO, edgeId -> [laneId1, laneId2, ...]
         self._sumo_laneIds = []  # all lane ids in SUMO
 
-        self._traffic_interval = traci_connection.simulation.getDeltaT()
-
+        self._traffic_interval = config_traffic.get("traffic_interval", 1)
+        self._tripinfo = None
+        self._org_tripinfo = None
+        if traci_connection is not None:
+            assert traci_connection.simulation.getDeltaT() == self._traffic_interval, "The traffic interval should be the same as the simulation interval."
+        else:
+            # 从config_traffic的tripinfo中获取tripinfo.csv的路径，读取作为pandas的DataFrame
+            tripinfo_path = config_traffic.get("tripinfo", None)
+            if tripinfo_path is not None:
+                # 只读取columns=['vehicle_id', 'data_timestep', 'vehicle_x', 'vehicle_y', 'vehicle_speed', 'vehicle_angle', 'vehicle_route']
+                self._tripinfo = pd.read_csv(tripinfo_path, sep=";", usecols=['vehicle_id', 'data_timestep', 'vehicle_x', 'vehicle_y', 'vehicle_speed', 'vehicle_angle', 'vehicle_route'])
+                # dropnan
+                self._tripinfo = self._tripinfo.dropna()
+                self._org_tripinfo = self._tripinfo.copy()
+            else:
+                raise ValueError("The tripinfo path is not set in the config_traffic.")
+        
         self._vehicle_id_counter = 0
         self._UAV_id_counter = 0
         self._RSU_id_counter = 0
@@ -46,6 +61,7 @@ class TrafficManager():
         self._route_id_counter = 0
 
         self._grid_width = 50
+        self._traffic_mode = config_traffic['traffic_mode']
 
         self._initialize_map_by_grid()
         self._initialize_edges_and_lanes()
@@ -53,6 +69,28 @@ class TrafficManager():
         self._initialize_RSUs()
         self._initialize_cloudServers()
         self._initialize_UAVs()
+
+    def reset(self):
+        """Reset the traffic manager.
+        """
+        self._current_time = 0.0
+        self._vehicle_infos = {}
+        self._UAV_infos = {}
+        self._RSU_infos = {}
+        self._cloudServer_infos = {}
+        self._new_added_vehicle_ids = []
+        self._vehicle_id_counter = 0
+        self._UAV_id_counter = 0
+        self._RSU_id_counter = 0
+        self._cloudServer_id_counter = 0
+        self._route_id_counter = 0
+        self._initialize_map_by_grid()
+        self._initialize_edges_and_lanes()
+        self._update_route_ids()
+        self._initialize_RSUs()
+        self._initialize_cloudServers()
+        self._initialize_UAVs()
+        self._tripinfo = self._org_tripinfo.copy() if self._org_tripinfo is not None else None
 
     def getIndexesByNodeId(self, node_id):
         # row_idx, col_idx = np.where(self._map_by_grid == node_id)
@@ -184,35 +222,37 @@ class TrafficManager():
     def _initialize_edges_and_lanes(self):
         """Initialize the edges information.
         """
-        lane_ids = self._traci_connection.lane.getIDList()
-        for lane_id in lane_ids:
-            edge_id = self._traci_connection.lane.getEdgeID(lane_id)
-            if edge_id not in self._sumo_edges:
-                self._sumo_edges[edge_id] = []
-            self._sumo_edges[edge_id].append(lane_id)
-            self._sumo_laneIds.append(lane_id)
-        edge_ids = self._traci_connection.edge.getIDList()
-        for edge_id in edge_ids:
-            if edge_id not in self._sumo_edges:
-                self._sumo_edges[edge_id] = []
-        valid_edges = []
-        edges = list(self._sumo_edges.keys())
-        self.all_allowed_classes = set()
-        for edge in edges:
-            lanes = self._sumo_edges[edge]
-            for lane in lanes:
-                allowed_classes = self._traci_connection.lane.getAllowed(lane)
-                self.all_allowed_classes.update(allowed_classes)
-                if len(allowed_classes) == 0 or 'passenger' in allowed_classes:
-                    valid_edges.append(edge)
-                    break
-        self.valid_edges = valid_edges
+        if self._traffic_mode == 'SUMO':
+            lane_ids = self._traci_connection.lane.getIDList()
+            for lane_id in lane_ids:
+                edge_id = self._traci_connection.lane.getEdgeID(lane_id)
+                if edge_id not in self._sumo_edges:
+                    self._sumo_edges[edge_id] = []
+                self._sumo_edges[edge_id].append(lane_id)
+                self._sumo_laneIds.append(lane_id)
+            edge_ids = self._traci_connection.edge.getIDList()
+            for edge_id in edge_ids:
+                if edge_id not in self._sumo_edges:
+                    self._sumo_edges[edge_id] = []
+            valid_edges = []
+            edges = list(self._sumo_edges.keys())
+            self.all_allowed_classes = set()
+            for edge in edges:
+                lanes = self._sumo_edges[edge]
+                for lane in lanes:
+                    allowed_classes = self._traci_connection.lane.getAllowed(lane)
+                    self.all_allowed_classes.update(allowed_classes)
+                    if len(allowed_classes) == 0 or 'passenger' in allowed_classes:
+                        valid_edges.append(edge)
+                        break
+            self.valid_edges = valid_edges
 
     def _update_route_ids(self):
         """Update the route information generated by SUMO.
         """
-        route_ids = self._traci_connection.route.getIDList()
-        self._sumo_route_ids = route_ids
+        if self._traffic_mode == 'SUMO':
+            route_ids = self._traci_connection.route.getIDList()
+            self._sumo_route_ids = route_ids
 
     def _generateRandomRoute(self):
         """Generate a random route id.
@@ -267,34 +307,85 @@ class TrafficManager():
         for UAV_id, mobility_pattern in UAV_mobility_patterns.items():
             self._updateUAVMobilityPatternById(UAV_id, mobility_pattern)
 
+    def updateCurrentTime(self):
+        """Update the current time.
+
+        Returns:
+            float: The updated current time.
+        """
+        if self._traffic_mode == 'SUMO':
+            return self._traci_connection.simulation.getTime()
+        else:
+            # 把self._tripinfo中current_time之前的数据删除
+            self._tripinfo = self._tripinfo[self._tripinfo['data_timestep']>=self._current_time]
+            return self._current_time + self._traffic_interval
+
+    def getVehicleIDsList(self):
+        """Get the vehicle ids list.
+
+        Returns:
+            list: The vehicle ids list.
+        """
+        if self._traffic_mode == 'SUMO':
+            return self._traci_connection.vehicle.getIDList()
+        else:
+            # 根据当前的时隙，从tripinfo中获取当前时隙的车辆信息
+            current_time = self._current_time
+            # tripinfo是pd.DataFrame，可以直接使用pandas的查询功能,'data_timestep'==current_time
+            vehicle_ids = self._tripinfo[self._tripinfo['data_timestep']==current_time]['vehicle_id'].tolist()
+            return vehicle_ids
+        
+    def getVehicleInfoByIds(self, vehicle_ids):
+        # {"position": position3d, "speed": speed, "acceleration": acceleration, "angle": angle, "routeId": route_id, 'id': vehicle_id}
+        if self._traffic_mode == 'SUMO':
+            vehicle_infos = {}
+            for vehicle_id in vehicle_ids:
+                position = self._traci_connection.vehicle.getPosition(vehicle_id)
+                speed = self._traci_connection.vehicle.getSpeed(vehicle_id)
+                acceleration = self._traci_connection.vehicle.getAcceleration(vehicle_id)
+                angle = self._traci_connection.vehicle.getAngle(vehicle_id)
+                route_id = self._traci_connection.vehicle.getRouteID(vehicle_id)
+                position3d = (position[0], position[1], 0)
+                vehicle_infos[vehicle_id] = {"position": position3d, "speed": speed, "acceleration": acceleration, "angle": angle, "routeId": route_id, 'id': vehicle_id}
+            return vehicle_infos
+        else:
+            # 从pd中批量获取车辆信息
+            cur_time_trip_info = self._tripinfo[self._tripinfo['data_timestep']==self._current_time]
+            pd_vehicle_infos = cur_time_trip_info[cur_time_trip_info['vehicle_id'].isin(vehicle_ids)]
+            vehicle_infos = {}
+            for idx, vehicle_info in pd_vehicle_infos.iterrows():
+                position = (vehicle_info['vehicle_x'], vehicle_info['vehicle_y'], 0)
+                speed = vehicle_info['vehicle_speed']
+                acceleration = 0
+                angle = vehicle_info['vehicle_angle']
+                route_id = vehicle_info['vehicle_route']
+                vehicle_id = vehicle_info['vehicle_id']
+                vehicle_infos[vehicle_id] = {"position": position, "speed": speed, "acceleration": acceleration, "angle": angle, "routeId": route_id, 'id': vehicle_id}
+            return vehicle_infos
+
     def stepSimulation(self):
         """Step the simulation for one step. Generate vehicles according to Poisson distribution, limit the number of vehicles, and update the route ids.
         """
-        to_generate_vehicles = int(np.random.poisson(self._arrival_lambda * self._traffic_interval))
-        current_n_vehicles = self._traci_connection.vehicle.getIDCount()
-        to_generate_vehicles = min(to_generate_vehicles, self._max_n_vehicles - current_n_vehicles)
-        self._new_added_vehicle_ids = []  # Clear the list in each step.
-        if to_generate_vehicles > 0:
-            for _ in range(to_generate_vehicles):
-                vehicle_id = "vehicle_" + str(self._vehicle_id_counter)
-                self._new_added_vehicle_ids.append(vehicle_id)
-                self._vehicle_id_counter += 1
-                route_id = self._generateRandomRoute()
-                self._traci_connection.vehicle.add(vehicle_id, route_id)
-        self._traci_connection.simulationStep()
-        # vehicles will be updated by sumo. (Vehicles which are out of map will be cleared automatically by sumo)
-        vehicle_ids = self._traci_connection.vehicle.getIDList()
-        self._vehicle_infos = {}
-        for vehicle_id in vehicle_ids:
-            # new position and other parameters has been updated by traci, not need to be updated by hand
-            position = self._traci_connection.vehicle.getPosition(vehicle_id)
-            speed = self._traci_connection.vehicle.getSpeed(vehicle_id)
-            route_id = self._traci_connection.vehicle.getRouteID(vehicle_id)
-            acceleration = self._traci_connection.vehicle.getAcceleration(vehicle_id)
-            angle = self._traci_connection.vehicle.getAngle(vehicle_id)
-            position3d = (position[0], position[1], 0)
-            self._vehicle_infos[vehicle_id] = {"position": position3d, "speed": speed, "acceleration": acceleration,
-                                               "angle": angle, "routeId": route_id, 'id': vehicle_id}
+        if self._traffic_mode == 'SUMO':
+            to_generate_vehicles = int(np.random.poisson(self._arrival_lambda*self._traffic_interval))
+            current_n_vehicles = self._traci_connection.vehicle.getIDCount()
+            to_generate_vehicles = min(to_generate_vehicles, self._max_n_vehicles - current_n_vehicles)
+            self._new_added_vehicle_ids = []  # Clear the list in each step.
+            if to_generate_vehicles > 0 :
+                for _ in range(to_generate_vehicles):
+                    vehicle_id = "vehicle_" + str(self._vehicle_id_counter)
+                    self._new_added_vehicle_ids.append(vehicle_id)
+                    self._vehicle_id_counter += 1
+                    route_id = self._generateRandomRoute()
+                    self._traci_connection.vehicle.add(vehicle_id, route_id)
+            self._traci_connection.simulationStep()
+            # vehicles will be updated by sumo. (Vehicles which are out of map will be cleared automatically by sumo)
+            vehicle_ids = self.getVehicleIDsList()
+        else:
+            # 从tripinfo中获取当前时间的车辆信息
+            vehicle_ids = self.getVehicleIDsList()
+        self._current_time = self.updateCurrentTime()
+        self._vehicle_infos = self.getVehicleInfoByIds(vehicle_ids)
 
         for UAV_id in self._UAV_infos:
             org_position = self._UAV_infos[UAV_id]["position"]
@@ -386,7 +477,8 @@ class TrafficManager():
         Returns:
             float: The current simulation time (in seconds).
         """
-        return self._traci_connection.simulation.getTime()
+        # return self._traci_connection.simulation.getTime()
+        return self._current_time
 
     def removeUAV(self, UAV_id):
         assert UAV_id in self._UAV_infos.keys(), 'UAV_id not in _UAV_infos'

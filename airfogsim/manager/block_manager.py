@@ -50,9 +50,10 @@ class BlockchainManager:
         BC=self.blockchain
         # 先判断self.transactions 是否达到阈值,while循环
         while len(BC.all_transactions) >= BC.transaction_threshold:
+            
             tmp_transactions = BC.all_transactions[:BC.transaction_threshold]
             # 生成新的区块
-            new_block = Block(cur_time, tmp_transactions, BC.chain[-1].hash)
+            new_block = Block(cur_time, tmp_transactions, BC.chain[-1].block_hash)
             # 将新的区块加入待挖矿区块列表
             BC.to_mine_blocks.append(new_block)
             # 清空self.transactions
@@ -61,6 +62,7 @@ class BlockchainManager:
 
         # 判断是否达到挖矿时间阈值
         if cur_time - BC.last_update_time >= BC.mine_time_threshold:
+            
             # 生成新的区块
             new_block = Block(cur_time, BC.all_transactions, BC.chain[-1].get_hash())
             # 将新的区块加入待挖矿区块列表
@@ -86,6 +88,7 @@ class BlockchainManager:
         # RSU准备写到链上的交易信息
         blockchain = self.blockchain
         to_mine_block = blockchain.to_mine_blocks
+        
         # 判断tran是否达到了区块大小，如果达到了，就进行挖矿，否则不挖矿
         result = []
         all_stakes = {key: rsu.getStake() for key, rsu in self.RSUs.items()}
@@ -156,7 +159,6 @@ class BlockchainManager:
             print('验证结果：', validate_chain)
 
         # 更新bs的stake
-        # 现在的bs应该还没有这个函数
         for rsu in self.RSUs.values():
             self._update_stake(rsu, simulation_interval)
 
@@ -165,6 +167,7 @@ class BlockchainManager:
         assert rsu.getStake() >= cost_stake
         rsu.setStake(rsu.getStake() - cost_stake)
         rsu.setTotalRevenues(rsu.getTotalRevenues() + revenue)
+        
     
     def _update_stake(self, bs, time_step):
         bs.setStake(bs.getStake() + bs.getTotalRevenues() * 0.1 * time_step)
@@ -202,7 +205,7 @@ class BlockchainManager:
         self.blockchain.to_mine_blocks.remove(block)
         block.block_miner = miner
         block.block_index = len(self.blockchain.chain)
-        block.block_previous_hash = self.blockchain.chain[-1].hash
+        block.block_previous_hash = self.blockchain.chain[-1].block_hash
         self.blockchain.chain.append(block)
     
     
@@ -227,6 +230,31 @@ class BlockchainManager:
             str: the transaction.
         """
         return self.blockchain.all_transactions[idx]
+    
+    def getTransactionsPerSecond(self):
+        """
+        Calculate the transactions per second (TPS) based on the total number of transactions and the blockchain's total time.
+
+        Returns:
+            float: The transactions per second.
+        """
+        first_block_time = self.blockchain.chain[0].block_timestamp
+        latest_block_time = self.blockchain.chain[-1].block_timestamp
+        total_time = latest_block_time - first_block_time  # Total time in seconds
+
+        if total_time > 0:
+            tps = self.blockchain.getTotalTransactions() / total_time
+            return tps
+        return 0
+    
+    def getBlockchainSize(self):
+        """
+        Get the total size of the blockchain in bytes.
+
+        Returns:
+            int: The total size of the blockchain.
+        """
+        return sum(block.getBlockSize() for block in self.blockchain.chain)
     
     
     

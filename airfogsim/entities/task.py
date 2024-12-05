@@ -49,6 +49,19 @@ class Task:
         self._failure_reason_code = -1
         self._farther_mission = farther_mission
 
+    # get task_ratio
+    @property
+    def task_deadline(self):
+        return self._task_deadline
+    
+    @property
+    def energy(self):
+        return self._task_cpu * 0.01
+    
+    @property
+    def task_delay(self):
+        return self._last_return_time - self._task_arrival_time
+
     def to_dict(self):
         """Convert the task to dictionary.
 

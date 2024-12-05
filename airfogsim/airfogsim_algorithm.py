@@ -226,7 +226,11 @@ class BaseAlgorithmModule:
             task_node_id = task_dict['task_node_id']
             assigned_node_id = task_dict['assigned_to']
             assigned_node_info = self.entityScheduler.getNodeInfoById(env, assigned_node_id)
-            self.compScheduler.setComputingWithNodeCPU(env, task_id, 0.3)  # allocate cpu 0.3
+            self.compScheduler.setComputingWithNodeCPU(env, task_id, 0.3) # allocate cpu 0.3
+            env.revenue_and_punishment_for_tasks[task_id] = {
+                'node_id': assigned_node_id,
+                'amount': 10
+            }
 
     def getRewardByTask(self, env: AirFogSimEnv):
         """The reward calculation logic. Should be implemented by the subclass. Default is calculating reward of done tasks in last time.

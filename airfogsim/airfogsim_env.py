@@ -15,6 +15,7 @@ from .airfogsim_visual import AirFogSimEnvVisualizer
 import traci
 import numpy as np
 import time
+import os
 from .utils.tk_utils import parse_location_info
 
 
@@ -69,7 +70,7 @@ class AirFogSimEnv():
 
         assert self.traffic_interval >= self.simulation_interval, "The traffic interval should be greater than or equal to the simulation interval!"
 
-        self.traci_connection = self._connectToSUMO(config['sumo'])
+        self.traci_connection = self._connectToSUMO(config['sumo'], config['traffic']['traffic_mode'] == 'SUMO')
         conv_boundary, _, _, _ = parse_location_info(config['sumo']['sumo_net'])
         conv_boundary = tuple(map(float, conv_boundary.split(',')))
         config['traffic']['x_range'] = [conv_boundary[0], conv_boundary[2]]
@@ -139,20 +140,34 @@ class AirFogSimEnv():
     def close(self):
         """Close the environment.
         """
-        traci.close()
+        if self.config['traffic']['traffic_mode'] == 'SUMO':
+            traci.close()
+        else:
+            self.traffic_manager.reset()
 
-    def _connectToSUMO(self, config):
+    def _connectToSUMO(self, config, useSUMO=True):
         """Connect to the SUMO simulator with a generated label (e.g., airfogsim_{timestamp}).
 
         Args:
             config (dict): The configuration of the SUMO simulator.
         """
-        self._sumo_label = "airfogsim_" + str(time.time())
-        traci.start(["sumo", "--no-step-log", "--no-warnings", "--log", "sumo.log", "-c", config['sumo_config']],
-                    port=config['sumo_port'], label=self._sumo_label)
-        assert self.traffic_interval == traci.simulation.getDeltaT(), "The traffic interval is not equal to the simulation step in SUMO!"
-        traci_connection = traci.getConnection(self._sumo_label)
-        return traci_connection
+        if useSUMO:
+            self._sumo_label = "airfogsim_" + str(time.time())
+            cmd_list = ["sumo", "--no-step-log", "--no-warnings", "--log", "sumo.log", "-c", config['sumo_config']]
+            if config['export_tripinfo']:
+                # cmd_list.append("--tripinfo-output")
+                # cmd_list.append(config['tripinfo_output'])
+                # cmd_list.append("--duration-log.statistics")
+                # --full-output 
+                cmd_list.append("--full-output")
+                cmd_list.append(config['tripinfo_output'])
+            print(cmd_list)
+            traci.start(cmd_list,
+                        port=config['sumo_port'], label=self._sumo_label)
+            assert self.traffic_interval == traci.simulation.getDeltaT(), "The traffic interval is not equal to the simulation step in SUMO!"
+            traci_connection = traci.getConnection(self._sumo_label)
+            return traci_connection
+        return None
 
     def isDone(self):
         """Check whether the environment is done.
@@ -375,7 +390,6 @@ class AirFogSimEnv():
             node = self.RSUs.get(node_id, None)
         if node is None:
             node = self.cloudServers.get(node_id, None)
-        assert node is not None
         return node
 
     def _allocate_communication_RBs(self, activated_offloading_tasks_with_RB_Nos: dict):
@@ -496,6 +510,8 @@ class AirFogSimEnv():
     def _updateBlockchain(self):
         """Update the blockchain for the entities.
         """
+        # 现在的问题是区块链不会因为transaction的数目而增加区块，transaction没有被成功记录到rsu上
+        # 添加新的输出指标
         self.payAndPunish(self.revenue_and_punishment_for_tasks)
         self.blockchain_manager.generateToMineBlocks(self.simulation_time)
         miner_and_revenues = self.blockchain_manager.chooseMiner()
@@ -512,7 +528,8 @@ class AirFogSimEnv():
             node_id = info_dict['node_id']
             amount = info_dict['amount']
             node = self._getNodeById(node_id)
-            node.setRevenue(amount)
+            if node is not None:
+                node.setRevenue(amount)
             self.blockchain_manager.addTransaction(f"({node_id}, {task_id}, {amount})")
 
     def getVehicleIds(self):
