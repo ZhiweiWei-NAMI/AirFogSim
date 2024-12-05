@@ -38,7 +38,7 @@ class ChannelManagerCP:
         self.RB_bandwidth = 2 # MHz
         self.n_RB = 10
         self.start_freq = 2.4 # GHz
-        # 2.4GHz到2.5GHz，共50个频段
+        # 2.4GHz开始，共n_RB个资源块，每个资源块 RB_bandwidth MHz
         self.RB_frequencies = [self.start_freq + i * self.RB_bandwidth for i in range(self.n_RB)]
         self.bandwidth = self.n_RB * self.RB_bandwidth
         self.V2VChannel = None
@@ -348,13 +348,13 @@ class ChannelManagerCP:
                 power_db = self.U2I_power_dB
             elif channel_type == 'I2U': # channel有对称性，所以直接用现有的channel就行了
                 rb_nos = self.I2U_active_links[txidx, rxidx, :]
-                addMatrix(I2U_Signal, self.I2U_power_dB, self.U2IChannel_with_fastfading, rb_nos, txidx, rxidx)
-                subMatrix(interference_power_matrix_itx_x2u, self.I2U_power_dB, self.U2IChannel_with_fastfading, rb_nos, txidx, rxidx)
+                addMatrix(I2U_Signal, self.I2U_power_dB, self.U2IChannel_with_fastfading, rb_nos, txidx, rxidx, inverse=True)
+                subMatrix(interference_power_matrix_itx_x2u, self.I2U_power_dB, self.U2IChannel_with_fastfading, rb_nos, txidx, rxidx, inverse=True)
                 power_db = self.I2U_power_dB
             elif channel_type == 'I2V':
                 rb_nos = self.I2V_active_links[txidx, rxidx, :]
-                addMatrix(I2V_Signal, self.I2V_power_dB, self.V2IChannel_with_fastfading, rb_nos, txidx, rxidx)
-                subMatrix(interference_power_matrix_itx_x2v, self.I2V_power_dB, self.V2IChannel_with_fastfading, rb_nos, txidx, rxidx)
+                addMatrix(I2V_Signal, self.I2V_power_dB, self.V2IChannel_with_fastfading, rb_nos, txidx, rxidx, inverse=True)
+                subMatrix(interference_power_matrix_itx_x2v, self.I2V_power_dB, self.V2IChannel_with_fastfading, rb_nos, txidx, rxidx, inverse=True)
                 power_db = self.I2V_power_dB
             elif channel_type == 'I2I':
                 rb_nos = self.I2I_active_links[txidx, rxidx, :]
@@ -367,12 +367,12 @@ class ChannelManagerCP:
                 addTwoMatrix(interference_power_matrix_vtx_x2u, power_db, self.V2UChannel_with_fastfading, rb_nos, txidx)
             elif channel_type[0] == 'U':
                 addTwoMatrix(interference_power_matrix_utx_x2i, power_db, self.U2IChannel_with_fastfading, rb_nos, txidx)
-                addTwoMatrix(interference_power_matrix_utx_x2v, power_db, self.V2UChannel_with_fastfading, rb_nos, txidx)
+                addTwoMatrix(interference_power_matrix_utx_x2v, power_db, self.V2UChannel_with_fastfading, rb_nos, txidx, inverse=True)
                 addTwoMatrix(interference_power_matrix_utx_x2u, power_db, self.U2UChannel_with_fastfading, rb_nos, txidx)
             elif channel_type[0] == 'I':
                 addTwoMatrix(interference_power_matrix_itx_x2i, power_db, self.I2IChannel_with_fastfading, rb_nos, txidx)
-                addTwoMatrix(interference_power_matrix_itx_x2v, power_db, self.V2IChannel_with_fastfading, rb_nos, txidx)
-                addTwoMatrix(interference_power_matrix_itx_x2u, power_db, self.U2IChannel_with_fastfading, rb_nos, txidx)
+                addTwoMatrix(interference_power_matrix_itx_x2v, power_db, self.V2IChannel_with_fastfading, rb_nos, txidx, inverse=True)
+                addTwoMatrix(interference_power_matrix_itx_x2u, power_db, self.U2IChannel_with_fastfading, rb_nos, txidx, inverse=True)
 
         # 2. 分别计算每个链路对X2I, X2U, X2V的干扰，同一个RB的情况下
         # 2.1 X2I Interference
