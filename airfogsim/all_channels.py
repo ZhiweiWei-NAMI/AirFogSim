@@ -47,6 +47,7 @@ class V2IChannel:
     def update_positions(self, veh_positions):
         # 把字典转换成列表，通过vid_index来根据index排序
         self.positions = cp.asarray(veh_positions)
+        self.n_Veh = len(veh_positions)
         
     def update_pathloss(self):
         if self.n_Veh == 0:
@@ -87,6 +88,7 @@ class V2VChannel:
     def update_positions(self, positions):
         # 把字典转换成列表，通过vid_index来根据index排序
         self.positions = cp.asarray(positions)
+        self.n_Veh = len(positions)
 
     def update_pathloss(self):
         if self.n_Veh == 0:
@@ -173,6 +175,8 @@ class V2UChannel:
         '''更新车辆和无人机的位置'''
         self.veh_positions = cp.asarray(veh_positions)
         self.uav_positions = cp.asarray(uav_positions)
+        self.n_Veh = len(veh_positions)
+        self.n_UAV = len(uav_positions)
         
     def update_pathloss(self):
         if self.n_Veh == 0 or self.n_UAV==0:
@@ -226,6 +230,7 @@ class U2IChannel:
 
     def update_positions(self, UAV_positions):
         self.UAV_positions = cp.asarray(UAV_positions)
+        self.n_UAV = len(UAV_positions)
         
     def update_pathloss(self):
         if self.n_UAV==0:
@@ -280,6 +285,7 @@ class U2UChannel:
     def update_positions(self, uav_positions):
         '''更新无人机的位置'''
         self.positions = cp.asarray(uav_positions)
+        self.n_UAV = len(uav_positions)
 
     def update_pathloss(self):
         if self.n_UAV==0:

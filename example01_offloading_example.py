@@ -21,7 +21,7 @@ env = AirFogSimEnv(config, interactive_mode=None)
 # 3. Get algorithm module
 algorithm_module = BaseAlgorithmModule()
 algorithm_module.initialize(env)
-RewardScheduler.setModel(env, 'REWARD', '-energy')
+RewardScheduler.setModel(env, 'REWARD', '-task_delay')
 accumulated_reward = 0
 while not env.isDone():
     algorithm_module.scheduleStep(env)
