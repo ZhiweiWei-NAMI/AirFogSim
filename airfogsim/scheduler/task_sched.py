@@ -175,7 +175,7 @@ class TaskScheduler(BaseScheduler):
         env.task_return_routes[task_id]=return_route
 
     @staticmethod
-    def getSuccessTaskNum(env):
+    def getDoneTaskNum(env):
         """Get the number of the success tasks.
 
         Args:

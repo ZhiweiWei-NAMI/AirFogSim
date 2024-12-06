@@ -10,6 +10,35 @@ if os.environ.get('useCUPY') == 'True':
         print("CuPy not available. Using NumPy instead.")
 else:
     import numpy as cp
+
+def OutageProbCallback(outage_prob_type):
+    """The callback function to get the outage probability.
+
+    Args:
+        outage_prob_type (str): The outage probability type.
+
+    Returns:
+        function: The callback function to get the outage probability.
+    """
+    if outage_prob_type == 'Rayleigh':
+        return rayleigh_outage_prob
+    else:
+        raise ValueError(f"Invalid outage probability type: {outage_prob_type}")
+
+def rayleigh_outage_prob(snr, snr_threshold):
+    """The Rayleigh outage probability model.
+
+    Args:
+        snr (cp.ndarray): The signal-to-noise ratio.
+        snr_threshold (float): The signal-to-noise ratio threshold.
+
+    Returns:
+        cp.ndarray: The outage probability.
+    """
+    # 处理snr<=0的情况
+    snr = cp.maximum(snr, 1e-9)
+    return 1 - cp.exp(-snr_threshold / snr)
+
 def addMatrix(add_ma, value, add_mb, rb_nos, txidx, rxidx, inverse=False):
     # 判断txidx和rxidx是否都在ma和mb的范围内
     flag1 = txidx < add_ma.shape[0] and rxidx < add_ma.shape[1]
@@ -25,7 +54,7 @@ def addMatrix(add_ma, value, add_mb, rb_nos, txidx, rxidx, inverse=False):
 def subMatrix(sub_ma, value, sub_mb, rb_nos, txidx, rxidx, inverse=False):
     # 判断txidx和rxidx是否都在ma和mb的范围内
     flag1 = txidx < sub_ma.shape[0] and rxidx < sub_ma.shape[1]
-    flag2 = (txidx < sub_mb.shape[0] and rxidx < sub_mb.shape[1] and not inverse) or (txidx < sub_mb.shape[1] and rx_idx < sub_mb.shape[0] and inverse)
+    flag2 = (txidx < sub_mb.shape[0] and rxidx < sub_mb.shape[1] and not inverse) or (txidx < sub_mb.shape[1] and rxidx < sub_mb.shape[0] and inverse)
     if flag1 and flag2:
         if inverse:
             decrement = 10 ** ((value - sub_mb[rxidx, txidx, :]) / 10) * rb_nos
