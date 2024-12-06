@@ -27,7 +27,7 @@ while not env.isDone():
     algorithm_module.scheduleStep(env)
     env.step()
     accumulated_reward += algorithm_module.getRewardByTask(env)
-    task_num = TaskScheduler.getSuccessTaskNum(env)
+    task_num = TaskScheduler.getDoneTaskNum(env)
     print(f"Simulation time: {env.simulation_time}, ACC_Reward: {accumulated_reward/max(1,task_num)}", end='\r')
     env.render()
 env.close()

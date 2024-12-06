@@ -1,6 +1,6 @@
 
 from ..all_channels import V2IChannel, V2UChannel, V2VChannel, U2IChannel, U2UChannel, I2IChannel
-from ..utils.pathloss_callback import addMatrix, subMatrix, addTwoMatrix
+from ..utils.pathloss_callback import addMatrix, subMatrix, addTwoMatrix, OutageProbCallback
 import os
 if os.environ.get('useCUPY') == 'True':
     try:
@@ -25,7 +25,7 @@ class ChannelManagerCP:
         self.I2I_power_dB = 29
         self.I2V_power_dB = 29
         self.I2U_power_dB = 29
-        self.sig2_dB = -104
+        self.sig2_dB = -114
         self.sig2 = 10**(self.sig2_dB/10)
         self.V2V_Shadowing = []
         self.V2I_Shadowing = []
@@ -75,6 +75,9 @@ class ChannelManagerCP:
         self.I2U_Rate = None
         self.I2V_Rate = None
 
+        self.outageProbCallback = OutageProbCallback('Rayleigh')
+        self.snr_threshold = 10
+
         self.n_Veh = n_Veh
         self.n_RSU = n_RSU
         self.n_UAV = n_UAV
@@ -82,7 +85,7 @@ class ChannelManagerCP:
         self.RSU_positions = RSU_positions
         self.simulation_interval = simulation_interval
 
-        self._last_timeslot_receive={} # node_id -> { transmit_size }
+        self._last_timeslot_receive = {} # node_id -> { transmit_size }
         self._last_timeslot_send = {}  # node_id -> { transmit_size }
 
         self._initialize_Channels()
@@ -401,9 +404,22 @@ class ChannelManagerCP:
         self.V2V_Interference = V2V_Interference + self.sig2
         self.V2U_Interference = V2U_Interference + self.sig2
         self.V2I_Interference = V2I_Interference + self.sig2
-        self.V2V_Rate = cp.log2(1 + cp.divide(V2V_Signal, self.V2V_Interference)) # bps, 小b
-        self.V2I_Rate = cp.log2(1 + cp.divide(V2I_Signal, self.V2I_Interference))
-        self.V2U_Rate = cp.log2(1 + cp.divide(V2U_Signal, self.V2U_Interference))
+        self.V2V_SINR = cp.divide(V2V_Signal, self.V2V_Interference)
+        self.V2I_SINR = cp.divide(V2I_Signal, self.V2I_Interference)
+        self.V2U_SINR = cp.divide(V2U_Signal, self.V2U_Interference)
+        # 判断是否中断。使用随机矩阵，如果小于outage概率，那么就是中断
+        V2V_sampling = cp.random.rand(*self.V2V_SINR.shape)
+        V2V_outage_prob = self.outageProbCallback(self.V2V_SINR, self.snr_threshold)
+        self.is_V2V_outage = V2V_sampling < V2V_outage_prob
+        self.is_V2I_outage = cp.random.rand(*self.V2I_SINR.shape) < self.outageProbCallback(self.V2I_SINR, self.snr_threshold)
+        self.is_V2U_outage = cp.random.rand(*self.V2U_SINR.shape) < self.outageProbCallback(self.V2U_SINR, self.snr_threshold)
+        self.V2V_Rate = cp.log2(1 + self.V2V_SINR) # bps, 小b
+        self.V2I_Rate = cp.log2(1 + self.V2I_SINR)
+        self.V2U_Rate = cp.log2(1 + self.V2U_SINR)
+        # isOutage的部分速率设置为0
+        self.V2V_Rate = cp.where(self.is_V2V_outage, 0, self.V2V_Rate)
+        self.V2I_Rate = cp.where(self.is_V2I_outage, 0, self.V2I_Rate)
+        self.V2U_Rate = cp.where(self.is_V2U_outage, 0, self.V2U_Rate)
         
         U2U_Interference = cp.repeat(X2U_Interference[cp.newaxis, :, :], self.n_UAV, axis = 0)
         U2V_Interference = cp.repeat(X2V_Interference[cp.newaxis, :, :], self.n_UAV, axis = 0)
@@ -411,9 +427,20 @@ class ChannelManagerCP:
         self.U2U_Interference = U2U_Interference + self.sig2
         self.U2V_Interference = U2V_Interference + self.sig2
         self.U2I_Interference = U2I_Interference + self.sig2
-        self.U2U_Rate = cp.log2(1 + cp.divide(U2U_Signal, self.U2U_Interference))
-        self.U2V_Rate = cp.log2(1 + cp.divide(U2V_Signal, self.U2V_Interference))
-        self.U2I_Rate = cp.log2(1 + cp.divide(U2I_Signal, self.U2I_Interference))
+        self.U2U_SINR = cp.divide(U2U_Signal, self.U2U_Interference)
+        self.U2V_SINR = cp.divide(U2V_Signal, self.U2V_Interference)
+        self.U2I_SINR = cp.divide(U2I_Signal, self.U2I_Interference)
+        self.is_U2U_outage = cp.random.rand(*self.U2U_SINR.shape) < self.outageProbCallback(self.U2U_SINR, self.snr_threshold)
+        self.is_U2V_outage = cp.random.rand(*self.U2V_SINR.shape) < self.outageProbCallback(self.U2V_SINR, self.snr_threshold)
+        self.is_U2I_outage = cp.random.rand(*self.U2I_SINR.shape) < self.outageProbCallback(self.U2I_SINR, self.snr_threshold)
+        self.U2U_Rate = cp.log2(1 + self.U2U_SINR)
+        self.U2V_Rate = cp.log2(1 + self.U2V_SINR)
+        self.U2I_Rate = cp.log2(1 + self.U2I_SINR)
+        # is_U2I_outage 为 False的坐标
+        # fU2I_index = cp.where(~self.is_U2I_outage)
+        self.U2U_Rate = cp.where(self.is_U2U_outage, 0, self.U2U_Rate)
+        self.U2V_Rate = cp.where(self.is_U2V_outage, 0, self.U2V_Rate)
+        self.U2I_Rate = cp.where(self.is_U2I_outage, 0, self.U2I_Rate)
 
         I2U_Interference = cp.repeat(X2U_Interference[cp.newaxis, :, :], self.n_RSU, axis = 0)
         I2V_Interference = cp.repeat(X2V_Interference[cp.newaxis, :, :], self.n_RSU, axis = 0)
@@ -421,9 +448,18 @@ class ChannelManagerCP:
         self.I2U_Interference = I2U_Interference + self.sig2
         self.I2V_Interference = I2V_Interference + self.sig2
         self.I2I_Interference = I2I_Interference + self.sig2
-        self.I2U_Rate = cp.log2(1 + cp.divide(I2U_Signal, self.I2U_Interference))
-        self.I2V_Rate = cp.log2(1 + cp.divide(I2V_Signal, self.I2V_Interference))
-        self.I2I_Rate = cp.log2(1 + cp.divide(I2I_Signal, self.I2I_Interference))
+        self.I2U_SINR = cp.divide(I2U_Signal, self.I2U_Interference)
+        self.I2V_SINR = cp.divide(I2V_Signal, self.I2V_Interference)
+        self.I2I_SINR = cp.divide(I2I_Signal, self.I2I_Interference)
+        self.is_I2U_outage = cp.random.rand(*self.I2U_SINR.shape) < self.outageProbCallback(self.I2U_SINR, self.snr_threshold)
+        self.is_I2V_outage = cp.random.rand(*self.I2V_SINR.shape) < self.outageProbCallback(self.I2V_SINR, self.snr_threshold)
+        self.is_I2I_outage = cp.random.rand(*self.I2I_SINR.shape) < self.outageProbCallback(self.I2I_SINR, self.snr_threshold)
+        self.I2U_Rate = cp.log2(1 + self.I2U_SINR)
+        self.I2V_Rate = cp.log2(1 + self.I2V_SINR)
+        self.I2I_Rate = cp.log2(1 + self.I2I_SINR)
+        self.I2U_Rate = cp.where(self.is_I2U_outage, 0, self.I2U_Rate)
+        self.I2V_Rate = cp.where(self.is_I2V_outage, 0, self.I2V_Rate)
+        self.I2I_Rate = cp.where(self.is_I2I_outage, 0, self.I2I_Rate)
 
         # 加上bandwidth
         avg_band = self.RB_bandwidth
