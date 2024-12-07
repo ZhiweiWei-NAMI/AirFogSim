@@ -88,10 +88,12 @@ class TaskScheduler(BaseScheduler):
             task_id (str): The task id.
             target_node_id (str): The target node id.
 
+        Returns:
+            bool: The result of the offloading task.
         Examples:
             taskSched.setTaskOffloading(env,'UAV_1','Task_1','UAV_3')
         """
-        env.task_manager.offloadTask(task_node_id, task_id, target_node_id, env.simulation_time)
+        return env.task_manager.offloadTask(task_node_id, task_id, target_node_id, env.simulation_time)
     
     @staticmethod
     def getAllComputingTaskInfos(env):

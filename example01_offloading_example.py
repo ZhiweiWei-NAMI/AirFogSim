@@ -1,5 +1,6 @@
 from airfogsim import AirFogSimEnv, BaseAlgorithmModule
 import numpy as np
+import random
 import yaml
 import sys
 from airfogsim.scheduler import RewardScheduler, TaskScheduler
@@ -21,8 +22,10 @@ env = AirFogSimEnv(config, interactive_mode=None)
 # 3. Get algorithm module
 algorithm_module = BaseAlgorithmModule()
 algorithm_module.initialize(env)
-RewardScheduler.setModel(env, 'REWARD', '-task_delay')
+RewardScheduler.setModel(env, 'REWARD', 'task_delay')
 accumulated_reward = 0
+np.random.seed(0)
+random.seed(0)
 while not env.isDone():
     algorithm_module.scheduleStep(env)
     env.step()

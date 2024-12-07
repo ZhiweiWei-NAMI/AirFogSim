@@ -231,6 +231,8 @@ class ChannelManagerCP:
 
         """
         assert transmitter_idx >= 0 and receiver_idx >= 0
+        if transmitter_idx == receiver_idx:
+            return
         if channel_type == 'V2V':
             self.V2V_active_links[transmitter_idx, receiver_idx, allocated_RBs] = True
         elif channel_type == 'V2I':
@@ -316,6 +318,8 @@ class ChannelManagerCP:
             channel_type = task_profile['channel_type']
             txidx = task_profile['tx_idx']
             rxidx = task_profile['rx_idx']
+            if txidx == rxidx:
+                continue
             power_db = None
             # 计算信号；并且把干扰减去，这样保证接收端的信号强度是正确的
             if channel_type == 'V2V':
@@ -407,6 +411,10 @@ class ChannelManagerCP:
         self.V2V_SINR = cp.divide(V2V_Signal, self.V2V_Interference)
         self.V2I_SINR = cp.divide(V2I_Signal, self.V2I_Interference)
         self.V2U_SINR = cp.divide(V2U_Signal, self.V2U_Interference)
+        # 保障sinr > 1e-9
+        self.V2V_SINR = cp.where(self.V2V_SINR < 1e-9, 1e-9, self.V2V_SINR)
+        self.V2I_SINR = cp.where(self.V2I_SINR < 1e-9, 1e-9, self.V2I_SINR)
+        self.V2U_SINR = cp.where(self.V2U_SINR < 1e-9, 1e-9, self.V2U_SINR)
         # 判断是否中断。使用随机矩阵，如果小于outage概率，那么就是中断
         V2V_sampling = cp.random.rand(*self.V2V_SINR.shape)
         V2V_outage_prob = self.outageProbCallback(self.V2V_SINR, self.snr_threshold)
@@ -430,6 +438,10 @@ class ChannelManagerCP:
         self.U2U_SINR = cp.divide(U2U_Signal, self.U2U_Interference)
         self.U2V_SINR = cp.divide(U2V_Signal, self.U2V_Interference)
         self.U2I_SINR = cp.divide(U2I_Signal, self.U2I_Interference)
+        # 保障sinr > 1e-9
+        self.U2U_SINR = cp.where(self.U2U_SINR < 1e-9, 1e-9, self.U2U_SINR)
+        self.U2V_SINR = cp.where(self.U2V_SINR < 1e-9, 1e-9, self.U2V_SINR)
+        self.U2I_SINR = cp.where(self.U2I_SINR < 1e-9, 1e-9, self.U2I_SINR)
         self.is_U2U_outage = cp.random.rand(*self.U2U_SINR.shape) < self.outageProbCallback(self.U2U_SINR, self.snr_threshold)
         self.is_U2V_outage = cp.random.rand(*self.U2V_SINR.shape) < self.outageProbCallback(self.U2V_SINR, self.snr_threshold)
         self.is_U2I_outage = cp.random.rand(*self.U2I_SINR.shape) < self.outageProbCallback(self.U2I_SINR, self.snr_threshold)
@@ -451,6 +463,10 @@ class ChannelManagerCP:
         self.I2U_SINR = cp.divide(I2U_Signal, self.I2U_Interference)
         self.I2V_SINR = cp.divide(I2V_Signal, self.I2V_Interference)
         self.I2I_SINR = cp.divide(I2I_Signal, self.I2I_Interference)
+        # 保障sinr > 1e-9
+        self.I2U_SINR = cp.where(self.I2U_SINR < 1e-9, 1e-9, self.I2U_SINR)
+        self.I2V_SINR = cp.where(self.I2V_SINR < 1e-9, 1e-9, self.I2V_SINR)
+        self.I2I_SINR = cp.where(self.I2I_SINR < 1e-9, 1e-9, self.I2I_SINR)
         self.is_I2U_outage = cp.random.rand(*self.I2U_SINR.shape) < self.outageProbCallback(self.I2U_SINR, self.snr_threshold)
         self.is_I2V_outage = cp.random.rand(*self.I2V_SINR.shape) < self.outageProbCallback(self.I2V_SINR, self.snr_threshold)
         self.is_I2I_outage = cp.random.rand(*self.I2I_SINR.shape) < self.outageProbCallback(self.I2I_SINR, self.snr_threshold)
