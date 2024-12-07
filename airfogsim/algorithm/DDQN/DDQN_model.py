@@ -6,68 +6,12 @@ from torch.nn import functional as F
 import numpy as np
 import collections  # 队列
 import random
-
-
-# ----------------------------------- #
-# （1）经验回放池
-# ----------------------------------- #
-
-class ReplayBuffer:
-    def __init__(self, buffer_size, train_min_size):
-        # 创建一个队列，先进先出，队列长度不变
-        self.buffer = collections.deque(maxlen=buffer_size)
-        self.train_min_size = train_min_size
-
-    # 填充经验池
-    def add(self, state, action, mask, reward, next_state, next_mask, done):
-        self.buffer.append((state, action, mask, reward, next_state, next_mask, done))
-
-    # 随机采样batch组样本数据
-    def sample(self, batch_size):
-        transitions = random.sample(self.buffer, batch_size)
-        # 分别取出这些数据，*获取list中的所有值
-        state, action, mask, reward, next_state, next_mask, done = zip(*transitions)
-        # 将state变成数组，后面方便计算
-        return np.array(state), action, mask, reward, np.array(next_state), next_mask, done
-
-    # 队列的长度
-    def size(self):
-        return len(self.buffer)
-
-    def ready(self):
-        return len(self.buffer) > self.train_min_size
-
+from .DDQN_relay_buffer import ReplayBuffer
+from .DDQN_network import Net
 
 # ----------------------------------- #
-# （2）构造网络，训练网络和目标网络共用该结构
+# 模型构建
 # ----------------------------------- #
-
-class Net(nn.Module):
-    def __init__(self, n_states, n_hiddens, n_actions):
-        super(Net, self).__init__()
-        # 有两个隐含层
-        self.fc1 = nn.Linear(n_states, n_hiddens)
-        self.fc2 = nn.Linear(n_hiddens, n_hiddens)
-        self.fc3 = nn.Linear(n_hiddens, n_actions)
-
-    # 前向传播
-    def forward(self, x):
-        x = self.fc1(x)  # [b,n_states]-->[b,n_hiddens]
-        x = self.fc2(x)  # [b,n_hiddens]-->[b,n_hiddens]
-        x = self.fc3(x)  # [b,n_hiddens]-->[b,n_actions]
-        return x
-
-    def save_checkpoint(self, file_dir):
-        torch.save(self.state_dict(), file_dir, _use_new_zipfile_serialization=False)
-
-    def load_checkpoint(self, file_dir):
-        self.load_state_dict(torch.load(file_dir))
-
-
-# ----------------------------------- #
-# （3）模型构建
-# ----------------------------------- #
-
 class Double_DQN:
     # （1）初始化
     def __init__(self, n_states, n_hiddens, n_actions,
@@ -105,7 +49,7 @@ class Double_DQN:
         self.update_network_parameters(tau=self.tau)
 
         # 模型文件路径
-        self.model_file_dir = "./model/"
+        self.model_file_dir = "./airfogsim/algorithm/DDQN/model/"
 
     # 目标网络更新
     def update_network_parameters(self, tau=None):
@@ -119,15 +63,15 @@ class Double_DQN:
         self.memory.add(state, action, mask, reward, next_state, next_mask, done)
 
     # 动作选择
-    def take_action(self, state, masks):
-        print("State content:", state)
-        print("State dtype:", np.array(state).dtype)
+    def take_action(self, state, mask):
         # numpy[n_states]-->[1, n_states]-->Tensor
         state = torch.Tensor(state[np.newaxis, :])
+        # numpy[n_actions]-->[1, n_actions]-->Tensor
+        mask = torch.Tensor(mask[np.newaxis, :]).bool()
         # 获取当前状态下采取各动作的q值
         q_values = self.q_net(state)
         # 非法动作置为最小值
-        masked_q_values = torch.where(masks, q_values, torch.tensor(float('-inf')))
+        masked_q_values = torch.where(mask, q_values, torch.tensor(float('-inf')))
         # 对每个样本找到最大 Q 值对应的动作的索引
         max_q_value, max_action_index = torch.max(masked_q_values, dim=-1)
         # 如果小于贪婪系数就取最大值reward最大的动作
@@ -138,7 +82,11 @@ class Double_DQN:
         # 如果大于贪婪系数就随即探索
         else:
             is_random = True
-            action = np.random.randint(self.n_actions)
+            # 选出可行动作的index并随机选择一个动作
+            flatten_mask = mask.flatten()
+            valid_action_indices = torch.nonzero(flatten_mask, as_tuple=False).squeeze(1)
+            action = valid_action_indices[torch.randint(0, len(valid_action_indices), (1,))].item()
+
         return is_random, max_q_value, action
 
     def decrement_epsilon(self):

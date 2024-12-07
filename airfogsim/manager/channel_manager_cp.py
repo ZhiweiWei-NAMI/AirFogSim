@@ -40,6 +40,7 @@ class ChannelManagerCP:
         self.start_freq = 2.4 # GHz
         # 2.4GHz到2.5GHz，共50个频段
         self.RB_frequencies = [self.start_freq + i * self.RB_bandwidth for i in range(self.n_RB)]
+        print(self.RB_frequencies)
         self.bandwidth = self.n_RB * self.RB_bandwidth
         self.V2VChannel = None
         self.V2IChannel = None
@@ -414,6 +415,12 @@ class ChannelManagerCP:
         self.U2U_Rate = cp.log2(1 + cp.divide(U2U_Signal, self.U2U_Interference))
         self.U2V_Rate = cp.log2(1 + cp.divide(U2V_Signal, self.U2V_Interference))
         self.U2I_Rate = cp.log2(1 + cp.divide(U2I_Signal, self.U2I_Interference))
+        print('U2I_Signal')
+        print(U2I_Signal)
+        print('U2I_Interference')
+        print(self.U2I_Interference)
+        print('U2I_SNR')
+        print(cp.divide(U2I_Signal, self.U2I_Interference))
 
         I2U_Interference = cp.repeat(X2U_Interference[cp.newaxis, :, :], self.n_RSU, axis = 0)
         I2V_Interference = cp.repeat(X2V_Interference[cp.newaxis, :, :], self.n_RSU, axis = 0)

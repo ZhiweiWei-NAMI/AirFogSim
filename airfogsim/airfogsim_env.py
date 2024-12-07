@@ -30,6 +30,12 @@ class AirFogSimEnv():
             config (dict): The configuration of the environment. Please follow standard YAML format.
             interactive_mode (str, optional): The interactive mode. 'graphic' or 'text'. Defaults to None.
         """
+        self.reset(config)
+        self._visualizer = None
+        if interactive_mode is not None:
+            self.mountVisualizer(interactive_mode)
+
+    def reset(self,config):
         self.force_quit = False
 
         self.vehicles = {}
@@ -97,9 +103,6 @@ class AirFogSimEnv():
         self.task_node_types = []
         self.task_node_threshold_poss = 1.0  # All vehicles and UAVs are task nodes
 
-        self._visualizer = None
-        if interactive_mode is not None:
-            self.mountVisualizer(interactive_mode)
 
         # ----------------decisions, managed by schedulers----------------
         self.vehicle_mobility_patterns = {}  # dict, key是vehicle_id, value是mobility pattern={speed}
@@ -118,6 +121,9 @@ class AirFogSimEnv():
         self.V2U_channel = {'time': 0, 'data_size': 0}
         self.V2I_channel = {'time': 0, 'data_size': 0}
         self.U2I_channel = {'time': 0, 'data_size': 0}
+
+        # ----------------temporary records in each timeslot----------------
+        self.new_vehicle_id_list=[]
 
     def mountVisualizer(self, mode='graphic'):
         """Mount the visualizer to the environment.
@@ -193,11 +199,10 @@ class AirFogSimEnv():
         for _ in range(sim_step_per_traffic_step):
             # 3. Update the authentication and privacy
             self._updateAuthPrivacy()
-            # 5. Update the task
+            # 4. Update the task
             self._updateTask()
-            # 4. Update the mission (such as crowd sensing, data collection, etc.) and add new missions for the entities.
+            # 5. Update the mission (such as crowd sensing, data collection, etc.) and add new missions for the entities.
             self._updateMission()
-
             # 6. Update the communication (wireless, V2V, V2I, V2U, etc.) for fog computing nodes.
             self._updateWirelessCommunication()
             # 7. Update the communication (wired, backhaul, fronthaul, etc.) for cloud computing network nodes.
@@ -221,8 +226,8 @@ class AirFogSimEnv():
         """
         Update the sensor for the entities.
         """
-        new_vehicle_id_list = self.traffic_manager.getNewVehicleIds()
-        for new_vehicle_id in new_vehicle_id_list:
+        # new_vehicle_id_list = self.traffic_manager.getNewVehicleIds()
+        for new_vehicle_id in self.new_vehicle_id_list:
             self.sensor_manager.initializeSensorsByNodeId(new_vehicle_id)
 
     def _updateMission(self):
@@ -311,6 +316,7 @@ class AirFogSimEnv():
 
             self.channel['time'] += self.simulation_interval
             self.channel['data_size'] += trans_data
+            # print(trans_data)
             if channel_type == 'V2I':
                 self.V2I_channel['time'] += self.simulation_interval
                 self.V2I_channel['data_size'] += trans_data
@@ -670,6 +676,7 @@ class AirFogSimEnv():
         uav_traffic_infos = self.traffic_manager.getUAVTrafficInfos()
         existing_vehicle_ids = list(self.vehicles.keys())
         certain_vehicle_ids = list(vehicle_traffic_infos.keys())
+        self.new_vehicle_id_list = list(set(certain_vehicle_ids) - set(existing_vehicle_ids))
         added_veh_nums = 0
 
         for vehicle_id, vehicle_traffic_info in vehicle_traffic_infos.items():
@@ -683,9 +690,7 @@ class AirFogSimEnv():
                     self.task_node_ids.append(vehicle_id)
             self.vehicles[vehicle_id].update(vehicle_traffic_info, self.simulation_time)
 
-        # print(self.simulation_time)
         for uav_id, uav_traffic_info in uav_traffic_infos.items():
-            # print(uav_id, uav_traffic_info['position'])
             if uav_id not in self.UAVs:
                 self.UAVs[uav_id] = UAV(uav_id, uav_traffic_info['position'], uav_traffic_info['speed'],
                                         uav_traffic_info['acceleration'], uav_traffic_info['angle'],

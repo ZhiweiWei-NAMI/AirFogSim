@@ -19,7 +19,7 @@ class TrafficManager():
         self._UAV_z_range = config_traffic.get("UAV_z_range", [100, 200])
         self._UAV_speed_range = config_traffic.get("UAV_speed_range", [20, 40])
         self._max_n_UAVs = config_traffic.get("max_n_UAVs", 10)
-        self._max_n_UAVs = config_traffic.get("max_n_RSUs", 1)
+        self._max_n_RSUs = config_traffic.get("max_n_RSUs", 1)
         self._RSU_positions = config_traffic.get("RSU_positions", [[0, 0, 0]])
         self._max_n_cloudServers = config_traffic.get("max_n_cloudServers", 1)
         self._arrival_lambda = config_traffic.get("arrival_lambda", 1)
@@ -32,7 +32,7 @@ class TrafficManager():
         self._UAV_infos = {}  # uav_id -> {position, speed, acceleration, angle, phi}
         self._RSU_infos = {}  # rsu_id -> {position, id}
         self._cloudServer_infos = {}
-        self._new_added_vehicle_ids = []  # The latest(this time slot) added vehicle's id
+        # self._new_added_vehicle_ids = []  # The latest(this time slot) added vehicle's id
 
         self._sumo_route_ids = []  # all route ids in SUMO, further information can be gained by traci_connection.route.getEdges(route_id)
         self._sumo_edges = {}  # each edge is a series of lanes in SUMO, edgeId -> [laneId1, laneId2, ...]
@@ -77,7 +77,7 @@ class TrafficManager():
         self._UAV_infos = {}
         self._RSU_infos = {}
         self._cloudServer_infos = {}
-        self._new_added_vehicle_ids = []
+        # self._new_added_vehicle_ids = []
         self._vehicle_id_counter = 0
         self._UAV_id_counter = 0
         self._RSU_id_counter = 0
@@ -386,14 +386,14 @@ class TrafficManager():
             to_generate_vehicles = int(np.random.poisson(self._arrival_lambda*self._traffic_interval))
             current_n_vehicles = self._traci_connection.vehicle.getIDCount()
             to_generate_vehicles = min(to_generate_vehicles, self._max_n_vehicles - current_n_vehicles)
-            self._new_added_vehicle_ids = []  # Clear the list in each step.
+            # self._new_added_vehicle_ids = []  # Clear the list in each step.
             if to_generate_vehicles > 0 :
                 for _ in range(to_generate_vehicles):
                     vehicle_id = "vehicle_" + str(self._vehicle_id_counter)
-                    self._new_added_vehicle_ids.append(vehicle_id)
                     self._vehicle_id_counter += 1
                     route_id = self._generateRandomRoute()
                     self._traci_connection.vehicle.add(vehicle_id, route_id)
+                    # self._new_added_vehicle_ids.append(vehicle_id)
             self._traci_connection.simulationStep()
             # vehicles will be updated by sumo. (Vehicles which are out of map will be cleared automatically by sumo)
             vehicle_ids = self.getVehicleIDsList()
@@ -475,13 +475,13 @@ class TrafficManager():
         """
         return self._cloudServer_infos
 
-    def getNewVehicleIds(self):
-        """Get vehicle ids which is added in latest timeslot.
-
-        Returns:
-            list: The Id list of vehicles.
-        """
-        return self._new_added_vehicle_ids
+    # def getNewVehicleIds(self):
+    #     """Get vehicle ids which is added in latest timeslot.
+    #
+    #     Returns:
+    #         list: The Id list of vehicles.
+    #     """
+    #     return self._new_added_vehicle_ids
 
     def getCurrentTime(self):
         """Get the current simulation time.

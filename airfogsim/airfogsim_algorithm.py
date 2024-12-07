@@ -323,7 +323,7 @@ class NVHAUAlgorithmModule(BaseAlgorithmModule):
             env (AirFogSimEnv): The environment object.
 
         """
-        UAV_probability = 0.5
+        UAV_probability = 1.0
         cur_time = self.trafficScheduler.getCurrentTime(env)
         new_missions_profile = self.missionScheduler.getToBeAssignedMissionsProfile(env, cur_time)
         delete_mission_profile_ids = []
@@ -496,8 +496,8 @@ class DDQNAlgorithmModule(BaseAlgorithmModule):
             # 创建一个队列，先进先出，队列长度不限
             self.buffer = {}
 
-        def __expToFlattenArray(self,exp):
-            state=exp['state']
+        def __expToFlattenArray(self, exp):
+            state = exp['state']
             action = exp['action']
             mask = exp['mask']
             reward = exp['reward']
@@ -506,34 +506,34 @@ class DDQNAlgorithmModule(BaseAlgorithmModule):
             done = exp['done']
             return np.array(state), action, mask, reward, np.array(next_state), next_mask, done
 
-        def add(self,exp_id, state, action, mask, reward=None, next_state=None, next_mask=None, done=None):
-            self.buffer[exp_id]={'state':state, 'action':action, 'mask':mask, 'reward':reward,
-                                   'next_state':next_state, 'next_mask':next_mask, 'done':done}
+        def add(self, exp_id, state, action, mask, reward=None, next_state=None, next_mask=None, done=None):
+            self.buffer[exp_id] = {'state': state, 'action': action, 'mask': mask, 'reward': reward,
+                                   'next_state': next_state, 'next_mask': next_mask, 'done': done}
 
-        def setNextState(self,exp_id,next_state, next_mask, done):
-            assert exp_id in self.buffer,"State_id is invalid."
-            self.buffer[exp_id]['next_state']=next_state
+        def setNextState(self, exp_id, next_state, next_mask, done):
+            assert exp_id in self.buffer, "State_id is invalid."
+            self.buffer[exp_id]['next_state'] = next_state
             self.buffer[exp_id]['next_mask'] = next_mask
             self.buffer[exp_id]['done'] = done
 
-        def completeAndPopExperience(self,exp_id,reward):
+        def completeAndPopExperience(self, exp_id, reward):
             assert exp_id in self.buffer, "exp_id is invalid."
             self.buffer[exp_id]['reward'] = reward
-            packed_exp=self.__expToFlattenArray(self.buffer[exp_id])
+            packed_exp = self.__expToFlattenArray(self.buffer[exp_id])
             del self.buffer[exp_id]
             return packed_exp
 
         def size(self):
             return len(self.buffer)
 
-    def __init__(self):
+    def __init__(self,last_episode=None):
         super().__init__()
-        self.n_state = 830
+        self.n_state = 631
         self.n_action = 10
         self.DDQN_env = DDQN_Env(self.n_state, self.n_action)
-        self.relay_buffer=self.RelayBuffer()
+        if last_episode is not None:
+            self.DDQN_env.loadModel(last_episode)
 
-        # ----------------indicators, managed by evaluation----------------
 
     def initialize(self, env: AirFogSimEnv):
         """Initialize the algorithm with the environment. Including setting the task generation model, setting the reward model, etc.
@@ -542,7 +542,11 @@ class DDQNAlgorithmModule(BaseAlgorithmModule):
             env (AirFogSimEnv): The environment object.
         """
         super().initialize(env)
-        self.last_mission_id=None # Last allocated mission id,used in next state update
+        self.max_n_vehicles = env.traffic_manager.getConfig('max_n_vehicles')
+        self.max_n_UAVs = env.traffic_manager.getConfig('max_n_UAVs')
+        self.max_n_RSUs = env.traffic_manager.getConfig('max_n_RSUs')
+        self.last_mission_id = None  # Last allocated mission id,used in next state update
+        self.relay_buffer = self.RelayBuffer()
 
     def scheduleStep(self, env: AirFogSimEnv):
         """The algorithm logic. Should be implemented by the subclass.
@@ -573,30 +577,34 @@ class DDQNAlgorithmModule(BaseAlgorithmModule):
         delete_mission_profile_ids = []
         excluded_sensor_ids = []
 
-        UAVs_state = self.algorithmScheduler.getNodeStates(env, 'U')
-        vehicles_state = self.algorithmScheduler.getNodeStates(env, 'V')
-        RSUs_state = self.algorithmScheduler.getNodeStates(env, 'R')
+        UAVs_state = self.algorithmScheduler.getNodeStates(env, 'U', self.max_n_UAVs)
+        vehicles_state = self.algorithmScheduler.getNodeStates(env, 'V', self.max_n_vehicles)
+        RSUs_state = self.algorithmScheduler.getNodeStates(env, 'R', self.max_n_RSUs)
 
         for mission_profile in new_missions_profile:
-            mission_id=mission_profile['mission_id']
+            mission_id = mission_profile['mission_id']
             mission_sensor_type = mission_profile['mission_sensor_type']
             mission_accuracy = mission_profile['mission_accuracy']
             mission_position = mission_profile['mission_routes'][0]
 
             mission_state = self.algorithmScheduler.getMissionStates(env, mission_profile)
-            nearest_10_sensors_state,mask = self.algorithmScheduler.getNearest10SensorStates(env, mission_sensor_type,
-                                                                                        mission_accuracy,
-                                                                                        mission_position,
-                                                                                        excluded_sensor_ids)
-
+            valid_sensor_num, nearest_10_sensors_state, mask = self.algorithmScheduler.getNearest10SensorStates(env,mission_sensor_type,mission_accuracy,mission_position,excluded_sensor_ids)
+            if valid_sensor_num==0:
+                continue
             state = np.concatenate([UAVs_state, vehicles_state, RSUs_state, mission_state, nearest_10_sensors_state])
-            state = state.flatten().reshape(1, -1)
-            action_index = self.DDQN_env.getAction(state,mask)
-            self.relay_buffer.setNextState(self.last_mission_id,state,mask,False)
-            self.relay_buffer.add(mission_id,state,action_index,mask)
+            state = state.flatten()
+            is_random, max_q_value, action_index = self.DDQN_env.takeAction(state, mask)
 
-            appointed_node_id, appointed_sensor_id, appointed_sensor_accuracy = self.algorithmScheduler.getSensorInfoByAction(env,action_index, nearest_10_sensors_state)
+            if self.last_mission_id is not None:
+                self.relay_buffer.setNextState(self.last_mission_id, state, mask, False)
+            self.relay_buffer.add(mission_id, state, action_index, mask)
+            self.last_mission_id = mission_id
+
+            appointed_node_type,appointed_node_id, appointed_sensor_id, appointed_sensor_accuracy = self.algorithmScheduler.getSensorInfoByAction(
+                env, action_index, nearest_10_sensors_state)
             if appointed_node_id != None and appointed_sensor_id != None:
+                if appointed_node_type=='U':
+                    self.trafficScheduler.addUAVRoute(env,appointed_node_id,mission_position)
                 mission_profile['appointed_node_id'] = appointed_node_id
                 mission_profile['appointed_sensor_id'] = appointed_sensor_id
                 mission_profile['appointed_sensor_accuracy'] = appointed_sensor_accuracy
@@ -616,6 +624,7 @@ class DDQNAlgorithmModule(BaseAlgorithmModule):
 
                 delete_mission_profile_ids.append(mission_profile['mission_id'])
                 excluded_sensor_ids.append(appointed_sensor_id)
+
         self.missionScheduler.deleteBeAssignedMissionsProfile(env, delete_mission_profile_ids)
 
     def scheduleReturning(self, env: AirFogSimEnv):
@@ -689,7 +698,7 @@ class DDQNAlgorithmModule(BaseAlgorithmModule):
         UAVs_mobile_pattern = {}
         for UAV_id, UAV_info in UAVs_info.items():
             current_position = UAV_info['position']
-            target_position = self.trafficScheduler.getNextPositionOfUav(env,UAV_id)
+            target_position = self.trafficScheduler.getNextPositionOfUav(env, UAV_id)
             if target_position is None:
                 # 悬停
                 mobility_pattern = {'angle': 0, 'phi': 0, 'speed': 0}
@@ -733,15 +742,15 @@ class DDQNAlgorithmModule(BaseAlgorithmModule):
     def getRewardByMission(self, env: AirFogSimEnv):
         return super().getRewardByMission(env)
 
-    def updateExperience(self,env: AirFogSimEnv):
+    def updateExperience(self, env: AirFogSimEnv):
         last_step_succ_mission_infos = self.missionScheduler.getLastStepSuccMissionInfos(env)
         last_step_fail_mission_infos = self.missionScheduler.getLastStepFailMissionInfos(env)
         for mission_info in last_step_succ_mission_infos:
-            reward=self.rewardScheduler.getRewardByMission(env,mission_info)
-            exp=self.relay_buffer.completeAndPopExperience(mission_info['mission_id'],reward)
+            reward = self.rewardScheduler.getRewardByMission(env, mission_info)
+            exp = self.relay_buffer.completeAndPopExperience(mission_info['mission_id'], reward)
             self.DDQN_env.addExperience(*exp)
         for mission_info in last_step_fail_mission_infos:
-            reward=self.rewardScheduler.getPunishByMission(env,mission_info)
-            exp=self.relay_buffer.completeAndPopExperience(mission_info['mission_id'],reward)
+            reward = self.rewardScheduler.getPunishByMission(env, mission_info)
+            exp = self.relay_buffer.completeAndPopExperience(mission_info['mission_id'], reward)
             self.DDQN_env.addExperience(*exp)
 

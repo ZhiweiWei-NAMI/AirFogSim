@@ -1,21 +1,27 @@
 import os
+
 os.environ['useCUPY'] = 'False'
-print('useCUPY:',os.environ['useCUPY'])
+print('useCUPY:', os.environ['useCUPY'])
 # When n_RB < 50, numpy is better than cupy; When n_RB >= 50, cupy is better than numpy.
 
-from airfogsim import AirFogSimEnv, BaseAlgorithmModule,NVHAUAlgorithmModule,DDQNAlgorithmModule,AirFogSimEvaluation
+from airfogsim import AirFogSimEnv, BaseAlgorithmModule, NVHAUAlgorithmModule, DDQNAlgorithmModule, AirFogSimEvaluation
 import numpy as np
 import yaml
 import sys
 from pyinstrument import Profiler
+
 
 def load_config(path):
     with open(path, 'r') as file:
         config = yaml.safe_load(file)
         return config
 
+
+last_episode = 0
+max_episode = 2
+
 # 启动性能监控
-profiler=Profiler()
+profiler = Profiler()
 profiler.start()
 
 # 1. Load the configuration file
@@ -23,19 +29,19 @@ config_path = sys.argv[1] if len(sys.argv) > 1 else 'config.yaml'
 config = load_config(config_path)
 
 # 2. Get algorithm module
-algorithm_module = DDQNAlgorithmModule()
+# algorithm_module = DDQNAlgorithmModule(last_episode)
+algorithm_module = NVHAUAlgorithmModule()
 
-episode=200
-for i in range(episode):
-    # 3. Create the new environment
-    env = AirFogSimEnv(config, interactive_mode='graphic')
-    # env = AirFogSimEnv(config, interactive_mode=None)
 
-    # 4. Initialize the algorithm module (initialize in every episode)
+# 3. Create the new environment
+env = AirFogSimEnv(config, interactive_mode='graphic')
+
+# 4. Create the evaluation module
+evaluation_module = AirFogSimEvaluation()
+
+for episode in range(last_episode + 1, max_episode+1):
+    # 5. Initialize the algorithm module (initialize in every episode)
     algorithm_module.initialize(env)
-
-    # 5. Create the evaluation module
-    evaluation_module=AirFogSimEvaluation()
 
     while not env.isDone():
         algorithm_module.scheduleStep(env)
@@ -44,10 +50,21 @@ for i in range(episode):
         # print(f"Simulation time: {env.simulation_time}", end='\r')
         # print(f"Simulation time: {env.simulation_time}, ACC_Reward: {accumulated_reward}")
         env.render()
-        algorithm_module.updateExperience(env)
-        evaluation_module.printEvaluation()
-    env.close()
+        # algorithm_module.updateExperience(env)
+        # algorithm_module.DDQN_env.train()
+        evaluation_module.updateEvaluationIndicators(env, algorithm_module)
+        evaluation_module.addToStepRecord()
+        # evaluation_module.printEvaluation()
 
+    # algorithm_module.DDQN_env.saveModel(episode)
+    evaluation_module.toFile(episode)
+    evaluation_module.addToEpisodeRecord()
+    evaluation_module.drawAndResetStepRecord(episode)
+
+    env.reset(config)
+
+evaluation_module.drawAndResetEpisodeRecord()
+env.close()
 # 结束性能监控并打印报告
 profiler.stop()
 profiler.print()

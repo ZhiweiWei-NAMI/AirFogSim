@@ -36,7 +36,7 @@ class DDQN_Env:
                                 self.eps_end, self.eps_dec, self.target_update, self.buffer_size, self.train_min_size,
                                 self.tau, self.device)
 
-    def getAction(self, state, mask):
+    def takeAction(self, state, mask):
         # 状态state时做动作选择，action为动作索引
         is_random, max_q_value, action = self.agent.take_action(state,mask)
         # 平滑处理最大state_value
@@ -51,6 +51,12 @@ class DDQN_Env:
 
     def train(self):
         self.agent.update()
+
+    def saveModel(self,episode):
+        self.agent.save_models(episode)
+
+    def loadModel(self,episode):
+        self.agent.load_models(episode)
 
 
 # ------------------------------- #
