@@ -1,6 +1,6 @@
 
 from ..all_channels import V2IChannel, V2UChannel, V2VChannel, U2IChannel, U2UChannel, I2IChannel
-from ..utils.pathloss_callback import addMatrix, subMatrix, addTwoMatrix
+from ..utils.pathloss_callback import addMatrix, subMatrix, addTwoMatrix, OutageProbCallback
 import os
 if os.environ.get('useCUPY') == 'True':
     try:
@@ -25,7 +25,7 @@ class ChannelManagerCP:
         self.I2I_power_dB = 29
         self.I2V_power_dB = 29
         self.I2U_power_dB = 29
-        self.sig2_dB = -104
+        self.sig2_dB = -114
         self.sig2 = 10**(self.sig2_dB/10)
         self.V2V_Shadowing = []
         self.V2I_Shadowing = []
@@ -38,7 +38,7 @@ class ChannelManagerCP:
         self.RB_bandwidth = 2 # MHz
         self.n_RB = 10
         self.start_freq = 2.4 # GHz
-        # 2.4GHz到2.5GHz，共50个频段
+        # 2.4GHz开始，共n_RB个资源块，每个资源块 RB_bandwidth MHz
         self.RB_frequencies = [self.start_freq + i * self.RB_bandwidth for i in range(self.n_RB)]
         print(self.RB_frequencies)
         self.bandwidth = self.n_RB * self.RB_bandwidth
@@ -76,6 +76,9 @@ class ChannelManagerCP:
         self.I2U_Rate = None
         self.I2V_Rate = None
 
+        self.outageProbCallback = OutageProbCallback('Rayleigh')
+        self.snr_threshold = 10
+
         self.n_Veh = n_Veh
         self.n_RSU = n_RSU
         self.n_UAV = n_UAV
@@ -83,7 +86,7 @@ class ChannelManagerCP:
         self.RSU_positions = RSU_positions
         self.simulation_interval = simulation_interval
 
-        self._last_timeslot_receive={} # node_id -> { transmit_size }
+        self._last_timeslot_receive = {} # node_id -> { transmit_size }
         self._last_timeslot_send = {}  # node_id -> { transmit_size }
 
         self._initialize_Channels()
@@ -163,8 +166,6 @@ class ChannelManagerCP:
             uav_index (list): The projection from the UAV id to the index.
 
         """
-        if self.n_Veh == 0 or self.n_UAV==0:
-            return
         # vid_index is list, each element is vehicle_id, first turn vid_index to dict
         vid_index = {vid: idx for idx, vid in enumerate(vid_index)}
         uav_index = {uav: idx for idx, uav in enumerate(uav_index)}
@@ -231,6 +232,8 @@ class ChannelManagerCP:
 
         """
         assert transmitter_idx >= 0 and receiver_idx >= 0
+        if transmitter_idx == receiver_idx:
+            return
         if channel_type == 'V2V':
             self.V2V_active_links[transmitter_idx, receiver_idx, allocated_RBs] = True
         elif channel_type == 'V2I':
@@ -316,7 +319,10 @@ class ChannelManagerCP:
             channel_type = task_profile['channel_type']
             txidx = task_profile['tx_idx']
             rxidx = task_profile['rx_idx']
+            if txidx == rxidx:
+                continue
             power_db = None
+            # 计算信号；并且把干扰减去，这样保证接收端的信号强度是正确的
             if channel_type == 'V2V':
                 rb_nos = self.V2V_active_links[txidx, rxidx, :]
                 addMatrix(V2V_Signal, self.V2V_power_dB, self.V2VChannel_with_fastfading, rb_nos, txidx, rxidx)
@@ -349,31 +355,32 @@ class ChannelManagerCP:
                 power_db = self.U2I_power_dB
             elif channel_type == 'I2U': # channel有对称性，所以直接用现有的channel就行了
                 rb_nos = self.I2U_active_links[txidx, rxidx, :]
-                addMatrix(I2U_Signal, self.I2U_power_dB, self.U2IChannel_with_fastfading, rb_nos, txidx, rxidx)
-                subMatrix(interference_power_matrix_itx_x2u, self.I2U_power_dB, self.U2IChannel_with_fastfading, rb_nos, txidx, rxidx)
+                addMatrix(I2U_Signal, self.I2U_power_dB, self.U2IChannel_with_fastfading, rb_nos, txidx, rxidx, inverse=True)
+                subMatrix(interference_power_matrix_itx_x2u, self.I2U_power_dB, self.U2IChannel_with_fastfading, rb_nos, txidx, rxidx, inverse=True)
                 power_db = self.I2U_power_dB
             elif channel_type == 'I2V':
                 rb_nos = self.I2V_active_links[txidx, rxidx, :]
-                addMatrix(I2V_Signal, self.I2V_power_dB, self.V2IChannel_with_fastfading, rb_nos, txidx, rxidx)
-                subMatrix(interference_power_matrix_itx_x2v, self.I2V_power_dB, self.V2IChannel_with_fastfading, rb_nos, txidx, rxidx)
+                addMatrix(I2V_Signal, self.I2V_power_dB, self.V2IChannel_with_fastfading, rb_nos, txidx, rxidx, inverse=True)
+                subMatrix(interference_power_matrix_itx_x2v, self.I2V_power_dB, self.V2IChannel_with_fastfading, rb_nos, txidx, rxidx, inverse=True)
                 power_db = self.I2V_power_dB
             elif channel_type == 'I2I':
                 rb_nos = self.I2I_active_links[txidx, rxidx, :]
                 addMatrix(I2I_Signal, self.I2I_power_dB, self.I2IChannel_with_fastfading, rb_nos, txidx, rxidx)
                 subMatrix(interference_power_matrix_itx_x2i, self.I2I_power_dB, self.I2IChannel_with_fastfading, rb_nos, txidx, rxidx)
                 power_db = self.I2I_power_dB
+            # 计算干扰
             if channel_type[0] == 'V':
                 addTwoMatrix(interference_power_matrix_vtx_x2i, power_db, self.V2IChannel_with_fastfading, rb_nos, txidx)
                 addTwoMatrix(interference_power_matrix_vtx_x2v, power_db, self.V2VChannel_with_fastfading, rb_nos, txidx)
                 addTwoMatrix(interference_power_matrix_vtx_x2u, power_db, self.V2UChannel_with_fastfading, rb_nos, txidx)
             elif channel_type[0] == 'U':
                 addTwoMatrix(interference_power_matrix_utx_x2i, power_db, self.U2IChannel_with_fastfading, rb_nos, txidx)
-                addTwoMatrix(interference_power_matrix_utx_x2v, power_db, self.V2UChannel_with_fastfading, rb_nos, txidx)
+                addTwoMatrix(interference_power_matrix_utx_x2v, power_db, self.V2UChannel_with_fastfading, rb_nos, txidx, inverse=True)
                 addTwoMatrix(interference_power_matrix_utx_x2u, power_db, self.U2UChannel_with_fastfading, rb_nos, txidx)
             elif channel_type[0] == 'I':
                 addTwoMatrix(interference_power_matrix_itx_x2i, power_db, self.I2IChannel_with_fastfading, rb_nos, txidx)
-                addTwoMatrix(interference_power_matrix_itx_x2v, power_db, self.V2IChannel_with_fastfading, rb_nos, txidx)
-                addTwoMatrix(interference_power_matrix_itx_x2u, power_db, self.U2IChannel_with_fastfading, rb_nos, txidx)
+                addTwoMatrix(interference_power_matrix_itx_x2v, power_db, self.V2IChannel_with_fastfading, rb_nos, txidx, inverse=True)
+                addTwoMatrix(interference_power_matrix_itx_x2u, power_db, self.U2IChannel_with_fastfading, rb_nos, txidx, inverse=True)
 
         # 2. 分别计算每个链路对X2I, X2U, X2V的干扰，同一个RB的情况下
         # 2.1 X2I Interference
@@ -402,9 +409,26 @@ class ChannelManagerCP:
         self.V2V_Interference = V2V_Interference + self.sig2
         self.V2U_Interference = V2U_Interference + self.sig2
         self.V2I_Interference = V2I_Interference + self.sig2
-        self.V2V_Rate = cp.log2(1 + cp.divide(V2V_Signal, self.V2V_Interference)) # bps, 小b
-        self.V2I_Rate = cp.log2(1 + cp.divide(V2I_Signal, self.V2I_Interference))
-        self.V2U_Rate = cp.log2(1 + cp.divide(V2U_Signal, self.V2U_Interference))
+        self.V2V_SINR = cp.divide(V2V_Signal, self.V2V_Interference)
+        self.V2I_SINR = cp.divide(V2I_Signal, self.V2I_Interference)
+        self.V2U_SINR = cp.divide(V2U_Signal, self.V2U_Interference)
+        # 保障sinr > 1e-9
+        self.V2V_SINR = cp.where(self.V2V_SINR < 1e-9, 1e-9, self.V2V_SINR)
+        self.V2I_SINR = cp.where(self.V2I_SINR < 1e-9, 1e-9, self.V2I_SINR)
+        self.V2U_SINR = cp.where(self.V2U_SINR < 1e-9, 1e-9, self.V2U_SINR)
+        # 判断是否中断。使用随机矩阵，如果小于outage概率，那么就是中断
+        V2V_sampling = cp.random.rand(*self.V2V_SINR.shape)
+        V2V_outage_prob = self.outageProbCallback(self.V2V_SINR, self.snr_threshold)
+        self.is_V2V_outage = V2V_sampling < V2V_outage_prob
+        self.is_V2I_outage = cp.random.rand(*self.V2I_SINR.shape) < self.outageProbCallback(self.V2I_SINR, self.snr_threshold)
+        self.is_V2U_outage = cp.random.rand(*self.V2U_SINR.shape) < self.outageProbCallback(self.V2U_SINR, self.snr_threshold)
+        self.V2V_Rate = cp.log2(1 + self.V2V_SINR) # bps, 小b
+        self.V2I_Rate = cp.log2(1 + self.V2I_SINR)
+        self.V2U_Rate = cp.log2(1 + self.V2U_SINR)
+        # isOutage的部分速率设置为0
+        self.V2V_Rate = cp.where(self.is_V2V_outage, 0, self.V2V_Rate)
+        self.V2I_Rate = cp.where(self.is_V2I_outage, 0, self.V2I_Rate)
+        self.V2U_Rate = cp.where(self.is_V2U_outage, 0, self.V2U_Rate)
         
         U2U_Interference = cp.repeat(X2U_Interference[cp.newaxis, :, :], self.n_UAV, axis = 0)
         U2V_Interference = cp.repeat(X2V_Interference[cp.newaxis, :, :], self.n_UAV, axis = 0)
@@ -412,15 +436,24 @@ class ChannelManagerCP:
         self.U2U_Interference = U2U_Interference + self.sig2
         self.U2V_Interference = U2V_Interference + self.sig2
         self.U2I_Interference = U2I_Interference + self.sig2
-        self.U2U_Rate = cp.log2(1 + cp.divide(U2U_Signal, self.U2U_Interference))
-        self.U2V_Rate = cp.log2(1 + cp.divide(U2V_Signal, self.U2V_Interference))
-        self.U2I_Rate = cp.log2(1 + cp.divide(U2I_Signal, self.U2I_Interference))
-        print('U2I_Signal')
-        print(U2I_Signal)
-        print('U2I_Interference')
-        print(self.U2I_Interference)
-        print('U2I_SNR')
-        print(cp.divide(U2I_Signal, self.U2I_Interference))
+        self.U2U_SINR = cp.divide(U2U_Signal, self.U2U_Interference)
+        self.U2V_SINR = cp.divide(U2V_Signal, self.U2V_Interference)
+        self.U2I_SINR = cp.divide(U2I_Signal, self.U2I_Interference)
+        # 保障sinr > 1e-9
+        self.U2U_SINR = cp.where(self.U2U_SINR < 1e-9, 1e-9, self.U2U_SINR)
+        self.U2V_SINR = cp.where(self.U2V_SINR < 1e-9, 1e-9, self.U2V_SINR)
+        self.U2I_SINR = cp.where(self.U2I_SINR < 1e-9, 1e-9, self.U2I_SINR)
+        self.is_U2U_outage = cp.random.rand(*self.U2U_SINR.shape) < self.outageProbCallback(self.U2U_SINR, self.snr_threshold)
+        self.is_U2V_outage = cp.random.rand(*self.U2V_SINR.shape) < self.outageProbCallback(self.U2V_SINR, self.snr_threshold)
+        self.is_U2I_outage = cp.random.rand(*self.U2I_SINR.shape) < self.outageProbCallback(self.U2I_SINR, self.snr_threshold)
+        self.U2U_Rate = cp.log2(1 + self.U2U_SINR)
+        self.U2V_Rate = cp.log2(1 + self.U2V_SINR)
+        self.U2I_Rate = cp.log2(1 + self.U2I_SINR)
+        # is_U2I_outage 为 False的坐标
+        # fU2I_index = cp.where(~self.is_U2I_outage)
+        self.U2U_Rate = cp.where(self.is_U2U_outage, 0, self.U2U_Rate)
+        self.U2V_Rate = cp.where(self.is_U2V_outage, 0, self.U2V_Rate)
+        self.U2I_Rate = cp.where(self.is_U2I_outage, 0, self.U2I_Rate)
 
         I2U_Interference = cp.repeat(X2U_Interference[cp.newaxis, :, :], self.n_RSU, axis = 0)
         I2V_Interference = cp.repeat(X2V_Interference[cp.newaxis, :, :], self.n_RSU, axis = 0)
@@ -428,9 +461,22 @@ class ChannelManagerCP:
         self.I2U_Interference = I2U_Interference + self.sig2
         self.I2V_Interference = I2V_Interference + self.sig2
         self.I2I_Interference = I2I_Interference + self.sig2
-        self.I2U_Rate = cp.log2(1 + cp.divide(I2U_Signal, self.I2U_Interference))
-        self.I2V_Rate = cp.log2(1 + cp.divide(I2V_Signal, self.I2V_Interference))
-        self.I2I_Rate = cp.log2(1 + cp.divide(I2I_Signal, self.I2I_Interference))
+        self.I2U_SINR = cp.divide(I2U_Signal, self.I2U_Interference)
+        self.I2V_SINR = cp.divide(I2V_Signal, self.I2V_Interference)
+        self.I2I_SINR = cp.divide(I2I_Signal, self.I2I_Interference)
+        # 保障sinr > 1e-9
+        self.I2U_SINR = cp.where(self.I2U_SINR < 1e-9, 1e-9, self.I2U_SINR)
+        self.I2V_SINR = cp.where(self.I2V_SINR < 1e-9, 1e-9, self.I2V_SINR)
+        self.I2I_SINR = cp.where(self.I2I_SINR < 1e-9, 1e-9, self.I2I_SINR)
+        self.is_I2U_outage = cp.random.rand(*self.I2U_SINR.shape) < self.outageProbCallback(self.I2U_SINR, self.snr_threshold)
+        self.is_I2V_outage = cp.random.rand(*self.I2V_SINR.shape) < self.outageProbCallback(self.I2V_SINR, self.snr_threshold)
+        self.is_I2I_outage = cp.random.rand(*self.I2I_SINR.shape) < self.outageProbCallback(self.I2I_SINR, self.snr_threshold)
+        self.I2U_Rate = cp.log2(1 + self.I2U_SINR)
+        self.I2V_Rate = cp.log2(1 + self.I2V_SINR)
+        self.I2I_Rate = cp.log2(1 + self.I2I_SINR)
+        self.I2U_Rate = cp.where(self.is_I2U_outage, 0, self.I2U_Rate)
+        self.I2V_Rate = cp.where(self.is_I2V_outage, 0, self.I2V_Rate)
+        self.I2I_Rate = cp.where(self.is_I2I_outage, 0, self.I2I_Rate)
 
         # 加上bandwidth
         avg_band = self.RB_bandwidth

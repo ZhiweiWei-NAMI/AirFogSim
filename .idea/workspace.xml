@@ -2,24 +2,17 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="e602f890-1e94-45d2-a6d5-c612b9de4d18" name="变更" comment="">
-      <change afterPath="$PROJECT_DIR$/airfogsim/algorithm/DDQN/DDQN_network.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/airfogsim/algorithm/DDQN/DDQN_relay_buffer.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/airfogsim/algorithm/MADDPG/MADDPG_env.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/airfogsim/algorithm/MADDPG/MADDPG_model.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/airfogsim/algorithm/MADDPG/MADDPG_network.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/airfogsim/algorithm/MADDPG/MADDPG_relay_buffer.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/airfogsim/algorithm/MADDPG/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/airfogsim/airfogsim_algorithm.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/airfogsim_algorithm.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/airfogsim/airfogsim_env.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/airfogsim_env.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/airfogsim/airfogsim_evaluation.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/airfogsim_evaluation.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/airfogsim/algorithm/DDQN/DDQN_env.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/algorithm/DDQN/DDQN_env.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/airfogsim/algorithm/DDQN/DDQN_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/algorithm/DDQN/DDQN_model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/airfogsim/all_channels.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/all_channels.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/airfogsim/entities/task.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/entities/task.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/airfogsim/manager/channel_manager_cp.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/manager/channel_manager_cp.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/airfogsim/manager/traffic_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/manager/traffic_manager.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/airfogsim/scheduler/algorithm_sched.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/scheduler/algorithm_sched.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/airfogsim/manager/task_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/manager/task_manager.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/airfogsim/scheduler/reward_sched.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/scheduler/reward_sched.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/airfogsim/scheduler/task_sched.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/scheduler/task_sched.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/airfogsim/scheduler/traffic_sched.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/scheduler/traffic_sched.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/airfogsim/utils/pathloss_callback.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/utils/pathloss_callback.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/example01_offloading_example.py" beforeDir="false" afterPath="$PROJECT_DIR$/example01_offloading_example.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/example05_crowdsensing_example.py" beforeDir="false" afterPath="$PROJECT_DIR$/example05_crowdsensing_example.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

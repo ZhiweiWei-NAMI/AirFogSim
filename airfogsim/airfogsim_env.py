@@ -312,7 +312,7 @@ class AirFogSimEnv():
             rx_size += trans_data
             rx_size_dict[rx_id] = rx_size
 
-            task.transmit_to_Node(rx_id, trans_data, self.simulation_time)
+            trans_flag = task.transmit_to_Node(rx_id, trans_data, self.simulation_time)
 
             self.channel['time'] += self.simulation_interval
             self.channel['data_size'] += trans_data
@@ -327,7 +327,7 @@ class AirFogSimEnv():
                 self.U2I_channel['time'] += self.simulation_interval
                 self.U2I_channel['data_size'] += trans_data
 
-            if task.isTransmittedToReturnedNode():
+            if trans_flag:
                 tmp_succeed_tasks.append(task_profile)
 
         self.channel_manager.setThisTimeslotTransSize(tx_size_dict,
@@ -426,11 +426,12 @@ class AirFogSimEnv():
         for _, task_set in offloading_tasks.items():
             for task in task_set:
                 assert isinstance(task, Task)
-                assert not task.isExecutedLocally(), '任务已经在本地执行，不需要分配RB！'
-                path = task.getToOffloadRoute()
                 task_id = task.getTaskId()
                 if task_id not in activated_offloading_tasks_with_RB_Nos:
                     continue
+                path = task.getToOffloadRoute()
+                assert not task.isExecutedLocally(), '任务已经在本地执行，不需要分配RB！'
+                if len(path) == 0: continue
                 allocated_RBs = activated_offloading_tasks_with_RB_Nos[task_id]
                 tx, rx = task.getCurrentNodeId(), path[0]
                 tx_idx = self._getNodeIdxById(tx)
@@ -475,11 +476,11 @@ class AirFogSimEnv():
     def _updateTask(self):
         """Update and generate the task for the entities. 
         """
-        # task_node_ids_kwardsDict = {}
-        # for task_node_ids in self.task_node_ids:
-        #     task_node_ids_kwardsDict[task_node_ids] = self._getNodeById(task_node_ids).getTaskProfile()
-        # # generate task for each task node. It generates the future tasks, and stored in "to_generate_tasks" in the task manager. These tasks are viewed as ``predictable'' tasks.
-        # self.task_manager.generateAndCheckTasks(task_node_ids_kwardsDict, self.simulation_time, self.simulation_interval)
+        task_node_ids_kwardsDict = {}
+        for task_node_ids in self.task_node_ids:
+            task_node_ids_kwardsDict[task_node_ids] = self._getNodeById(task_node_ids).getTaskProfile()
+        # generate task for each task node. It generates the future tasks, and stored in "to_generate_tasks" in the task manager. These tasks are viewed as ``predictable'' tasks.
+        self.task_manager.generateAndCheckTasks(task_node_ids_kwardsDict, self.simulation_time, self.simulation_interval)
         for task_id, route in self.task_return_routes.items():
             self.task_manager.setTaskReturnRouteAndStartReturn(task_id, route, self.simulation_time)
         self.task_return_routes = {}

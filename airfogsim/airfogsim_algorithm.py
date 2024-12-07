@@ -58,7 +58,7 @@ class BaseAlgorithmModule:
         self.scheduleOffloading(env)
         self.scheduleCommunication(env)
         self.scheduleComputing(env)
-        self.scheduleMission(env)
+        # self.scheduleMission(env)
         self.scheduleTraffic(env)
 
     def scheduleReturning(self, env: AirFogSimEnv):
@@ -190,18 +190,14 @@ class BaseAlgorithmModule:
             env (AirFogSimEnv): The environment object.
         """
         all_task_infos = self.taskScheduler.getAllToOffloadTaskInfos(env)
-        all_node_infos = self.entityScheduler.getAllNodeInfos(env)
-        all_node_infos_dict = {}
-        for node_info in all_node_infos:
-            all_node_infos_dict[node_info['id']] = node_info
         for task_dict in all_task_infos:
             task_node_id = task_dict['task_node_id']
             task_id = task_dict['task_id']
-            task_node = all_node_infos_dict[task_node_id]
-            neighbor_infos = self.entityScheduler.getNeighborNodeInfosById(env, task_node_id, sorted_by='distance',
-                                                                           max_num=5)
-            nearest_node_id = neighbor_infos[0]['id']
-            self.taskScheduler.setTaskOffloading(env, task_node_id, task_id, nearest_node_id)
+            neighbor_infos = self.entityScheduler.getNeighborNodeInfosById(env, task_node_id, sorted_by='distance', max_num=5)
+            if len(neighbor_infos) > 0:
+                nearest_node_id = neighbor_infos[0]['id']
+                flag = self.taskScheduler.setTaskOffloading(env, task_node_id, task_id, nearest_node_id)
+                assert flag
 
     def scheduleCommunication(self, env: AirFogSimEnv):
         """The communication scheduling logic. Should be implemented by the subclass. Default is random.
@@ -221,8 +217,8 @@ class BaseAlgorithmModule:
         Args:
             env (AirFogSimEnv): The environment object.
         """
-        all_offloading_task_infos = self.taskScheduler.getAllOffloadingTaskInfos(env)
-        for task_dict in all_offloading_task_infos:
+        all_computing_task_infos = self.taskScheduler.getAllComputingTaskInfos(env)
+        for task_dict in all_computing_task_infos:
             task_id = task_dict['task_id']
             task_node_id = task_dict['task_node_id']
             assigned_node_id = task_dict['assigned_to']

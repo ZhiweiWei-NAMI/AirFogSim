@@ -10,23 +10,67 @@ if os.environ.get('useCUPY') == 'True':
         print("CuPy not available. Using NumPy instead.")
 else:
     import numpy as cp
-def addMatrix(add_ma, value, add_mb, rb_nos, txidx, rxidx):
+
+def OutageProbCallback(outage_prob_type):
+    """The callback function to get the outage probability.
+
+    Args:
+        outage_prob_type (str): The outage probability type.
+
+    Returns:
+        function: The callback function to get the outage probability.
+    """
+    if outage_prob_type == 'Rayleigh':
+        return rayleigh_outage_prob
+    else:
+        raise ValueError(f"Invalid outage probability type: {outage_prob_type}")
+
+def rayleigh_outage_prob(snr, snr_threshold):
+    """The Rayleigh outage probability model.
+
+    Args:
+        snr (cp.ndarray): The signal-to-noise ratio.
+        snr_threshold (float): The signal-to-noise ratio threshold.
+
+    Returns:
+        cp.ndarray: The outage probability.
+    """
+    # 处理snr<=0的情况
+    snr = cp.maximum(snr, 1e-9)
+    return 1 - cp.exp(-snr_threshold / snr)
+
+def addMatrix(add_ma, value, add_mb, rb_nos, txidx, rxidx, inverse=False):
     # 判断txidx和rxidx是否都在ma和mb的范围内
-    if txidx < add_ma.shape[0] and rxidx < add_ma.shape[1] and txidx < add_mb.shape[0] and rxidx < add_mb.shape[1]:
-        increment = 10 ** ((value - add_mb[txidx, rxidx, :]) / 10) * rb_nos
+    flag1 = txidx < add_ma.shape[0] and rxidx < add_ma.shape[1]
+    flag2 = (txidx < add_mb.shape[0] and rxidx < add_mb.shape[1] and not inverse) or (txidx < add_mb.shape[1] and rxidx < add_mb.shape[0] and inverse)
+    if flag1 and flag2:
+        if inverse:
+            increment = 10 ** ((value - add_mb[rxidx, txidx, :]) / 10) * rb_nos
+        else:
+            increment = 10 ** ((value - add_mb[txidx, rxidx, :]) / 10) * rb_nos
         # 更新 add_ma
         add_ma[txidx, rxidx, :] += increment
 
-def subMatrix(sub_ma, value, sub_mb, rb_nos, txidx, rxidx):
+def subMatrix(sub_ma, value, sub_mb, rb_nos, txidx, rxidx, inverse=False):
     # 判断txidx和rxidx是否都在ma和mb的范围内
-    if txidx < sub_ma.shape[0] and rxidx < sub_ma.shape[1] and txidx < sub_mb.shape[0] and rxidx < sub_mb.shape[1]:
-        decrement = 10 ** ((value - sub_mb[txidx, rxidx, :]) / 10) * rb_nos
+    flag1 = txidx < sub_ma.shape[0] and rxidx < sub_ma.shape[1]
+    flag2 = (txidx < sub_mb.shape[0] and rxidx < sub_mb.shape[1] and not inverse) or (txidx < sub_mb.shape[1] and rxidx < sub_mb.shape[0] and inverse)
+    if flag1 and flag2:
+        if inverse:
+            decrement = 10 ** ((value - sub_mb[rxidx, txidx, :]) / 10) * rb_nos
+        else:
+            decrement = 10 ** ((value - sub_mb[txidx, rxidx, :]) / 10) * rb_nos
         sub_ma[txidx, rxidx, :] -= decrement
 
-def addTwoMatrix(add_ma, value, add_mb, rb_nos, txidx):
+def addTwoMatrix(add_ma, value, add_mb, rb_nos, txidx, inverse=False):
     # interference_power_matrix_vtx_x2i[txidx, :, :] += 10 ** ((power_db - self.V2IChannel_with_fastfading[txidx, :, :]) / 10) * rb_nos
-    if txidx < add_ma.shape[0] and txidx < add_mb.shape[0]:
-        increment = 10 ** ((value - add_ma[txidx, :, :]) / 10) * rb_nos
+    flag1 = txidx < add_ma.shape[0]
+    flag2 = txidx < add_mb.shape[0] and not inverse or txidx < add_mb.shape[1] and inverse
+    if flag1 and flag2:
+        if inverse:
+            increment = 10 ** ((value - add_mb[:, txidx, :]) / 10) * rb_nos
+        else:
+            increment = 10 ** ((value - add_mb[txidx, :, :]) / 10) * rb_nos
         add_ma[txidx, :, :] += increment
 
 MAX_PL = 500 # The maximum path loss in dB, does not have a physical meaning
