@@ -167,7 +167,7 @@ class TaskManager:
                     self._to_compute_tasks[node_id].remove(task_info)
                     self._waiting_to_return_tasks[node_id]=self._waiting_to_return_tasks.get(node_id, [])
                     self._waiting_to_return_tasks[node_id].append(task_info)
-                    task_info.startToReturn(current_time)
+                    # task_info.startToReturn(current_time)
                     self._to_return_tasks[node_id] = self._to_return_tasks.get(node_id, [])
                     self._to_return_tasks[node_id].append(task_info)
 
