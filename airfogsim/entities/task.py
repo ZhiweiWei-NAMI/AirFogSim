@@ -6,8 +6,7 @@ class Task:
     """ Task is the class that represents the task. 
     """
 
-    def __init__(self, task_id, task_node_id, task_cpu, task_size, task_deadline, task_priority, task_arrival_time,
-                 farther_mission: Mission = None, required_returned_size=0):
+    def __init__(self, task_id, task_node_id, task_cpu, task_size, task_deadline, task_priority, task_arrival_time, farther_mission: Mission = None, required_returned_size=0, to_return_node_id = None):
         """The constructor of the Task class.
 
         Args:
@@ -20,18 +19,22 @@ class Task:
             task_arrival_time (float): The start time of the task.
             farther_mission (Mission): The farther mission of the task.
             required_returned_size (float): The required returned size of the task.
+            to_return_node_id (str): The ID of the node that the task should be returned to. If None, the task is returned to the task node.
         """
         self._task_id = task_id
         self._task_node_id = task_node_id
         self._task_cpu = task_cpu
         self._task_size = task_size
         self._required_returned_size = required_returned_size
+        if to_return_node_id is not None:
+            self._to_return_node_id = to_return_node_id
+        else:
+            self._to_return_node_id = task_node_id
         self._task_deadline = task_deadline
         self._task_priority = task_priority
         self._task_arrival_time = task_arrival_time
         self._executed_locally = False
         self._assigned_to = None
-        self._returned_to = None
         self._decided_route = []  # the decided route for offloading
         self._routes = [task_node_id]  # arrived node list
         self._to_offload_route = []  # the route to offload the task.
@@ -60,25 +63,27 @@ class Task:
     
     @property
     def task_delay(self):
-        return self._last_return_time - self._task_arrival_time
-
+        return self.getLastOperationTime() - self._task_arrival_time
+    
     def to_dict(self):
         """Convert the task to dictionary.
 
         Returns:
             dict: The dictionary of the task.
         """
-        # 遍历所有属性，将其转化为字典
         task_dict = {}
-        for key, value in self.__dict__.items():
-            key = key[1:]
-            if key == "farther_mission":
-                if value is not None:
-                    task_dict[key] = value.to_dict()
+        for key in dir(self):
+            if not key.startswith('__') and not callable(getattr(self, key)):
+                value = getattr(self, key)
+                if key == "farther_mission":
+                    if value is not None:
+                        task_dict[key] = value.to_dict()
+                    else:
+                        task_dict[key] = None
                 else:
-                    task_dict[key] = None
-            else:
-                task_dict[key] = value
+                    if key.startswith('_'):
+                        key = key[1:]
+                    task_dict[key] = value
         return task_dict
 
     def isStarted(self):
@@ -116,7 +121,7 @@ class Task:
             bool: True if the task requires return, False otherwise.
         """
         assert self.isComputed(), "The task should be computed before returning."
-        if self._assigned_to != self._task_node_id and self._required_returned_size > 0:
+        if self._assigned_to != self._to_return_node_id and self._required_returned_size > 0:
             assert len(self._to_offload_route) > 0, "The route to offload the task should be set."
             return True
         return False
@@ -168,7 +173,7 @@ class Task:
         """
         assert len(self._to_return_route) == 0 and len(to_return_route) > 0
         self._to_return_route = to_return_route
-        self._returned_to = self._to_return_route[-1]
+        self._to_return_node_id = self._to_return_route[-1]
 
     def wait_to_ddl(self, current_time):
         """Check if the task is out of deadline.
@@ -189,16 +194,19 @@ class Task:
         """
         return self.isComputed() and self.isTransmitting()
 
-    def transmit_to_Node(self, node_id, trans_data, current_time):
+    def transmit_to_Node(self, node_id, trans_data, current_time, fast_return=False):
         """Transmit the data to the node. Possible to return or offload the task. 
 
         Args:
             node_id (str): The ID of the node.
+            trans_data (float): The transmitted data.
+            current_time (float): The current time.
+            fast_return (bool): The flag to indicate whether the task is fast returned.
 
         Returns:
             bool: True if the task is transmitted, False if requires more transmission.
         """
-        assert self.isTransmitting(), "The task should be transmitting."
+        assert self.isTransmitting() or fast_return, "The task should be transmitting or not require return."
         isReturning = self.isReturning()
         self._transmitted_size += trans_data
         if isReturning:
@@ -207,11 +215,14 @@ class Task:
         else:
             self._last_transmission_time = current_time
             require_transmit_size = self._task_size
+        if fast_return:
+            require_transmit_size = 0
         if self._transmitted_size >= require_transmit_size:
             self._transmitted_size = 0
             self._routes.append(node_id)
             self._routed_time.append(current_time)
-            del self._to_offload_route[0]  # remove the first element
+            if not fast_return:
+                del self._to_offload_route[0]  # remove the first element
             return True
         return False
 
@@ -226,8 +237,7 @@ class Task:
         Examples:
             task.offloadTo('node1', ['node2', 'node1'], 10)
         """
-        self._decided_route = [
-                                  self._task_node_id] + route  # the decided route for offloading, starting from the task node
+        self._decided_route = [self._task_node_id] + route  # the decided route for offloading, starting from the task node
         self._to_offload_route = route
         assert route[-1] == node_id, "The last node in the route should be the node ID."
         self._assigned_to = node_id
@@ -299,7 +309,7 @@ class Task:
         Returns:
             bool: True if the task is transmitted, False otherwise.
         """
-        return self._returned_to is not None and self.getCurrentNodeId() == self._returned_to
+        return self._to_return_node_id is not None and self.getCurrentNodeId() == self._to_return_node_id
 
     def setTaskFailueCode(self, code):
         """Set the task failure code
@@ -325,15 +335,6 @@ class Task:
         """
         # return self.isComputed()  and len(self._to_offload_route) == 0
         return self.isTransmittedToReturnedNode()
-
-    @property
-    def task_delay(self):
-        """Get the delay of the task.
-
-        Returns:
-            float: The delay of the task.
-        """
-        return self._last_return_time - self._task_arrival_time
 
     @property
     def task_deadline(self):
@@ -466,6 +467,14 @@ class Task:
             float: The task deadline.
         """
         return self._task_deadline
+    
+    def getToReturnNodeId(self):
+        """Get the node ID to return.
+
+        Returns:
+            str: The node ID to return.
+        """
+        return self._to_return_node_id
 
     def isRelatedToNode(self, node_id):
         """Check if the task is related to the node. (The task is related to the node if the task is offloaded to the node, the task is assigned to the node, or the node is in the to_offload_route.)
@@ -477,10 +486,12 @@ class Task:
             bool: True if the task is related to the node, False otherwise.
         """
         flag = False
-        # if self._task_node_id == node_id:
-        #     flag = True
-        # if self._assigned_to == node_id:
-        #     flag = True
+        if self._task_node_id == node_id:
+            flag = True
+        if self._assigned_to == node_id:
+            flag = True
+        if self._to_return_node_id == node_id:
+            flag = True
         if self.getCurrentNodeId()==node_id:
             flag=True
         if node_id in self._to_offload_route:
