@@ -231,7 +231,7 @@ class ChannelManagerCP:
 
         """
         assert transmitter_idx >= 0 and receiver_idx >= 0
-        if transmitter_idx == receiver_idx:
+        if transmitter_idx == receiver_idx and channel_type in ['V2V', 'U2U', 'I2I']:
             return
         if channel_type == 'V2V':
             self.V2V_active_links[transmitter_idx, receiver_idx, allocated_RBs] = True
@@ -318,7 +318,7 @@ class ChannelManagerCP:
             channel_type = task_profile['channel_type']
             txidx = task_profile['tx_idx']
             rxidx = task_profile['rx_idx']
-            if txidx == rxidx:
+            if txidx == rxidx and channel_type in ['V2V', 'U2U', 'I2I']:
                 continue
             power_db = None
             # 计算信号；并且把干扰减去，这样保证接收端的信号强度是正确的
