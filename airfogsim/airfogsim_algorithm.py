@@ -58,7 +58,7 @@ class BaseAlgorithmModule:
         self.scheduleOffloading(env)
         self.scheduleCommunication(env)
         self.scheduleComputing(env)
-        # self.scheduleMission(env)
+        self.scheduleMission(env)
         self.scheduleTraffic(env)
 
     def scheduleReturning(self, env: AirFogSimEnv):
@@ -319,7 +319,7 @@ class NVHAUAlgorithmModule(BaseAlgorithmModule):
             env (AirFogSimEnv): The environment object.
 
         """
-        UAV_probability = 1.0
+        UAV_probability = 0.5
         cur_time = self.trafficScheduler.getCurrentTime(env)
         new_missions_profile = self.missionScheduler.getToBeAssignedMissionsProfile(env, cur_time)
         delete_mission_profile_ids = []
@@ -373,6 +373,7 @@ class NVHAUAlgorithmModule(BaseAlgorithmModule):
             for task in tasks:
                 current_node_id = task.getCurrentNodeId()
                 current_node_type = self.entityScheduler.getNodeTypeById(env, current_node_id)
+                assert current_node_type is not None
                 vehicle_num = self.entityScheduler.getNodeNumByType(env, 'V')
                 UAV_num = self.entityScheduler.getNodeNumByType(env, 'U')
                 RSU_num = self.entityScheduler.getNodeNumByType(env, 'R')

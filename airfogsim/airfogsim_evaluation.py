@@ -21,7 +21,6 @@ class AirFogSimEvaluation:
         # 1.仿真时间
         self.simulation_time = 0
         self.step_num = 0
-        self.episode_num=0
 
         # 2.过程监控
         self.to_generate_missions_num = 0
@@ -35,18 +34,16 @@ class AirFogSimEvaluation:
         self.avg_V2U_trans_rate = 0
         self.avg_V2I_trans_rate = 0
         self.avg_U2I_trans_rate = 0
+        self.V2U_data_trans_list= []
+        self.V2I_data_trans_list = []
+        self.U2I_data_trans_list = []
+
 
         # 4.reward
         self.sum_reward = 0
         self.sum_success_reward = 0
         self.avg_reward = 0
         self.avg_success_reward = 0
-
-        self.step_avg_reward = []
-        self.step_avg_success_reward = []
-
-        self.episode_avg_reward = []
-        self.episode_avg_success_reward = []
 
         # 5.ratio
         # 5.1 completion ratio
@@ -204,6 +201,9 @@ class AirFogSimEvaluation:
         self.avg_floating_time = (self.sum_executing_time - self.sum_sensing_time) / self.finish_mission_num if self.finish_mission_num > 0 else 0
         self.avg_executing_time = self.sum_executing_time / self.finish_mission_num if self.finish_mission_num > 0 else 0
 
+        self.V2U_data_trans_list = env.getChannelTransData('V2U')
+        self.V2I_data_trans_list = env.getChannelTransData('V2I')
+        self.U2I_data_trans_list = env.getChannelTransData('U2I')
     def printEvaluation(self):
         # 仿真时间
         print('simulation_time: ', self.simulation_time)
@@ -222,6 +222,7 @@ class AirFogSimEvaluation:
         print('avg_V2U_trans_rate: ', self.avg_V2U_trans_rate)
         print('avg_V2I_trans_rate: ', self.avg_V2I_trans_rate)
         print('avg_U2I_trans_rate: ', self.avg_U2I_trans_rate)
+
 
         # reward
         print('奖励')
@@ -344,7 +345,7 @@ class AirFogSimEvaluation:
 
         # 信道速率指标
         plt.figure()
-        plt.plot(x_indices, self.step_avg_trans_rate, label='Avg', color='deepskyblue')
+        plt.plot(x_indices, self.step_avg_trans_rate, label='Avg', color='blueviolet')
         plt.plot(x_indices, self.step_avg_V2U_trans_rate, label='V2U', color='limegreen')
         plt.plot(x_indices, self.step_avg_V2I_trans_rate, label='V2I', color='red')
         plt.plot(x_indices, self.step_avg_U2I_trans_rate, label='U2I', color='orange')
@@ -354,10 +355,6 @@ class AirFogSimEvaluation:
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()
         plt.savefig(path_to_save + 'ChannelRate.png')
-        self.step_avg_trans_rate.append(self.avg_trans_rate)
-        self.step_avg_V2U_trans_rate.append(self.avg_V2U_trans_rate)
-        self.step_avg_V2I_trans_rate.append(self.avg_V2I_trans_rate)
-        self.step_avg_U2I_trans_rate.append(self.avg_U2I_trans_rate)
 
         # reward
         plt.figure()
@@ -393,14 +390,44 @@ class AirFogSimEvaluation:
 
         # optimization objectives
         plt.figure()
-        plt.plot(x_indices, self.step_avg_floating_time, color='orange')
-        plt.plot(x_indices, self.step_avg_executing_time, color='limegreen')
+        plt.plot(x_indices, self.step_avg_floating_time,label='Floating', color='orange')
+        plt.plot(x_indices, self.step_avg_executing_time,label='Executing', color='limegreen')
         plt.title('Time')
         plt.xlabel('Step')
         plt.ylabel('The Related Time of Missions')
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()
         plt.savefig(path_to_save + 'Time.png')
+
+        # data trans
+        # V2U
+        x_indices = list(range(1, len(self.V2U_data_trans_list) + 1))
+        plt.figure()
+        plt.plot(x_indices, self.V2U_data_trans_list, color='orange')
+        plt.title('V2U Data Trans')
+        plt.xlabel('Trans Step')
+        plt.ylabel('Data Size')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.savefig(path_to_save + 'V2U_data_trans.png')
+        # V2I
+        x_indices = list(range(1, len(self.V2I_data_trans_list) + 1))
+        plt.figure()
+        plt.plot(x_indices, self.V2I_data_trans_list, color='orange')
+        plt.title('V2I Data Trans')
+        plt.xlabel('Trans Step')
+        plt.ylabel('Data Size')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.savefig(path_to_save + 'V2I_data_trans.png')
+        # U2I
+        x_indices = list(range(1, len(self.U2I_data_trans_list) + 1))
+        plt.figure()
+        plt.plot(x_indices, self.U2I_data_trans_list, color='orange')
+        plt.title('U2I Data Trans')
+        plt.xlabel('Trans Step')
+        plt.ylabel('Data Size')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.savefig(path_to_save + 'U2I_data_trans.png')
+
 
         self.initOrResetStepIndicators()
         self.initOrResetStepRecords()
@@ -457,7 +484,7 @@ class AirFogSimEvaluation:
 
         # 信道速率指标
         plt.figure()
-        plt.plot(x_indices, self.episode_avg_trans_rate, label='Avg', color='deepskyblue')
+        plt.plot(x_indices, self.episode_avg_trans_rate, label='Avg', color='blueviolet')
         plt.plot(x_indices, self.episode_avg_V2U_trans_rate, label='V2U', color='limegreen')
         plt.plot(x_indices, self.episode_avg_V2I_trans_rate, label='V2I', color='red')
         plt.plot(x_indices, self.episode_avg_U2I_trans_rate, label='U2I', color='orange')
@@ -467,10 +494,6 @@ class AirFogSimEvaluation:
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()
         plt.savefig(path_to_save + 'ChannelRate.png')
-        self.step_avg_trans_rate.append(self.avg_trans_rate)
-        self.step_avg_V2U_trans_rate.append(self.avg_V2U_trans_rate)
-        self.step_avg_V2I_trans_rate.append(self.avg_V2I_trans_rate)
-        self.step_avg_U2I_trans_rate.append(self.avg_U2I_trans_rate)
 
         # reward
         plt.figure()
@@ -490,13 +513,12 @@ class AirFogSimEvaluation:
         plt.xlabel('Step')
         plt.ylabel('The Completion Ratio of Missions')
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
-        plt.legend()
         plt.savefig(path_to_save + 'CompletionRatio.png')
 
         # acceleration ratio
         plt.figure()
-        plt.plot(x_indices, self.episode_weighted_acceleration_ratio, color='orange')
-        plt.plot(x_indices, self.episode_acceleration_ratio, color='limegreen')
+        plt.plot(x_indices, self.episode_weighted_acceleration_ratio, label='Weighted Acc', color='orange')
+        plt.plot(x_indices, self.episode_acceleration_ratio, label='Not Weighted Acc', color='limegreen')
         plt.title('Acceleration Ratio')
         plt.xlabel('Step')
         plt.ylabel('The Acceleration Ratio of Missions')
@@ -506,8 +528,8 @@ class AirFogSimEvaluation:
 
         # optimization objectives
         plt.figure()
-        plt.plot(x_indices, self.episode_avg_floating_time, color='orange')
-        plt.plot(x_indices, self.episode_avg_executing_time, color='limegreen')
+        plt.plot(x_indices, self.episode_avg_floating_time, label='Floating', color='orange')
+        plt.plot(x_indices, self.episode_avg_executing_time, label='Executing', color='limegreen')
         plt.title('Time')
         plt.xlabel('Step')
         plt.ylabel('The Related Time of Missions')

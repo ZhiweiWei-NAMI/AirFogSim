@@ -2,17 +2,26 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="e602f890-1e94-45d2-a6d5-c612b9de4d18" name="变更" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/airfogsim/airfogsim_algorithm.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/airfogsim_algorithm.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/airfogsim/airfogsim_env.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/airfogsim_env.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/airfogsim/all_channels.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/all_channels.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/airfogsim/airfogsim_evaluation.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/airfogsim_evaluation.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/airfogsim/entities/task.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/entities/task.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/airfogsim/manager/channel_manager_cp.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/manager/channel_manager_cp.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/airfogsim/manager/task_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/manager/task_manager.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/airfogsim/scheduler/reward_sched.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/scheduler/reward_sched.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/airfogsim/scheduler/task_sched.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/scheduler/task_sched.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/airfogsim/scheduler/traffic_sched.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/scheduler/traffic_sched.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/airfogsim/utils/pathloss_callback.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/utils/pathloss_callback.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example01_offloading_example.py" beforeDir="false" afterPath="$PROJECT_DIR$/example01_offloading_example.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/AccelerationRatio.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/episode_1/AccelerationRatio.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/ChannelRate.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/episode_1/ChannelRate.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/CompletionRatio.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/episode_1/CompletionRatio.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/ProcessMonitoring.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/episode_1/ProcessMonitoring.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/Reward.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/episode_1/Reward.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/Time.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/episode_1/Time.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/episode_2/AccelerationRatio.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/episode_2/AccelerationRatio.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/episode_2/ChannelRate.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/episode_2/ChannelRate.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/episode_2/CompletionRatio.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/episode_2/CompletionRatio.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/episode_2/ProcessMonitoring.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/episode_2/ProcessMonitoring.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/episode_2/Reward.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/episode_2/Reward.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/episode_2/Time.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/episode_2/Time.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/example05_crowdsensing_example.py" beforeDir="false" afterPath="$PROJECT_DIR$/example05_crowdsensing_example.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -73,5 +82,16 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/example05_crowdsensing_example.py</url>
+          <line>27</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>

@@ -6,7 +6,7 @@ class Task:
     """ Task is the class that represents the task. 
     """
 
-    def __init__(self, task_id, task_node_id, task_cpu, task_size, task_deadline, task_priority, task_arrival_time, farther_mission: Mission = None, required_returned_size=0, to_return_node_id = None):
+    def __init__(self, task_id, task_node_id, task_cpu, task_size, task_deadline, task_priority, task_arrival_time, farther_mission: Mission = None, required_returned_size=0, to_return_node_id = None, return_lazy_set=False):
         """The constructor of the Task class.
 
         Args:
@@ -20,6 +20,7 @@ class Task:
             farther_mission (Mission): The farther mission of the task.
             required_returned_size (float): The required returned size of the task.
             to_return_node_id (str): The ID of the node that the task should be returned to. If None, the task is returned to the task node.
+            return_lazy_set (bool): If the to_return_node is set after Task init
         """
         self._task_id = task_id
         self._task_node_id = task_node_id
@@ -28,8 +29,10 @@ class Task:
         self._required_returned_size = required_returned_size
         if to_return_node_id is not None:
             self._to_return_node_id = to_return_node_id
-        else:
+        elif return_lazy_set is False:
             self._to_return_node_id = task_node_id
+        else:
+            self._to_return_node_id = None
         self._task_deadline = task_deadline
         self._task_priority = task_priority
         self._task_arrival_time = task_arrival_time

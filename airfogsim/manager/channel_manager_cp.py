@@ -40,7 +40,6 @@ class ChannelManagerCP:
         self.start_freq = 2.4 # GHz
         # 2.4GHz开始，共n_RB个资源块，每个资源块 RB_bandwidth MHz
         self.RB_frequencies = [self.start_freq + i * self.RB_bandwidth for i in range(self.n_RB)]
-        print(self.RB_frequencies)
         self.bandwidth = self.n_RB * self.RB_bandwidth
         self.V2VChannel = None
         self.V2IChannel = None
@@ -232,15 +231,19 @@ class ChannelManagerCP:
 
         """
         assert transmitter_idx >= 0 and receiver_idx >= 0
-        if transmitter_idx == receiver_idx:
-            return
+        # if transmitter_idx == receiver_idx:
+        #     return
         if channel_type == 'V2V':
+            if transmitter_idx == receiver_idx:
+                return
             self.V2V_active_links[transmitter_idx, receiver_idx, allocated_RBs] = True
         elif channel_type == 'V2I':
             self.V2I_active_links[transmitter_idx, receiver_idx, allocated_RBs] = True
         elif channel_type == 'V2U':
             self.V2U_active_links[transmitter_idx, receiver_idx, allocated_RBs] = True
         elif channel_type == 'U2U':
+            if transmitter_idx == receiver_idx:
+                return
             self.U2U_active_links[transmitter_idx, receiver_idx, allocated_RBs] = True
         elif channel_type == 'U2V':
             self.U2V_active_links[transmitter_idx, receiver_idx, allocated_RBs] = True
@@ -251,9 +254,54 @@ class ChannelManagerCP:
         elif channel_type == 'I2V':
             self.I2V_active_links[transmitter_idx, receiver_idx, allocated_RBs] = True
         elif channel_type == 'I2I':
+            if transmitter_idx == receiver_idx:
+                return
             self.I2I_active_links[transmitter_idx, receiver_idx, allocated_RBs] = True
         elif channel_type == 'I2I':
+            if transmitter_idx == receiver_idx:
+                return
             self.I2I_active_links[transmitter_idx, receiver_idx, allocated_RBs] = True
+
+    def getLinkActivationState(self, transmitter_idx, receiver_idx, channel_type):
+        """Get activation state of the link between the transmitter and the receiver.
+
+        Args:
+            transmitter_idx (int): The index of the transmitter corresponding to its type.
+            receiver_idx (int): The index of the receiver corresponding to its type.
+            allocated_RBs (list): The allocated RBs.
+            channel_type (str): The channel type.
+
+        """
+        assert transmitter_idx >= 0 and receiver_idx >= 0
+
+        if channel_type == 'V2V':
+            if transmitter_idx == receiver_idx:
+                return
+            return self.V2V_active_links[transmitter_idx, receiver_idx, :]
+        elif channel_type == 'V2I':
+            return self.V2I_active_links[transmitter_idx, receiver_idx, :]
+        elif channel_type == 'V2U':
+            return self.V2U_active_links[transmitter_idx, receiver_idx, :]
+        elif channel_type == 'U2U':
+            if transmitter_idx == receiver_idx:
+                return
+            return self.U2U_active_links[transmitter_idx, receiver_idx, :]
+        elif channel_type == 'U2V':
+            return self.U2V_active_links[transmitter_idx, receiver_idx, :]
+        elif channel_type == 'U2I':
+            return self.U2I_active_links[transmitter_idx, receiver_idx, :]
+        elif channel_type == 'I2U':
+            return self.I2U_active_links[transmitter_idx, receiver_idx, :]
+        elif channel_type == 'I2V':
+            return self.I2V_active_links[transmitter_idx, receiver_idx, :]
+        elif channel_type == 'I2I':
+            if transmitter_idx == receiver_idx:
+                return
+            return self.I2I_active_links[transmitter_idx, receiver_idx, :]
+        elif channel_type == 'I2I':
+            if transmitter_idx == receiver_idx:
+                return
+            return self.I2I_active_links[transmitter_idx, receiver_idx, :]
 
     def getRateByChannelType(self, transmitter_idx, receiver_idx, channel_type):
         """Get the rate by the channel type.
@@ -319,7 +367,7 @@ class ChannelManagerCP:
             channel_type = task_profile['channel_type']
             txidx = task_profile['tx_idx']
             rxidx = task_profile['rx_idx']
-            if txidx == rxidx:
+            if (channel_type == 'V2V' or channel_type == 'U2U' or channel_type == 'I2I') and txidx == rxidx:
                 continue
             power_db = None
             # 计算信号；并且把干扰减去，这样保证接收端的信号强度是正确的
@@ -426,9 +474,9 @@ class ChannelManagerCP:
         self.V2I_Rate = cp.log2(1 + self.V2I_SINR)
         self.V2U_Rate = cp.log2(1 + self.V2U_SINR)
         # isOutage的部分速率设置为0
-        self.V2V_Rate = cp.where(self.is_V2V_outage, 0, self.V2V_Rate)
-        self.V2I_Rate = cp.where(self.is_V2I_outage, 0, self.V2I_Rate)
-        self.V2U_Rate = cp.where(self.is_V2U_outage, 0, self.V2U_Rate)
+        # self.V2V_Rate = cp.where(self.is_V2V_outage, 0, self.V2V_Rate)
+        # self.V2I_Rate = cp.where(self.is_V2I_outage, 0, self.V2I_Rate)
+        # self.V2U_Rate = cp.where(self.is_V2U_outage, 0, self.V2U_Rate)
         
         U2U_Interference = cp.repeat(X2U_Interference[cp.newaxis, :, :], self.n_UAV, axis = 0)
         U2V_Interference = cp.repeat(X2V_Interference[cp.newaxis, :, :], self.n_UAV, axis = 0)
@@ -451,9 +499,11 @@ class ChannelManagerCP:
         self.U2I_Rate = cp.log2(1 + self.U2I_SINR)
         # is_U2I_outage 为 False的坐标
         # fU2I_index = cp.where(~self.is_U2I_outage)
-        self.U2U_Rate = cp.where(self.is_U2U_outage, 0, self.U2U_Rate)
-        self.U2V_Rate = cp.where(self.is_U2V_outage, 0, self.U2V_Rate)
-        self.U2I_Rate = cp.where(self.is_U2I_outage, 0, self.U2I_Rate)
+        # self.U2U_Rate = cp.where(self.is_U2U_outage, 0, self.U2U_Rate)
+        # self.U2V_Rate = cp.where(self.is_U2V_outage, 0, self.U2V_Rate)
+        # self.U2I_Rate = cp.where(self.is_U2I_outage, 0, self.U2I_Rate)
+        # print(self.U2I_SINR)
+        # print(self.is_U2I_outage)
 
         I2U_Interference = cp.repeat(X2U_Interference[cp.newaxis, :, :], self.n_RSU, axis = 0)
         I2V_Interference = cp.repeat(X2V_Interference[cp.newaxis, :, :], self.n_RSU, axis = 0)
@@ -474,9 +524,9 @@ class ChannelManagerCP:
         self.I2U_Rate = cp.log2(1 + self.I2U_SINR)
         self.I2V_Rate = cp.log2(1 + self.I2V_SINR)
         self.I2I_Rate = cp.log2(1 + self.I2I_SINR)
-        self.I2U_Rate = cp.where(self.is_I2U_outage, 0, self.I2U_Rate)
-        self.I2V_Rate = cp.where(self.is_I2V_outage, 0, self.I2V_Rate)
-        self.I2I_Rate = cp.where(self.is_I2I_outage, 0, self.I2I_Rate)
+        # self.I2U_Rate = cp.where(self.is_I2U_outage, 0, self.I2U_Rate)
+        # self.I2V_Rate = cp.where(self.is_I2V_outage, 0, self.I2V_Rate)
+        # self.I2I_Rate = cp.where(self.is_I2I_outage, 0, self.I2I_Rate)
 
         # 加上bandwidth
         avg_band = self.RB_bandwidth

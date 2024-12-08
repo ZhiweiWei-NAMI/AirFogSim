@@ -40,6 +40,7 @@ env = AirFogSimEnv(config, interactive_mode='graphic')
 evaluation_module = AirFogSimEvaluation()
 
 for episode in range(last_episode + 1, max_episode+1):
+    env.reset(config)
     # 5. Initialize the algorithm module (initialize in every episode)
     algorithm_module.initialize(env)
 
@@ -60,8 +61,6 @@ for episode in range(last_episode + 1, max_episode+1):
     evaluation_module.toFile(episode)
     evaluation_module.addToEpisodeRecord()
     evaluation_module.drawAndResetStepRecord(episode)
-
-    env.reset(config)
 
 evaluation_module.drawAndResetEpisodeRecord()
 env.close()

@@ -167,9 +167,9 @@ class TaskManager:
                     self._to_compute_tasks[node_id].remove(task_info)
                     self._waiting_to_return_tasks[node_id]=self._waiting_to_return_tasks.get(node_id, [])
                     self._waiting_to_return_tasks[node_id].append(task_info)
-                    task_info.startToReturn(current_time)
-                    self._to_return_tasks[node_id] = self._to_return_tasks.get(node_id, [])
-                    self._to_return_tasks[node_id].append(task_info)
+                    # task_info.startToReturn(current_time)
+                    # self._to_return_tasks[node_id] = self._to_return_tasks.get(node_id, [])
+                    # self._to_return_tasks[node_id].append(task_info)
 
     def getRecentlyDoneTasks(self):
         """Get the recently done tasks (the maximum number is 100).
@@ -444,7 +444,7 @@ class TaskManager:
         self._task_id += 1
         return Task(task_id=f'Task_{self._task_id}', task_node_id=task_node_id, task_cpu=0,
                     task_size=0, task_deadline=task_deadline,task_priority=self._generatePriority(),
-                    task_arrival_time=arrival_time,required_returned_size= return_size)
+                    task_arrival_time=arrival_time,required_returned_size= return_size,return_lazy_set=True)
 
     def _generateTasks(self, task_node_ids_kwardsDict, cur_time, simulation_interval):
         # 1. Move the tasks from the to_generate_task_infos to the todo_tasks according to the current time

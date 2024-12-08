@@ -1,7 +1,7 @@
 
 simulation:
   vehicle_count: 200
-  max_simulation_time: 100
+  max_simulation_time: 1000
   simulation_interval: 0.1 # in seconds, for transmission, computation, task generation and assignment, etc.
   traffic_interval: 0.5 # in seconds, for traffic simulation. Remember to set the same value in the SUMO configuration file; otherwise, the simulation will not work properly
   
@@ -26,7 +26,7 @@ traffic:
   vehicle_traffic_file: "path/to/vehicle_traffic_file.csv" # Only required if mode is "real". The format should be in accordance with the SUMO vehicle file format
   uav_traffic_file: "path/to/uav_traffic_file.csv" # UAV traffic file
   max_n_vehicles: 100 # Number of vehicles to simulate
-  max_n_UAVs: 4 # Number of UAVs to simulate. UAVs are randomly generated in the simulation area initially
+  max_n_UAVs: 10 # Number of UAVs to simulate. UAVs are randomly generated in the simulation area initially
   max_n_RSUs: 4 # Number of UAVs to simulate. RSU are generated in fixed position in the simulation area initially
   RSU_positions: [[100, 100, 0], [100, 2000, 0], [2500, 100, 0], [2500, 2000, 0]] # List of RSU positions, each RSU is represented by a list of x, y, z coordinates
   max_n_cloudServers: 1 # Number of cloud servers

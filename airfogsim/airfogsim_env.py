@@ -121,6 +121,9 @@ class AirFogSimEnv():
         self.V2U_channel = {'time': 0, 'data_size': 0}
         self.V2I_channel = {'time': 0, 'data_size': 0}
         self.U2I_channel = {'time': 0, 'data_size': 0}
+        self.V2U_trans_data = []
+        self.V2I_trans_data = []
+        self.U2I_trans_data = []
 
         # ----------------temporary records in each timeslot----------------
         self.new_vehicle_id_list=[]
@@ -316,16 +319,19 @@ class AirFogSimEnv():
 
             self.channel['time'] += self.simulation_interval
             self.channel['data_size'] += trans_data
-            # print(trans_data)
+
             if channel_type == 'V2I':
                 self.V2I_channel['time'] += self.simulation_interval
                 self.V2I_channel['data_size'] += trans_data
+                self.V2I_trans_data.append(trans_data)
             elif channel_type == 'V2U':
                 self.V2U_channel['time'] += self.simulation_interval
                 self.V2U_channel['data_size'] += trans_data
+                self.V2U_trans_data.append(trans_data)
             elif channel_type == 'U2I':
                 self.U2I_channel['time'] += self.simulation_interval
                 self.U2I_channel['data_size'] += trans_data
+                self.U2I_trans_data.append(trans_data)
 
             if trans_flag:
                 tmp_succeed_tasks.append(task_profile)
@@ -476,11 +482,11 @@ class AirFogSimEnv():
     def _updateTask(self):
         """Update and generate the task for the entities. 
         """
-        task_node_ids_kwardsDict = {}
-        for task_node_ids in self.task_node_ids:
-            task_node_ids_kwardsDict[task_node_ids] = self._getNodeById(task_node_ids).getTaskProfile()
-        # generate task for each task node. It generates the future tasks, and stored in "to_generate_tasks" in the task manager. These tasks are viewed as ``predictable'' tasks.
-        self.task_manager.generateAndCheckTasks(task_node_ids_kwardsDict, self.simulation_time, self.simulation_interval)
+        # task_node_ids_kwardsDict = {}
+        # for task_node_ids in self.task_node_ids:
+        #     task_node_ids_kwardsDict[task_node_ids] = self._getNodeById(task_node_ids).getTaskProfile()
+        # # generate task for each task node. It generates the future tasks, and stored in "to_generate_tasks" in the task manager. These tasks are viewed as ``predictable'' tasks.
+        # self.task_manager.generateAndCheckTasks(task_node_ids_kwardsDict, self.simulation_time, self.simulation_interval)
         for task_id, route in self.task_return_routes.items():
             self.task_manager.setTaskReturnRouteAndStartReturn(task_id, route, self.simulation_time)
         self.task_return_routes = {}
@@ -776,3 +782,12 @@ class AirFogSimEnv():
             return self.V2I_channel['data_size'] / self.V2I_channel['time'] if self.V2I_channel['time'] != 0 else 0
         elif channel_type == 'U2I':
             return self.U2I_channel['data_size'] / self.U2I_channel['time'] if self.U2I_channel['time'] != 0 else 0
+
+    def getChannelTransData(self,channel_type):
+        assert channel_type in ['V2U', 'V2I', 'U2I']
+        if channel_type == 'V2U':
+            return self.V2U_trans_data
+        elif channel_type == 'V2I':
+            return self.V2I_trans_data
+        elif channel_type == 'U2I':
+            return self.U2I_trans_data
