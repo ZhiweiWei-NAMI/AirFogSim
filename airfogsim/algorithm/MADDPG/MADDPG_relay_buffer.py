@@ -1,23 +1,23 @@
+import collections
 from collections import namedtuple
 import random
-Experience = namedtuple('Experience',
-                        ('states', 'actions', 'next_states', 'rewards'))
 
 
 class ReplayBuffer:
-    def __init__(self, capacity):
-        self.capacity = capacity
-        self.memory = []
-        self.position = 0
+    def __init__(self, buffer_size, train_min_size):
+        # 创建一个队列，先进先出，队列长度不变
+        self.buffer_size=buffer_size
+        self.train_min_size = train_min_size
+        self.buffer = collections.deque(maxlen=buffer_size)
 
     def add(self, state,action,next_state,reward):
-        if len(self.memory) < self.capacity:
-            self.memory.append(None)
-        self.memory[self.position] = Experience(*args)
-        self.position = (self.position + 1) % self.capacity
+        self.buffer.append((state,action,next_state,reward))
 
     def sample(self, batch_size):
-        return random.sample(self.memory, batch_size)
+        return random.sample(self.buffer, batch_size)
 
-    def __len__(self):
-        return len(self.memory)
+    def size(self):
+        return len(self.buffer)
+
+    def ready(self):
+        return len(self.buffer) > self.train_min_size

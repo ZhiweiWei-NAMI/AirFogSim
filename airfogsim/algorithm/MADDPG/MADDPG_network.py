@@ -1,3 +1,4 @@
+import torch
 import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
@@ -24,6 +25,12 @@ class Critic(nn.Module):
         result = F.relu(self.FC2(combined))
         return self.FC4(F.relu(self.FC3(result)))
 
+    def save_model(self, file_dir):
+        torch.save(self.state_dict(), file_dir, _use_new_zipfile_serialization=False)
+
+    def load_model(self, file_dir):
+        self.load_state_dict(torch.load(file_dir))
+
 
 class Actor(nn.Module):
     def __init__(self, dim_observation, dim_action):
@@ -38,3 +45,9 @@ class Actor(nn.Module):
         result = F.relu(self.FC2(result))
         result = F.tanh(self.FC3(result))
         return result
+
+    def save_model(self, file_dir):
+        torch.save(self.state_dict(), file_dir, _use_new_zipfile_serialization=False)
+
+    def load_model(self, file_dir):
+        self.load_state_dict(torch.load(file_dir))

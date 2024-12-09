@@ -319,11 +319,12 @@ class NVHAUAlgorithmModule(BaseAlgorithmModule):
             env (AirFogSimEnv): The environment object.
 
         """
-        UAV_probability = 0.5
+        UAV_probability = 0.1
         cur_time = self.trafficScheduler.getCurrentTime(env)
         new_missions_profile = self.missionScheduler.getToBeAssignedMissionsProfile(env, cur_time)
         delete_mission_profile_ids = []
         excluded_sensor_ids = []
+
         for mission_profile in new_missions_profile:
             mission_sensor_type = mission_profile['mission_sensor_type']
             mission_accuracy = mission_profile['mission_accuracy']
@@ -428,7 +429,7 @@ class NVHAUAlgorithmModule(BaseAlgorithmModule):
                         nearest_r_id = self.entityScheduler.getNodeInfoByIndexAndType(env, int(nearest_r_idx[0]), 'R')[
                             'id']
 
-                    relay_probability = 0.5
+                    relay_probability = 1.0
                     if random.random() < relay_probability and UAV_num > 0:
                         return_route = [nearest_u_id, nearest_r_id]
                     else:
@@ -488,7 +489,7 @@ class DDQNAlgorithmModule(BaseAlgorithmModule):
         UAV: Fly to next position in route list and stay for a period of time.
     '''
 
-    class RelayBuffer:
+    class ReplayBuffer:
         def __init__(self):
             # 创建一个队列，先进先出，队列长度不限
             self.buffer = {}
@@ -525,9 +526,9 @@ class DDQNAlgorithmModule(BaseAlgorithmModule):
 
     def __init__(self,last_episode=None):
         super().__init__()
-        self.n_state = 631
-        self.n_action = 10
-        self.DDQN_env = DDQN_Env(self.n_state, self.n_action)
+        self.dim_state = 631
+        self.dim_action = 10
+        self.DDQN_env = DDQN_Env(self.dim_state, self.dim_action)
         if last_episode is not None:
             self.DDQN_env.loadModel(last_episode)
 
@@ -543,7 +544,7 @@ class DDQNAlgorithmModule(BaseAlgorithmModule):
         self.max_n_UAVs = env.traffic_manager.getConfig('max_n_UAVs')
         self.max_n_RSUs = env.traffic_manager.getConfig('max_n_RSUs')
         self.last_mission_id = None  # Last allocated mission id,used in next state update
-        self.relay_buffer = self.RelayBuffer()
+        self.replay_buffer = self.ReplayBuffer()
 
     def scheduleStep(self, env: AirFogSimEnv):
         """The algorithm logic. Should be implemented by the subclass.
@@ -593,8 +594,8 @@ class DDQNAlgorithmModule(BaseAlgorithmModule):
             is_random, max_q_value, action_index = self.DDQN_env.takeAction(state, mask)
 
             if self.last_mission_id is not None:
-                self.relay_buffer.setNextState(self.last_mission_id, state, mask, False)
-            self.relay_buffer.add(mission_id, state, action_index, mask)
+                self.replay_buffer.setNextState(self.last_mission_id, state, mask, False)
+            self.replay_buffer.add(mission_id, state, action_index, mask)
             self.last_mission_id = mission_id
 
             appointed_node_type,appointed_node_id, appointed_sensor_id, appointed_sensor_accuracy = self.algorithmScheduler.getSensorInfoByAction(
@@ -744,10 +745,10 @@ class DDQNAlgorithmModule(BaseAlgorithmModule):
         last_step_fail_mission_infos = self.missionScheduler.getLastStepFailMissionInfos(env)
         for mission_info in last_step_succ_mission_infos:
             reward = self.rewardScheduler.getRewardByMission(env, mission_info)
-            exp = self.relay_buffer.completeAndPopExperience(mission_info['mission_id'], reward)
+            exp = self.replay_buffer.completeAndPopExperience(mission_info['mission_id'], reward)
             self.DDQN_env.addExperience(*exp)
         for mission_info in last_step_fail_mission_infos:
             reward = self.rewardScheduler.getPunishByMission(env, mission_info)
-            exp = self.relay_buffer.completeAndPopExperience(mission_info['mission_id'], reward)
+            exp = self.replay_buffer.completeAndPopExperience(mission_info['mission_id'], reward)
             self.DDQN_env.addExperience(*exp)
 

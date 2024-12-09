@@ -8,8 +8,10 @@ import numpy as np
 class ReplayBuffer:
     def __init__(self, buffer_size, train_min_size):
         # 创建一个队列，先进先出，队列长度不变
-        self.buffer = collections.deque(maxlen=buffer_size)
+        self.buffer_size=buffer_size
         self.train_min_size = train_min_size
+        self.buffer = collections.deque(maxlen=buffer_size)
+
 
     # 填充经验池
     def add(self, state, action, mask, reward, next_state, next_mask, done):

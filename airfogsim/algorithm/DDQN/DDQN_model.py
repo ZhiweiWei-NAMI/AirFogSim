@@ -14,13 +14,13 @@ from .DDQN_network import Net
 # ----------------------------------- #
 class Double_DQN:
     # （1）初始化
-    def __init__(self, n_states, n_hiddens, n_actions,
+    def __init__(self, dim_states, dim_hiddens, dim_actions,
                  learning_rate, gamma, epsilon, eps_end, eps_dec,
-                 target_update, buffer_size, train_min_size, tau, device):
+                 target_update, buffer_size,batch_size, train_min_size, tau, device):
         # 属性分配
-        self.n_states = n_states
-        self.n_hiddens = n_hiddens
-        self.n_actions = n_actions
+        self.dim_states = dim_states
+        self.dim_hiddens = dim_hiddens
+        self.dim_actions = dim_actions
         self.learning_rate = learning_rate
         self.gamma = gamma
         self.epsilon = epsilon
@@ -28,6 +28,7 @@ class Double_DQN:
         self.eps_dec = eps_dec
         self.target_update = target_update
         self.buffer_size = buffer_size
+        self.batch_size=batch_size
         self.train_min_size = train_min_size
         self.tau = tau
         self.device = device
@@ -35,9 +36,9 @@ class Double_DQN:
         self.count = 0
 
         # 实例化训练网络
-        self.q_net = Net(n_states=self.n_states, n_hiddens=self.n_hiddens, n_actions=self.n_actions)
+        self.q_net = Net(dim_states=self.dim_states, dim_hiddens=self.dim_hiddens, dim_actions=self.dim_actions)
         # 实例化目标网络
-        self.target_q_net = Net(n_states=self.n_states, n_hiddens=self.n_hiddens, n_actions=self.n_actions)
+        self.target_q_net = Net(dim_states=self.dim_states, dim_hiddens=self.dim_hiddens, dim_actions=self.dim_actions)
 
         # 优化器，更新训练网络的参数
         self.optimizer = torch.optim.Adam(params=self.q_net.parameters(), lr=self.learning_rate)
@@ -47,9 +48,6 @@ class Double_DQN:
 
         # 更新目标网络
         self.update_network_parameters(tau=self.tau)
-
-        # 模型文件路径
-        self.model_file_dir = "./airfogsim/algorithm/DDQN/model/"
 
     # 目标网络更新
     def update_network_parameters(self, tau=None):
@@ -107,33 +105,33 @@ class Double_DQN:
     def update(self):
         if not self.memory.ready():
             return
-        states, actions, masks, rewards, next_states, next_masks, dones, = self.memory.sample()
+        states, actions, masks, rewards, next_states, next_masks, dones = self.memory.sample(self.batch_size)
 
         # 当前状态，array_shape=[b,4]
         states = torch.tensor(states, dtype=torch.float)
         # 当前状态的动作，tuple_shape=[b]==>[b,1]
         actions = torch.tensor(actions, dtype=torch.int64).view(-1, 1)
         # 动作掩码（布尔张量，True为有效动作，False为无效动作）
-        masks = torch.tensor(masks, dtype=torch.float).view(-1, 1)
+        masks = torch.tensor(masks, dtype=torch.bool).view(-1, 1)
         # 选择当前动作的奖励, tuple_shape=[b]==>[b,1]
         rewards = torch.tensor(rewards, dtype=torch.float).view(-1, 1)
         # 下一个时刻的状态array_shape=[b,4]
         next_states = torch.tensor(next_states, dtype=torch.float)
         # 动作掩码（布尔张量，True为有效动作，False为无效动作）
-        next_masks = torch.tensor(next_masks, dtype=torch.float).view(-1, 1)
+        next_masks = torch.tensor(next_masks, dtype=torch.bool).view(-1, 1)
         # 是否到达目标 tuple_shape=[b,1]
-        dones = torch.tensor(dones, dtype=torch.float).view(-1, 1)
+        dones = torch.tensor(dones, dtype=torch.bool).view(-1, 1)
 
         with torch.no_grad():
             next_q_values = self.q_net.forward(next_states)
             next_masked_q_values = torch.where(next_masks, next_q_values, torch.tensor(float('-inf')))
             max_next_actions = torch.argmax(next_masked_q_values, dim=-1)
-            next_target_q_values = self.target_q_net.forward(next_states)
-            q_targets = rewards + self.gamma * next_target_q_values.gather(1, max_next_actions) * (1 - dones)
+            next_q_targets = self.target_q_net.forward(next_states)
+            td_q_targets = rewards + self.gamma * next_q_targets.gather(1, max_next_actions) * (1 - dones)
         q_values = self.q_net(states).gather(1, actions)
 
         # 预测值和目标值的均方误差损失(取一个batch的平均值)
-        dqn_loss = torch.mean(F.mse_loss(q_values, q_targets.detach()))
+        dqn_loss = torch.mean(F.mse_loss(q_values, td_q_targets.detach()))
         # 梯度清零
         self.optimizer.zero_grad()
         # 梯度反传
@@ -148,20 +146,19 @@ class Double_DQN:
         # 迭代计数+1
         self.count += 1
 
-    def save_models(self, episode):
-        if not os.path.exists(self.model_file_dir):
-            os.makedirs(self.model_file_dir)
+    def save_models(self, episode,base_dir):
+        file_dir=f"{base_dir}/episode_{episode}/"
+        if not os.path.exists(file_dir):
+            os.makedirs(file_dir)
 
-        self.q_net.save_model(self.model_file_dir + 'DDQN_Q_net_{}.pth'.format(episode))
+        self.q_net.save_model(file_dir + f'DDQN_Q_net_{episode}.pth')
         print('Saving Q_net network successfully!')
-        self.target_q_net.save_model(self.model_file_dir + 'DDQN_Q_target_{}.pth'.format(episode))
+        self.target_q_net.save_model(file_dir + f'DDQN_Q_target_{episode}.pth')
         print('Saving Q_target network successfully!')
 
-    def load_models(self, episode):
-        if not os.path.exists(self.model_file_dir):
-            os.makedirs(self.model_file_dir)
-
-        self.q_net.load_model(self.model_file_dir + 'DDQN_Q_net_{}.pth'.format(episode))
+    def load_models(self, episode,base_dir):
+        file_dir = f"{base_dir}/episode_{episode}/"
+        self.q_net.load_model(file_dir + f'DDQN_Q_net_{episode}.pth')
         print('Loading Q_net network successfully!')
-        self.target_q_net.load_model(self.model_file_dir + 'DDQN_Q_target_{}.pth'.format(episode))
+        self.target_q_net.load_model(file_dir + f'DDQN_Q_target_{episode}.pth')
         print('Loading Q_target network successfully!')

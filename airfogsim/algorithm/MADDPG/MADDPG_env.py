@@ -31,6 +31,8 @@ n_states = 213
 n_actions = 2
 capacity = 1000000
 batch_size = 1000
+gamma = 0.95
+tau = 0.01
 
 n_episode = 20000
 max_steps = 1000

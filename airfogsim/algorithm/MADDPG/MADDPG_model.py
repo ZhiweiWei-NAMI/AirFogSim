@@ -1,12 +1,11 @@
-from model import Critic, Actor
-import torch as th
+from .MADDPG_network import Critic, Actor
+import torch
 from copy import deepcopy
-from memory import ReplayMemory, Experience
+from .MADDPG_relay_buffer import ReplayBuffer
 from torch.optim import Adam
-from randomProcess import OrnsteinUhlenbeckProcess
+from torch.nn import functional as F
 import torch.nn as nn
 import numpy as np
-from params import scale_reward
 
 
 def soft_update(target, source, t):
@@ -23,30 +22,41 @@ def hard_update(target, source):
 
 
 class MADDPG:
-    def __init__(self, n_agents, dim_obs, dim_act, batch_size,
-                 capacity, episodes_before_train):
-        self.actors = [Actor(dim_obs, dim_act) for i in range(n_agents)]
-        self.critics = [Critic(n_agents, dim_obs,
-                               dim_act) for i in range(n_agents)]
-        self.actors_target = deepcopy(self.actors)
-        self.critics_target = deepcopy(self.critics)
-
+    def __init__(self, n_agents, dim_obs, dim_act, gamma, buffer_size, batch_size,
+                 episodes_before_train, train_min_size, tau, device):
         self.n_agents = n_agents
-        self.n_states = dim_obs
-        self.n_actions = dim_act
-        self.memory = ReplayMemory(capacity)
+        self.dim_states = dim_obs
+        self.dim_actions = dim_act
+        self.buffer_size = buffer_size
         self.batch_size = batch_size
-        self.use_cuda = th.cuda.is_available()
+        # self.use_cuda = th.cuda.is_available()
+        self.device=device
+        self.train_min_size = train_min_size
         self.episodes_before_train = episodes_before_train
 
-        self.GAMMA = 0.95
-        self.tau = 0.01
+        self.gamma = gamma
+        self.tau = tau
 
         self.var = [1.0 for i in range(n_agents)]
+
+        # 实例化策略训练网络*n
+        self.actors = [Actor(dim_obs, dim_act) for i in range(n_agents)]
+        # 实例化价值训练网络*n
+        self.critics = [Critic(n_agents, dim_obs,
+                               dim_act) for i in range(n_agents)]
+        # 实例化目标策略网络*n
+        self.actors_target = deepcopy(self.actors)
+        # 实例化目标价值网络*n
+        self.critics_target = deepcopy(self.critics)
+        # 策略训练网络优化器
         self.critic_optimizer = [Adam(x.parameters(),
                                       lr=0.001) for x in self.critics]
+        # 目标训练网络优化器
         self.actor_optimizer = [Adam(x.parameters(),
                                      lr=0.0001) for x in self.actors]
+
+        # 经验池
+        self.memory = ReplayBuffer(buffer_size=self.buffer_size, train_min_size=self.train_min_size)
 
         if self.use_cuda:
             for x in self.actors:
@@ -61,75 +71,60 @@ class MADDPG:
         self.steps_done = 0
         self.episode_done = 0
 
-    def update_policy(self):
+    def update(self):
+        if not self.memory.ready():
+            return
         # do not train until exploration is enough
         if self.episode_done <= self.episodes_before_train:
             return None, None
 
-        ByteTensor = th.cuda.ByteTensor if self.use_cuda else th.ByteTensor
-        FloatTensor = th.cuda.FloatTensor if self.use_cuda else th.FloatTensor
-
         c_loss = []
         a_loss = []
         for agent in range(self.n_agents):
-            transitions = self.memory.sample(self.batch_size)
-            batch = Experience(*zip(*transitions))
-            non_final_mask = ByteTensor(list(map(lambda s: s is not None,
-                                                 batch.next_states)))
-            # state_batch: batch_size x n_agents x dim_obs
-            state_batch = th.stack(batch.states).type(FloatTensor)
-            action_batch = th.stack(batch.actions).type(FloatTensor)
-            reward_batch = th.stack(batch.rewards).type(FloatTensor)
-            # : (batch_size_non_final) x n_agents x dim_obs
-            non_final_next_states = th.stack(
-                [s for s in batch.next_states
-                 if s is not None]).type(FloatTensor)
+            # 同一时间的全局state,action,next_state,reward
+            states,actions,next_states,rewards = self.memory.sample(self.batch_size)
+            # 转换为 PyTorch 张量
+            states = torch.tensor(states, dtype=torch.float)
+            actions = torch.tensor(actions, dtype=torch.float).view(-1,1)
+            rewards = torch.tensor(rewards, dtype=torch.float).view(-1,1)
+            next_states = torch.tensor(next_states, dtype=torch.float)
 
-            # for current agent
-            whole_state = state_batch.view(self.batch_size, -1)
-            whole_action = action_batch.view(self.batch_size, -1)
+
+            whole_states = states.view(self.batch_size, -1)
+            whole_actions = actions.view(self.batch_size, -1)
+
+            # 1.Critic 更新(agent_i)
+            q_values_i = self.critics[agent](whole_states, whole_actions) #实际采取的动作
+            with torch.no_grad():
+                next_whole_states = next_states.view(self.batch_size, -1)
+                # all agents next actions
+                next_whole_actions = [
+                    self.actors_target[i](next_states[:, i, :]) for i in range(self.n_agents)
+                ]
+                next_whole_actions = torch.cat(next_whole_actions, dim=-1)
+                q_targets_i = self.critics_target[agent](next_whole_states, next_whole_actions).squeeze()
+                td_targets_i = rewards[:, agent] + self.gamma * q_targets_i
+
+            critic_loss = F.mse_loss(q_values_i, td_targets_i.detach())
             self.critic_optimizer[agent].zero_grad()
-            current_Q = self.critics[agent](whole_state, whole_action)
-
-            non_final_next_actions = [
-                self.actors_target[i](non_final_next_states[:,
-                                                            i,
-                                                            :]) for i in range(
-                                                                self.n_agents)]
-            non_final_next_actions = th.stack(non_final_next_actions)
-            non_final_next_actions = (
-                non_final_next_actions.transpose(0,
-                                                 1).contiguous())
-
-            target_Q = th.zeros(
-                self.batch_size).type(FloatTensor)
-
-            target_Q[non_final_mask] = self.critics_target[agent](
-                non_final_next_states.view(-1, self.n_agents * self.n_states),
-                non_final_next_actions.view(-1,
-                                            self.n_agents * self.n_actions)
-            ).squeeze()
-            # scale_reward: to scale reward in Q functions
-
-            target_Q = (target_Q.unsqueeze(1) * self.GAMMA) + (
-                reward_batch[:, agent].unsqueeze(1) * scale_reward)
-
-            loss_Q = nn.MSELoss()(current_Q, target_Q.detach())
-            loss_Q.backward()
+            critic_loss.backward()
             self.critic_optimizer[agent].step()
 
+            # 2.Actor 更新(agent_i)
+            state_i=states[:, agent, :]
+            online_action_i = self.actors[agent](state_i)  # 非经验里state_i对应的实际动作，是重新采样的
+            online_action = actions.clone()
+            online_action[:, agent, :] = online_action_i
+            whole_online_actions = online_action.view(self.batch_size, -1)
+
+            # loss采用-q，评价越好loss越小
+            actor_loss = -self.critics[agent](whole_states, whole_online_actions).mean()
             self.actor_optimizer[agent].zero_grad()
-            state_i = state_batch[:, agent, :]
-            action_i = self.actors[agent](state_i)
-            ac = action_batch.clone()
-            ac[:, agent, :] = action_i
-            whole_action = ac.view(self.batch_size, -1)
-            actor_loss = -self.critics[agent](whole_state, whole_action)
-            actor_loss = actor_loss.mean()
             actor_loss.backward()
             self.actor_optimizer[agent].step()
-            c_loss.append(loss_Q)
-            a_loss.append(actor_loss)
+
+            c_loss.append(critic_loss.item())
+            a_loss.append(actor_loss.item())
 
         if self.steps_done % 100 == 0 and self.steps_done > 0:
             for i in range(self.n_agents):
@@ -151,8 +146,7 @@ class MADDPG:
             act += th.from_numpy(
                 np.random.randn(2) * self.var[i]).type(FloatTensor)
 
-            if self.episode_done > self.episodes_before_train and\
-               self.var[i] > 0.05:
+            if self.episode_done > self.episodes_before_train and self.var[i] > 0.05:
                 self.var[i] *= 0.999998
             act = th.clamp(act, -1.0, 1.0)
 
