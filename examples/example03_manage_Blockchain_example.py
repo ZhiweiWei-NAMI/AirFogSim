@@ -1,3 +1,8 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+dir_name = os.path.dirname(__file__)
+
 from airfogsim import AirFogSimEnv, BaseAlgorithmModule,AirFogSimScheduler
 
 import numpy as np
@@ -12,7 +17,7 @@ def load_config(path):
     
 
 # 1. Load the configuration file
-config_path = sys.argv[1] if len(sys.argv) > 1 else 'config.yaml'
+config_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), 'config.yaml')
 config = load_config(config_path)
 
 # 2. Create the environment

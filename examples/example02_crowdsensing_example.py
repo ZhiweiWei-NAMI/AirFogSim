@@ -1,12 +1,15 @@
+import sys
 import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+dir_name = os.path.dirname(__file__)
+
 os.environ['useCUPY'] = 'False'
 print('useCUPY:',os.environ['useCUPY'])
 # When n_RB < 50, numpy is better than cupy; When n_RB >= 50, cupy is better than numpy.
 
-from airfogsim import AirFogSimEnv, BaseAlgorithmModule,NVHAUAlgorithmModule,AirFogSimEvaluation
+from airfogsim import AirFogSimEnv, BaseAlgorithmModule, NVHAUAlgorithmModule, AirFogSimEvaluation
 import numpy as np
 import yaml
-import sys
 from pyinstrument import Profiler
 
 def load_config(path):
@@ -19,7 +22,7 @@ profiler=Profiler()
 profiler.start()
 
 # 1. Load the configuration file
-config_path = sys.argv[1] if len(sys.argv) > 1 else 'config.yaml'
+config_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), 'config.yaml')
 config = load_config(config_path)
 
 # 2. Create the environment

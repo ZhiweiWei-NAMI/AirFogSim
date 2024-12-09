@@ -1,6 +1,6 @@
 
 from ..all_channels import V2IChannel, V2UChannel, V2VChannel, U2IChannel, U2UChannel, I2IChannel
-from ..utils.pathloss_callback import addMatrix, subMatrix, addTwoMatrix, OutageProbCallback
+from ..channel_callback import addMatrix, subMatrix, addTwoMatrix, OutageProbCallback
 import os
 if os.environ.get('useCUPY') == 'True':
     try:
@@ -15,7 +15,8 @@ else:
     import numpy as cp
 class ChannelManagerCP:
     """ChannelManager is the class for managing the wireless communication channels in the airfogsim environment. It provides the APIs for the agent to interact with the channels."""
-    def __init__(self, n_RSU=1, n_UAV=1, n_Veh=1, hei_UAVs=100, RSU_positions=[], simulation_interval=0.1):
+    def __init__(self, config_channel, n_RSU=1, n_UAV=1, n_Veh=1, hei_UAVs=100, RSU_positions=[], simulation_interval=0.1):
+        self._config_channel = config_channel
         self.V2V_power_dB = 23 # dBm 记录的都是最大功率
         self.V2I_power_dB = 26
         self.V2U_power_dB = 26
@@ -75,8 +76,8 @@ class ChannelManagerCP:
         self.I2U_Rate = None
         self.I2V_Rate = None
 
-        self.outageProbCallback = OutageProbCallback('Rayleigh')
-        self.snr_threshold = 10
+        self.outageProbCallback = OutageProbCallback(config_channel['outage_model'])
+        self.snr_threshold = config_channel['outage_snr_threshold']
 
         self.n_Veh = n_Veh
         self.n_RSU = n_RSU
@@ -87,18 +88,43 @@ class ChannelManagerCP:
 
         self._last_timeslot_receive = {} # node_id -> { transmit_size }
         self._last_timeslot_send = {}  # node_id -> { transmit_size }
+        # 最大可容忍的断续传输时间
+        self._transmission_timeout_threshold = 0.5
 
         self._initialize_Channels()
         self._initialize_Interference_and_active()
         self.resetActiveLinks()
+
+    
+    def transmissionTimeOut(self, last_transmission_time, simulation_time):
+        assert last_transmission_time >= 0 and simulation_time >= 0
+        return simulation_time - last_transmission_time > self._transmission_timeout_threshold
         
     def _initialize_Channels(self):
-        self.V2VChannel = V2VChannel(self.n_Veh, self.RB_frequencies)  # number of vehicles
-        self.V2IChannel = V2IChannel(self.n_Veh, self.n_RSU, self.RB_frequencies, self.RSU_positions)
-        self.V2UChannel = V2UChannel(self.n_Veh, self.n_UAV, self.RB_frequencies, self.hei_UAVs)
-        self.U2UChannel = U2UChannel(self.n_UAV, self.RB_frequencies, self.hei_UAVs)
-        self.U2IChannel = U2IChannel(self.n_RSU, self.n_UAV, self.RB_frequencies, self.hei_UAVs, self.RSU_positions)
-        self.I2IChannel = I2IChannel(self.n_RSU, self.RB_frequencies, self.RSU_positions)
+        self.V2VChannel = V2VChannel(self.n_Veh, self.RB_frequencies, 
+                                        pathloss_type = self._config_channel.get('V2V', {}).get('pathloss_model', 'V2V_urban_tr37885'),
+                                        shadowing_type = self._config_channel.get('V2V', {}).get('shadowing_model', '3GPP_LogNormal'),
+                                        fastfading_type = self._config_channel.get('V2V', {}).get('fastfading_model', 'Rayleigh'))
+        self.V2IChannel = V2IChannel(self.n_Veh, self.n_RSU, self.RB_frequencies, self.RSU_positions,
+                                        pathloss_type = self._config_channel.get('V2I', {}).get('pathloss_model', 'UMa_LOS_tr38901'),
+                                        shadowing_type = self._config_channel.get('V2I', {}).get('shadowing_model', '3GPP_LogNormal'),
+                                        fastfading_type = self._config_channel.get('V2I', {}).get('fastfading_model', 'Rayleigh'))
+        self.V2UChannel = V2UChannel(self.n_Veh, self.n_UAV, self.RB_frequencies, self.hei_UAVs,
+                                        pathloss_type = self._config_channel.get('V2U', {}).get('pathloss_model', 'V2V_urban_tr37885'),
+                                        shadowing_type = self._config_channel.get('V2U', {}).get('shadowing_model', '3GPP_LogNormal'),
+                                        fastfading_type = self._config_channel.get('V2U', {}).get('fastfading_model', 'Rayleigh'))
+        self.U2UChannel = U2UChannel(self.n_UAV, self.RB_frequencies, self.hei_UAVs,
+                                        pathloss_type = self._config_channel.get('U2U', {}).get('pathloss_model', 'free_space'),
+                                        shadowing_type = self._config_channel.get('U2U', {}).get('shadowing_model', '3GPP_LogNormal'),
+                                        fastfading_type = self._config_channel.get('U2U', {}).get('fastfading_model', 'Rayleigh'))
+        self.U2IChannel = U2IChannel(self.n_RSU, self.n_UAV, self.RB_frequencies, self.hei_UAVs, self.RSU_positions,
+                                        pathloss_type = self._config_channel.get('U2I', {}).get('pathloss_model', 'free_space'),
+                                        shadowing_type = self._config_channel.get('U2I', {}).get('shadowing_model', '3GPP_LogNormal'),
+                                        fastfading_type = self._config_channel.get('U2I', {}).get('fastfading_model', 'Rayleigh'))
+        self.I2IChannel = I2IChannel(self.n_RSU, self.RB_frequencies, self.RSU_positions,
+                                        pathloss_type = self._config_channel.get('I2I', {}).get('pathloss_model', 'UMa_LOS_tr38901'),
+                                        shadowing_type = self._config_channel.get('I2I', {}).get('shadowing_model', '3GPP_LogNormal'),
+                                        fastfading_type = self._config_channel.get('I2I', {}).get('fastfading_model', 'Rayleigh'))
     
     def _update_Channels(self, removed_veh_indexes, added_veh_nums):
         # removed_veh_indexes是一个个删掉的，所以不用考虑乱序

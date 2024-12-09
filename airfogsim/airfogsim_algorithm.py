@@ -33,15 +33,12 @@ class BaseAlgorithmModule:
         self.sensorScheduler = AirFogSimScheduler.getSensorScheduler()
         self.trafficScheduler = AirFogSimScheduler.getTrafficScheduler()
 
-    def initialize(self, env: AirFogSimEnv):
-        """Initialize the algorithm with the environment. Should be implemented by the subclass. Including setting the task generation model, setting the reward model, etc.
+    def initialize(self, env: AirFogSimEnv, config={}):
+        """Initialize the algorithm with the environment. Should be implemented by the subclass. Including setting the reward model, etc.
 
         Args:
             env (AirFogSimEnv): The environment object.
         """
-        self.taskScheduler.setTaskGenerationModel(env, 'Poisson')
-        self.taskScheduler.setTaskNodePossibility(env, node_types=['vehicle', 'UAV'], max_num=30, threshold_poss=0.5)
-        # self.rewardScheduler.setRewardModel(env, 'log(1+(task_deadline-task_delay))')
         self.rewardScheduler.setModel(env, 'REWARD',
                                       '5 * log(10, 1 + (_mission_deadline-_mission_duration_sum)) * (1 / (1 + exp(-(_mission_deadline-_mission_duration_sum) / (_mission_finish_time - _mission_arrival_time-_mission_duration_sum))) - 1 / (1 + exp(-1)))')
         self.rewardScheduler.setModel(env, 'PUNISH', '-1')
@@ -56,7 +53,7 @@ class BaseAlgorithmModule:
         self.scheduleOffloading(env)
         self.scheduleCommunication(env)
         self.scheduleComputing(env)
-        # self.scheduleMission(env)
+        self.scheduleMission(env)
         self.scheduleTraffic(env)
 
     def scheduleReturning(self, env: AirFogSimEnv):
@@ -449,7 +446,8 @@ class NVHAUAlgorithmModule(BaseAlgorithmModule):
         super().scheduleTraffic(env)
 
     def scheduleOffloading(self, env: AirFogSimEnv):
-        super().scheduleOffloading(env)
+        # super().scheduleOffloading(env)
+        pass
 
     def scheduleCommunication(self, env: AirFogSimEnv):
         super().scheduleCommunication(env)
@@ -663,7 +661,8 @@ class DDQNAlgorithmModule(BaseAlgorithmModule):
         self.trafficScheduler.setUAVMobilityPatterns(env, UAVs_mobile_pattern)
 
     def scheduleOffloading(self, env: AirFogSimEnv):
-        super().scheduleOffloading(env)
+        # super().scheduleOffloading(env)
+        pass
 
     def scheduleCommunication(self, env: AirFogSimEnv):
         super().scheduleCommunication(env)
