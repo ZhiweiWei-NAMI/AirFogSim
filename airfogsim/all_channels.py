@@ -10,6 +10,8 @@ if os.environ.get('useCUPY') == 'True':
         print("CuPy not available. Using NumPy instead.")
 else:
     import numpy as cp
+
+cp.seterr(all='ignore')
 from .utils.pathloss_callback import PathLossCallback, ShadowingCallback, FastFadingCallback
 
 class V2IChannel: 

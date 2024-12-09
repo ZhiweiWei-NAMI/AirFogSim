@@ -1,3 +1,8 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+dir_name = os.path.dirname(__file__)
+
 from airfogsim import AirFogSimEnv, BaseAlgorithmModule
 import numpy as np
 import random
@@ -10,9 +15,10 @@ def load_config(path):
         config = yaml.safe_load(file)
         return config
     
+    
 
 # 1. Load the configuration file
-config_path = sys.argv[1] if len(sys.argv) > 1 else 'config.yaml'
+config_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), 'config.yaml')
 config = load_config(config_path)
 
 # 2. Create the environment
@@ -26,6 +32,9 @@ RewardScheduler.setModel(env, 'REWARD', 'task_delay')
 accumulated_reward = 0
 np.random.seed(0)
 random.seed(0)
+v2u_rate = [0]
+v2i_rate = [0]
+u2i_rate = [0]
 while not env.isDone():
     algorithm_module.scheduleStep(env)
     env.step()
@@ -33,4 +42,16 @@ while not env.isDone():
     task_num = TaskScheduler.getDoneTaskNum(env)
     print(f"Simulation time: {env.simulation_time}, ACC_Reward: {accumulated_reward/max(1,task_num)}", end='\r')
     env.render()
+    v2u_rate.append(env.getChannelAvgRate('V2U'))
+    v2i_rate.append(env.getChannelAvgRate('V2I'))
+    u2i_rate.append(env.getChannelAvgRate('U2I'))
+    print(f'V2U: {v2u_rate[-1]}, V2I: {v2i_rate[-1]}, U2I: {u2i_rate[-1]}', end='\r')
 env.close()
+# plt绘制
+import matplotlib.pyplot as plt
+plt.plot(v2u_rate[1:],label='V2U')
+plt.plot(v2i_rate[1:],label='V2I')
+plt.plot(u2i_rate[1:],label='U2I')
+plt.legend()
+plt.savefig('rate.png',dpi=300)
+print('Simulation done!')
