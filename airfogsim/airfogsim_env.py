@@ -176,6 +176,8 @@ class AirFogSimEnv():
             assert self.traffic_interval == traci.simulation.getDeltaT(), "The traffic interval is not equal to the simulation step in SUMO!"
             traci_connection = traci.getConnection(self._sumo_label)
             return traci_connection
+        else:
+            self._sumo_label = "non_sumo_" + str(time.time())
         return None
 
     def isDone(self):

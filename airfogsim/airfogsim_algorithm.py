@@ -196,6 +196,7 @@ class BaseAlgorithmModule:
             neighbor_infos = self.entityScheduler.getNeighborNodeInfosById(env, task_node_id, sorted_by='distance', max_num=5)
             if len(neighbor_infos) > 0:
                 nearest_node_id = neighbor_infos[0]['id']
+                furthest_node_id = neighbor_infos[-1]['id']
                 flag = self.taskScheduler.setTaskOffloading(env, task_node_id, task_id, nearest_node_id)
                 assert flag
 

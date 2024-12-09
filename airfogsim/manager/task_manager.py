@@ -549,7 +549,7 @@ class TaskManager:
                     task_node_id = task_info.getTaskNodeId()
                     self._done_tasks[task_node_id] = self._done_tasks.get(task_node_id, [])
                     self._done_tasks[task_node_id].append(task_info)
-                    task_info.transmit_to_Node(task_info.getToReturnNodeId(), 1, cur_time, fast_return=True)
+                    task_info.transmit_to_Node(task_info.getToReturnNodeId(), 1, task_info.getLastComputeTime(), fast_return=True)
                     self._recently_done_100_tasks.append(task_info)
                     self._to_return_tasks[node_id].remove(task_info)
         # 3. Check the computing tasks
