@@ -40,7 +40,7 @@ class ChannelManagerCP:
         self.n_RB = 10
         self.start_freq = 2.4 # GHz
         # 2.4GHz开始，共n_RB个资源块，每个资源块 RB_bandwidth MHz
-        self.RB_frequencies = [self.start_freq + i * self.RB_bandwidth for i in range(self.n_RB)]
+        self.RB_frequencies = [self.start_freq + i * self.RB_bandwidth / 1000 for i in range(self.n_RB)]
         self.bandwidth = self.n_RB * self.RB_bandwidth
         self.V2VChannel = None
         self.V2IChannel = None

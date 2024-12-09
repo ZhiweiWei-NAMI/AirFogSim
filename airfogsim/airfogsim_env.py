@@ -15,7 +15,6 @@ from .airfogsim_visual import AirFogSimEnvVisualizer
 import traci
 import numpy as np
 import time
-import os
 from .utils.tk_utils import parse_location_info
 
 
