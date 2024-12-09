@@ -35,6 +35,9 @@ def rayleigh_outage_prob(snr, snr_threshold):
     Returns:
         cp.ndarray: The outage probability.
     """
+    # 如果snr有任意shape是0，则返回空数组
+    if cp.prod(snr.shape) == 0:
+        return cp.ones_like(snr)
     # 处理snr<=0的情况
     snr = cp.maximum(snr, 1e-9)
     return 1 - cp.exp(-snr_threshold / snr)

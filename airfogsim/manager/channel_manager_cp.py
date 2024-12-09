@@ -408,9 +408,9 @@ class ChannelManagerCP:
         self.V2V_Interference = V2V_Interference + self.sig2
         self.V2U_Interference = V2U_Interference + self.sig2
         self.V2I_Interference = V2I_Interference + self.sig2
-        self.V2V_SINR = cp.divide(V2V_Signal, self.V2V_Interference)
-        self.V2I_SINR = cp.divide(V2I_Signal, self.V2I_Interference)
-        self.V2U_SINR = cp.divide(V2U_Signal, self.V2U_Interference)
+        self.V2V_SINR = 10*cp.log10(cp.divide(V2V_Signal, self.V2V_Interference))  # dB
+        self.V2I_SINR = 10*cp.log10(cp.divide(V2I_Signal, self.V2I_Interference))
+        self.V2U_SINR = 10*cp.log10(cp.divide(V2U_Signal, self.V2U_Interference))
         # 保障sinr > 1e-9
         self.V2V_SINR = cp.where(self.V2V_SINR < 1e-9, 1e-9, self.V2V_SINR)
         self.V2I_SINR = cp.where(self.V2I_SINR < 1e-9, 1e-9, self.V2I_SINR)
@@ -429,15 +429,15 @@ class ChannelManagerCP:
         self.V2I_Rate = cp.where(self.is_V2I_outage, 0, self.V2I_Rate)
         self.V2U_Rate = cp.where(self.is_V2U_outage, 0, self.V2U_Rate)
         
-        U2U_Interference = cp.repeat(X2U_Interference[cp.newaxis, :, :], self.n_UAV, axis = 0)
+        U2U_Interference = cp.repeat(X2U_Interference[cp.newaxis, :, :], self.n_UAV, axis = 0) #单位是mW
         U2V_Interference = cp.repeat(X2V_Interference[cp.newaxis, :, :], self.n_UAV, axis = 0)
         U2I_Interference = cp.repeat(X2I_Interference[cp.newaxis, :, :], self.n_UAV, axis = 0)
         self.U2U_Interference = U2U_Interference + self.sig2
         self.U2V_Interference = U2V_Interference + self.sig2
         self.U2I_Interference = U2I_Interference + self.sig2
-        self.U2U_SINR = cp.divide(U2U_Signal, self.U2U_Interference)
-        self.U2V_SINR = cp.divide(U2V_Signal, self.U2V_Interference)
-        self.U2I_SINR = cp.divide(U2I_Signal, self.U2I_Interference)
+        self.U2U_SINR = 10*cp.log10(cp.divide(U2U_Signal, self.U2U_Interference))
+        self.U2V_SINR = 10*cp.log10(cp.divide(U2V_Signal, self.U2V_Interference))
+        self.U2I_SINR = 10*cp.log10(cp.divide(U2I_Signal, self.U2I_Interference))
         # 保障sinr > 1e-9
         self.U2U_SINR = cp.where(self.U2U_SINR < 1e-9, 1e-9, self.U2U_SINR)
         self.U2V_SINR = cp.where(self.U2V_SINR < 1e-9, 1e-9, self.U2V_SINR)
@@ -460,9 +460,9 @@ class ChannelManagerCP:
         self.I2U_Interference = I2U_Interference + self.sig2
         self.I2V_Interference = I2V_Interference + self.sig2
         self.I2I_Interference = I2I_Interference + self.sig2
-        self.I2U_SINR = cp.divide(I2U_Signal, self.I2U_Interference)
-        self.I2V_SINR = cp.divide(I2V_Signal, self.I2V_Interference)
-        self.I2I_SINR = cp.divide(I2I_Signal, self.I2I_Interference)
+        self.I2U_SINR = 10*cp.log10(cp.divide(I2U_Signal, self.I2U_Interference))
+        self.I2V_SINR = 10*cp.log10(cp.divide(I2V_Signal, self.I2V_Interference))
+        self.I2I_SINR = 10*cp.log10(cp.divide(I2I_Signal, self.I2I_Interference))
         # 保障sinr > 1e-9
         self.I2U_SINR = cp.where(self.I2U_SINR < 1e-9, 1e-9, self.I2U_SINR)
         self.I2V_SINR = cp.where(self.I2V_SINR < 1e-9, 1e-9, self.I2V_SINR)
