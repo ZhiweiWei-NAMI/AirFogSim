@@ -78,24 +78,15 @@ class AirFogSimEnv():
         config['mission']['x_range'] = [conv_boundary[0], conv_boundary[2]]
         config['mission']['y_range'] = [conv_boundary[1], conv_boundary[3]]
 
-        self.traffic_manager = TrafficManager(config['traffic'],
-                                              self.traci_connection)  # traffic interval is decided by sumo simulation step
-        self._initRSUsAndCloudServers()
-        self.task_manager = TaskManager(
-            predictable_seconds=self.traffic_interval)  # suppose tasks are generated every traffic interval
-        self.channel_manager = ChannelManagerCP(n_RSU=self.traffic_manager.getNumberOfRSUs(),
-                                              n_UAV=self.traffic_manager.getNumberOfUAVs(),
-                                              n_Veh=self.traffic_manager.getNumberOfVehicles(),
-                                              RSU_positions=self.traffic_manager.getRSUPositions(),
-                                              simulation_interval=self.simulation_interval)
-        self.mission_manager = MissionManager(config['mission'], config['sensing'])
-        self.sensor_manager = SensorManager(config['sensing'], self.traffic_manager)
-        self.blockchain_manager = BlockchainManager(self.RSUs)
-        self.energy_manager = EnergyManager(config['energy'], self.traffic_manager.getUAVTrafficInfos().keys())
+        self._configManagersModels()
 
-        self.max_task_node_num = 0
-        self.task_node_types = []
-        self.task_node_threshold_poss = 1.0  # All vehicles and UAVs are task nodes
+        self.task_node_profiles = self.config['task_node']['task_node_profiles'] # list of dict
+        # [{'type':'UAV', 'max_node_num': 15}, {'type':'vehicle', 'max_node_num': 10}]
+        self.task_node_types = [profile['type'] for profile in self.task_node_profiles]
+        self.task_node_gen_poss = self.config['task_node']['task_node_gen_poss']
+        self.max_task_node_num = {}
+        for profile in self.task_node_profiles:
+            self.max_task_node_num[profile['type']] = profile['max_node_num']
 
         self._visualizer = None
         if interactive_mode is not None:
@@ -118,6 +109,25 @@ class AirFogSimEnv():
         self.V2U_channel = {'time': 0, 'data_size': 0}
         self.V2I_channel = {'time': 0, 'data_size': 0}
         self.U2I_channel = {'time': 0, 'data_size': 0}
+
+    def _configManagersModels(self):
+        config = self.config
+        # 1. Config the traffic manager
+        self.traffic_manager = TrafficManager(config['traffic'], self.traci_connection) 
+        self._initRSUsAndCloudServers()
+        # 2. Config the task manager
+        self.task_manager = TaskManager(config['task'], predictable_seconds=self.traffic_interval)  # suppose tasks are generated every traffic interval
+        self.channel_manager = ChannelManagerCP(config['channel'], 
+                                              n_RSU=self.traffic_manager.getNumberOfRSUs(),
+                                              n_UAV=self.traffic_manager.getNumberOfUAVs(),
+                                              n_Veh=self.traffic_manager.getNumberOfVehicles(),
+                                              RSU_positions=self.traffic_manager.getRSUPositions(),
+                                              simulation_interval=self.simulation_interval)
+        self.mission_manager = MissionManager(config['mission'], config['sensing'])
+        self.sensor_manager = SensorManager(config['sensing'], self.traffic_manager)
+        self.blockchain_manager = BlockchainManager(self.RSUs)
+        self.energy_manager = EnergyManager(config['energy'], self.traffic_manager.getUAVTrafficInfos().keys())
+
 
     def mountVisualizer(self, mode='graphic'):
         """Mount the visualizer to the environment.
@@ -235,8 +245,7 @@ class AirFogSimEnv():
         for mission in self.new_missions:
             self.mission_manager.addMission(mission, self.sensor_manager)
         self.new_missions = []
-        self.mission_manager.updateMissions(self.simulation_interval, self.simulation_time, self._getNodeById,
-                                            self.sensor_manager, self.task_manager)
+        self.mission_manager.updateMissions(self.simulation_interval, self.simulation_time, self._getNodeById, self.sensor_manager, self.task_manager)
 
     def _updateAuthPrivacy(self):
         """Update the authentication and privacy for the entities.
@@ -275,8 +284,8 @@ class AirFogSimEnv():
         Args:
             activated_task_dict (dict): The activated offloading tasks with the profiles. The key is the task ID, and the value is dict {tx_idx, rx_idx, channel_type, task}
         """
-        tmp_succeed_tasks = []
-        tmp_failed_tasks = []
+        tmp_succeed_tasks = [] # 临时存储成功的任务
+        tmp_failed_tasks = [] # 临时存储失败的任务，仅包括传输层面的失败1）节点不在场景中；2）两次传输间隔超过channel timeout
         tx_size_dict = {}
         rx_size_dict = {}
         for task_idx, task_profile in activated_task_dict.items():
@@ -293,9 +302,11 @@ class AirFogSimEnv():
                 tmp_failed_tasks.append(task_profile)
                 continue
             TX_Node.transmitting = False
-            RX_Node.receiving = False  # 务必每一回都要让这个玩意儿变成负数，然后每个TTI重新分配RB资源
-            if task.wait_to_ddl(self.simulation_time):
-                task.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_DDL)
+            RX_Node.receiving = False  
+            # check if the task is out of the transmission time
+            last_transmission_time = task.getLastTransmissionTime()
+            if self.channel_manager.transmissionTimeOut(last_transmission_time, self.simulation_time):
+                task.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_TTI)
                 tmp_failed_tasks.append(task_profile)
                 continue
             trans_data = np.sum(
@@ -308,7 +319,10 @@ class AirFogSimEnv():
             rx_size += trans_data
             rx_size_dict[rx_id] = rx_size
 
+            # transmit the task to the target node
             trans_flag = task.transmit_to_Node(rx_id, trans_data, self.simulation_time)
+            if trans_flag:
+                tmp_succeed_tasks.append(task_profile)
 
             self.channel['time'] += self.simulation_interval
             self.channel['data_size'] += trans_data
@@ -322,11 +336,7 @@ class AirFogSimEnv():
                 self.U2I_channel['time'] += self.simulation_interval
                 self.U2I_channel['data_size'] += trans_data
 
-            if trans_flag:
-                tmp_succeed_tasks.append(task_profile)
-
-        self.channel_manager.setThisTimeslotTransSize(tx_size_dict,
-                                                      rx_size_dict)  # used for update energy in self._updateEnergy()
+        self.channel_manager.setThisTimeslotTransSize(tx_size_dict, rx_size_dict)  # used for update energy in self._updateEnergy()
 
         for task_profile in tmp_succeed_tasks:
             flag = self.task_manager.finishOffloadingTask(task_profile['task'], self.simulation_time)
@@ -534,6 +544,10 @@ class AirFogSimEnv():
                 node.setRevenue(amount)
             self.blockchain_manager.addTransaction(f"({node_id}, {task_id}, {amount})")
 
+    def getTaskNodeNumByType(self, node_type):
+        # 从 self.task_node_ids 中获取 node_type 类型的节点数量
+        return len([node_id for node_id in self.task_node_ids if self._getNodeTypeById(node_id) == node_type])
+
     def getVehicleIds(self):
         """Get the vehicle ids.
 
@@ -680,8 +694,7 @@ class AirFogSimEnv():
                 self.vehicles[vehicle_id] = self._initVehicle(vehicle_traffic_info,
                                                               fog_profile=self.fog_profile['vehicle'])
                 # check if the vehicle_id should be in the task_node_ids
-                if 'vehicle' in self.task_node_types and np.random.rand() < self.task_node_threshold_poss and len(
-                        self.task_node_ids) < self.max_task_node_num and vehicle_id not in self.task_node_ids:
+                if 'vehicle' in self.task_node_types and np.random.rand() < self.task_node_gen_poss and self.getTaskNodeNumByType('vehicle') < self.max_task_node_num['vehicle'] and vehicle_id not in self.task_node_ids:
                     self.task_node_ids.append(vehicle_id)
             self.vehicles[vehicle_id].update(vehicle_traffic_info, self.simulation_time)
 
@@ -693,8 +706,7 @@ class AirFogSimEnv():
                                         uav_traffic_info['acceleration'], uav_traffic_info['angle'],
                                         uav_traffic_info['phi'], fog_profile=self.fog_profile['uav'], task_profile={})
                 # check if the uav_id should be in the task_node_ids
-                if 'UAV' in self.task_node_types and np.random.rand() < self.task_node_threshold_poss and len(
-                        self.task_node_ids) < self.max_task_node_num and uav_id not in self.task_node_ids:
+                if 'UAV' in self.task_node_types and np.random.rand() < self.task_node_gen_poss and self.getTaskNodeNumByType('UAV') < self.max_task_node_num['UAV'] and uav_id not in self.task_node_ids:
                     self.task_node_ids.append(uav_id)
             self.UAVs[uav_id].update(uav_traffic_info, self.simulation_time)
 

@@ -22,23 +22,6 @@ class TaskScheduler(BaseScheduler):
 
 
     @staticmethod
-    def setTaskNodePossibility(env, max_num = 30, node_types = ['vehicle'], threshold_poss = 0.5):
-        """Set the possibility of the task node for the task generation.
-
-        Args:
-            env (AirFogSimEnv): The AirFogSim environment.
-            max_num (int, optional): The maximum number of the task nodes. Defaults to 30.
-            node_types (list, optional): The types of the task nodes. Limited to ['vehicle', 'UAV']. Defaults to ['vehicle'].
-            threshold_poss (float, optional): The threshold possibility for the task node. Defaults to 0.5.
-
-        Examples:
-            taskSched.setTaskNodePossibility(env, max_num=30, node_types=['vehicle'], threshold_poss=0.5)
-        """
-        env.max_task_node_num = max_num
-        env.task_node_types = node_types
-        env.task_node_threshold_poss = threshold_poss
-
-    @staticmethod
     def getAllToOffloadTaskInfos(env):
         """Get the task infos for the environment to offload.
 
@@ -190,3 +173,18 @@ class TaskScheduler(BaseScheduler):
             taskSched.getSuccessTaskNum(env)
         """
         return len(env.task_manager.getDoneTasks())
+    
+    @staticmethod
+    def getOutOfDDLTasks(env):
+        """Get the number of the failed tasks.
+
+        Args:
+            env (AirFogSimEnv): The AirFogSim environment.
+
+        Returns:
+            int: The number of the failed tasks.
+
+        Examples:
+            taskSched.getFailedTaskNum(env)
+        """
+        return len(env.task_manager.getOutOfDDLTasks())

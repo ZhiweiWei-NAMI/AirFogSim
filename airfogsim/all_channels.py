@@ -12,11 +12,11 @@ else:
     import numpy as cp
 
 cp.seterr(all='ignore')
-from .utils.pathloss_callback import PathLossCallback, ShadowingCallback, FastFadingCallback
+from .channel_callback import PathLossCallback, ShadowingCallback, FastFadingCallback
 
 class V2IChannel: 
     # Simulator of the V2I channels
-    def __init__(self, n_Veh, n_BS, frequency_ranges, BS_positions):
+    def __init__(self, n_Veh, n_BS, frequency_ranges, BS_positions, **kwargs):
         '''V2I只存在于一个BS范围内的V2I channel'''
         self.h_bs = 25 # 基站高度25m
         self.h_ut = 1.5        
@@ -28,9 +28,9 @@ class V2IChannel:
         self.frequency_ranges = cp.asarray(frequency_ranges)
         self.shadow_std = 4
         self.fastfading_std = 1
-        self.pathloss_callback = PathLossCallback('UMa_LOS_tr38901')
-        self.shadow_callback = ShadowingCallback('3GPP_LogNormal')
-        self.fast_fading_callback = FastFadingCallback('Rayleigh')
+        self.pathloss_callback = PathLossCallback(kwargs.get('pathloss_type', 'UMa_LOS_tr38901'))
+        self.shadow_callback = ShadowingCallback(kwargs.get('shadowing_type', '3GPP_LogNormal'))
+        self.fast_fading_callback = FastFadingCallback(kwargs.get('fastfading_type', 'Rayleigh'))
         self.update_shadow([])
 
     
@@ -66,13 +66,13 @@ class V2IChannel:
         else:
             delta_distance_list = cp.asarray(delta_distance_list)
             delta_distance = cp.repeat(delta_distance_list[:,cp.newaxis], self.n_BS, axis=1)
-            self.Shadow = self.shadow_callback(self.Shadow, delta_distance, std=self.shadow_std, d_correlation=self.decorrelation_distance)
+            self.Shadow = self.shadow_callback(self.Shadow, delta_distance=delta_distance, std=self.shadow_std, d_correlation=self.decorrelation_distance)
 
     def update_fast_fading(self):
         self.FastFading = self.fast_fading_callback(self.n_Veh, self.n_BS, self.n_RB, std=self.fastfading_std)
 
 class V2VChannel:
-    def __init__(self, n_Veh, frequency_ranges):
+    def __init__(self, n_Veh, frequency_ranges, **kwargs):
         self.t = 0
         self.h_tx = 1.5
         self.h_rx = 1.5
@@ -82,9 +82,9 @@ class V2VChannel:
         self.frequency_ranges = cp.asarray(frequency_ranges)
         self.shadow_std = 3
         self.fastfading_std = 1
-        self.pathloss_callback = PathLossCallback('V2V_urban_tr37885')
-        self.shadow_callback = ShadowingCallback('3GPP_LogNormal')
-        self.fast_fading_callback = FastFadingCallback('Rayleigh')
+        self.pathloss_callback = PathLossCallback(kwargs.get('pathloss_type', 'V2V_urban_tr37885'))
+        self.shadow_callback = ShadowingCallback(kwargs.get('shadowing_type', '3GPP_LogNormal'))
+        self.fast_fading_callback = FastFadingCallback(kwargs.get('fastfading_type', 'Rayleigh'))
         self.update_shadow([])
 
     def update_positions(self, positions):
@@ -125,13 +125,13 @@ class V2VChannel:
             # delta_distance_list is the distance change of each vehicle; should calculate the relative distance between each pair of vehicles
             # 这里不考虑向量delta_distance_list的长度变化，直接将变化的距离加到原来的距离上
             delta_distance = cp.add.outer(delta_distance_list, delta_distance_list)
-            self.Shadow = self.shadow_callback(self.Shadow, delta_distance, std=self.shadow_std, d_correlation=self.decorrelation_distance)
+            self.Shadow = self.shadow_callback(self.Shadow, delta_distance=delta_distance, std=self.shadow_std, d_correlation=self.decorrelation_distance)
 
     def update_fast_fading(self):
         self.FastFading = self.fast_fading_callback(self.n_Veh, self.n_Veh, self.n_RB, std=self.fastfading_std)
 
 class V2UChannel:
-    def __init__(self, n_Veh, n_UAV, frequency_ranges, hei_UAV):
+    def __init__(self, n_Veh, n_UAV, frequency_ranges, hei_UAV, **kwargs):
         '''多个vehicle和多个UAV之间的通信信道'''
         self.t = 0
         self.h_uav = hei_UAV
@@ -143,9 +143,9 @@ class V2UChannel:
         self.n_Veh = n_Veh # 车辆数量
         self.n_UAV = n_UAV # 无人机数量
         self.n_RB = len(frequency_ranges) # RB数量
-        self.pathloss_callback = PathLossCallback('free_space')
-        self.shadow_callback = ShadowingCallback('3GPP_LogNormal')
-        self.fast_fading_callback = FastFadingCallback('Rayleigh')
+        self.pathloss_callback = PathLossCallback(kwargs.get('pathloss_type', 'free_space'))
+        self.shadow_callback = ShadowingCallback(kwargs.get('shadowing_type', '3GPP_LogNormal'))
+        self.fast_fading_callback = FastFadingCallback(kwargs.get('fastfading_type', 'Rayleigh'))
         self.update_shadow([], [])
     
     def remove_vehicle_shadow(self, v_index):
@@ -194,14 +194,14 @@ class V2UChannel:
             veh_delta_distance_list = cp.asarray(veh_delta_distance_list)
             uav_delta_distance_list = cp.asarray(uav_delta_distance_list)
             delta_distance = cp.add.outer(veh_delta_distance_list, uav_delta_distance_list)
-            self.Shadow = self.shadow_callback(self.Shadow, delta_distance, std=self.shadow_std, d_correlation=self.decorrelation_distance)
+            self.Shadow = self.shadow_callback(self.Shadow, delta_distance=delta_distance, std=self.shadow_std, d_correlation=self.decorrelation_distance)
 
     def update_fast_fading(self):
         self.FastFading = self.fast_fading_callback(self.n_Veh, self.n_UAV, self.n_RB, std=self.fastfading_std)
 
 class U2IChannel: 
     # U2I仿真信道
-    def __init__(self, n_BS, n_UAV, frequency_ranges, hei_UAV, BS_positions):
+    def __init__(self, n_BS, n_UAV, frequency_ranges, hei_UAV, BS_positions, **kwargs):
         '''V2I只存在于一个BS范围内的V2I channel'''
         self.h_bs = 25 # 基站高度25m
         self.hei_UAV = hei_UAV
@@ -212,9 +212,9 @@ class U2IChannel:
         self.n_RB = len(frequency_ranges)
         self.frequency_ranges = cp.asarray(frequency_ranges)
         self.BS_positions = cp.asarray(BS_positions)
-        self.pathloss_callback = PathLossCallback('free_space')
-        self.shadow_callback = ShadowingCallback('3GPP_LogNormal')
-        self.fast_fading_callback = FastFadingCallback('Rayleigh')
+        self.pathloss_callback = PathLossCallback(kwargs.get('pathloss_type', 'free_space'))
+        self.shadow_callback = ShadowingCallback(kwargs.get('shadowing_type', '3GPP_LogNormal'))
+        self.fast_fading_callback = FastFadingCallback(kwargs.get('fastfading_type', 'Rayleigh'))
         self.update_shadow([])
 
     def remove_UAV_shadow(self, vid, vid_index):
@@ -247,13 +247,13 @@ class U2IChannel:
         else: 
             delta_distance_list = cp.asarray(delta_distance_list)
             delta_distance = cp.repeat(delta_distance_list[:,cp.newaxis], self.n_BS, axis=1)
-            self.Shadow = self.shadow_callback(self.Shadow, delta_distance, std=self.shadow_std, d_correlation=self.Decorrelation_distance)
+            self.Shadow = self.shadow_callback(self.Shadow, delta_distance=delta_distance, std=self.shadow_std, d_correlation=self.Decorrelation_distance)
 
     def update_fast_fading(self):
         self.FastFading = self.fast_fading_callback(self.n_UAV, self.n_BS, self.n_RB)
 
 class U2UChannel:
-    def __init__(self, n_UAV, frequency_ranges, hei_UAV):
+    def __init__(self, n_UAV, frequency_ranges, hei_UAV, **kwargs):
         # M. M. Azari, G. Geraci, A. Garcia-Rodriguez and S. Pollin, "UAV-to-UAV Communications in Cellular Networks," in IEEE Transactions on Wireless Communications, 2020, doi: 10.1109/TWC.2020.3000303.
         # A Survey of Channel Modeling for UAV Communications
         self.t = 0
@@ -264,9 +264,9 @@ class U2UChannel:
         self.decorrelation_distance = 50
         self.shadow_std = 3 # shadow的标准值
         self.n_UAV = n_UAV
-        self.pathloss_callback = PathLossCallback('free_space')
-        self.shadow_callback = ShadowingCallback('3GPP_LogNormal')
-        self.fast_fading_callback = FastFadingCallback('Rayleigh')
+        self.pathloss_callback = PathLossCallback(kwargs.get('pathloss_type', 'free_space'))
+        self.shadow_callback = ShadowingCallback(kwargs.get('shadowing_type', '3GPP_LogNormal'))
+        self.fast_fading_callback = FastFadingCallback(kwargs.get('fastfading_type', 'Rayleigh'))
         self.update_shadow([])
 
     def remove_UAV_shadow(self, vid, vid_index):
@@ -304,14 +304,14 @@ class U2UChannel:
             self.Shadow = cp.random.normal(0,self.shadow_std, size=(self.n_UAV, self.n_UAV))
         else:
             delta_distance_list = cp.asarray(delta_distance_list)
-            self.Shadow = self.shadow_callback(self.Shadow, delta_distance, std=self.shadow_std, d_correlation=self.decorrelation_distance)
+            self.Shadow = self.shadow_callback(self.Shadow, delta_distance=delta_distance, std=self.shadow_std, d_correlation=self.decorrelation_distance)
 
     def update_fast_fading(self):
         '''更新快速衰落'''
         self.FastFading = self.fast_fading_callback(self.n_UAV, self.n_UAV, self.n_RB)
 
 class I2IChannel:
-    def __init__(self, n_BS, frequency_ranges, BS_positions):
+    def __init__(self, n_BS, frequency_ranges, BS_positions, **kwargs):
         self.t = 0
         self.h_rx = 25 
         self.h_tx = 25 
@@ -322,16 +322,16 @@ class I2IChannel:
         self.n_RB = len(frequency_ranges)
         self.positions = cp.asarray(BS_positions)
         self.frequency_ranges = cp.asarray(frequency_ranges)
-        self.pathloss_callback = PathLossCallback('free_space')
-        self.shadow_callback = ShadowingCallback('3GPP_LogNormal')
-        self.fast_fading_callback = FastFadingCallback('Rayleigh')
+        self.pathloss_callback = PathLossCallback(kwargs.get('pathloss_type', 'free_space'))
+        self.shadow_callback = ShadowingCallback(kwargs.get('shadowing_type', '3GPP_LogNormal'))
+        self.fast_fading_callback = FastFadingCallback(kwargs.get('fastfading_type', 'Rayleigh'))
         self.update_shadow()
 
     def update_pathloss(self):
         if self.n_BS == 0:
             self.PathLoss = cp.zeros((self.n_BS, self.n_BS, self.n_RB))
             return
-        self.PathLoss = self.pathloss_callback(self.positions, self.positions, self.frequency_ranges)
+        self.PathLoss = self.pathloss_callback(self.positions, self.positions, self.frequency_ranges, h_BS=25, h_UT=25)
         # 对角线置为0
         for i in range(self.PathLoss.shape[0]):
             self.PathLoss[i, i, :] = 0
