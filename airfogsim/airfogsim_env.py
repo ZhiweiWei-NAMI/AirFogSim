@@ -4,6 +4,7 @@ from .manager.channel_manager_cp import ChannelManagerCP
 from .manager.block_manager import BlockchainManager
 from .manager.sensor_manager import SensorManager
 from .manager.energy_manager import EnergyManager
+from .manager.state_info_manager import StateInfoManager
 from .entities.vehicle import Vehicle
 from .entities.rsu import RSU
 from .entities.uav import UAV
@@ -47,20 +48,6 @@ class AirFogSimEnv():
 
         self.config = config
 
-        self.fog_profile = {}
-        self.fog_profile['vehicle'] = {'cpu': config['fog_profile']['vehicle']['cpu'],
-                                       'memory': config['fog_profile']['vehicle']['memory'],
-                                       'storage': config['fog_profile']['vehicle']['storage']}
-        self.fog_profile['uav'] = {'cpu': config['fog_profile']['uav']['cpu'],
-                                   'memory': config['fog_profile']['uav']['memory'],
-                                   'storage': config['fog_profile']['uav']['storage']}
-        self.fog_profile['rsu'] = {'cpu': config['fog_profile']['rsu']['cpu'],
-                                   'memory': config['fog_profile']['rsu']['memory'],
-                                   'storage': config['fog_profile']['rsu']['storage']}
-        self.fog_profile['cloud'] = {'cpu': config['fog_profile']['cloud']['cpu'],
-                                     'memory': config['fog_profile']['cloud']['memory'],
-                                     'storage': config['fog_profile']['cloud']['storage']}
-
         self.simulation_time = 0
         self.max_simulation_time = config['simulation']['max_simulation_time']
 
@@ -79,10 +66,10 @@ class AirFogSimEnv():
 
         self._configManagersModels()
 
-        self.task_node_profiles = self.config['task_node']['task_node_profiles'] # list of dict
+        self.task_node_profiles = self.config['task_profile']['task_node_profiles'] # list of dict
         # [{'type':'UAV', 'max_node_num': 15}, {'type':'vehicle', 'max_node_num': 10}]
         self.task_node_types = [profile['type'] for profile in self.task_node_profiles]
-        self.task_node_gen_poss = self.config['task_node']['task_node_gen_poss']
+        self.task_node_gen_poss = self.config['task_profile']['task_node_gen_poss']
         self.max_task_node_num = {}
         for profile in self.task_node_profiles:
             self.max_task_node_num[profile['type']] = profile['max_node_num']
@@ -126,6 +113,7 @@ class AirFogSimEnv():
         self.sensor_manager = SensorManager(config['sensing'], self.traffic_manager)
         self.blockchain_manager = BlockchainManager(self.RSUs)
         self.energy_manager = EnergyManager(config['energy'], self.traffic_manager.getUAVTrafficInfos().keys())
+        self.node_state_manager = StateInfoManager(config['state_attribute']) # 用pandas管理节点每个时隙的状态，以fog node/task node划分不同类型的实体（UAV, veh, RSU, cloud server），并从config中获取需要存储的属性列表
 
 
     def mountVisualizer(self, mode='graphic'):
@@ -300,10 +288,10 @@ class AirFogSimEnv():
                 task.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_NODE)
                 tmp_failed_tasks.append(task_profile)
                 continue
-            TX_Node.transmitting = False
-            RX_Node.receiving = False  
             # check if the task is out of the transmission time
             last_transmission_time = task.getLastTransmissionTime()
+            if task.isReturning():
+                last_transmission_time = task.getLastReturnTime()
             if self.channel_manager.transmissionTimeOut(last_transmission_time, self.simulation_time):
                 task.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_TTI)
                 tmp_failed_tasks.append(task_profile)
@@ -440,10 +428,6 @@ class AirFogSimEnv():
                 tx, rx = task.getCurrentNodeId(), path[0]
                 tx_idx = self._getNodeIdxById(tx)
                 rx_idx = self._getNodeIdxById(rx)
-                TX_Node = self._getNodeById(tx)
-                RX_Node = self._getNodeById(rx)
-                TX_Node.setTransmitting(True)
-                RX_Node.setReceiving(True)
                 TX_Node_type = self._getNodeTypeById(tx)  # 'V', 'U', 'I'
                 RX_Node_type = self._getNodeTypeById(rx)  # 'V', 'U', 'I'
                 assert TX_Node_type in ['V', 'U', 'I'], 'TX_Node_type不在["Vehicle", "UAV", "RSU"]中！'
@@ -666,14 +650,15 @@ class AirFogSimEnv():
         cloudserver_infos = self.traffic_manager.getCloudServerInfos()
         for rsu_id, rsu_info in rsu_infos.items():
             if rsu_id not in self.RSUs:
-                self.RSUs[rsu_id] = RSU(id=rsu_id, position=rsu_info['position'], fog_profile=self.fog_profile['rsu'],
-                                        task_profile={})
+                self.RSUs[rsu_id] = RSU(id=rsu_id, position=rsu_info['position'], fog_profile=self.config['fog_profile'].get('rsu', {}),
+                                        task_profile=self.config['task_profile'].get('rsu', {}))
 
         for cloudserver_id, cloudserver_info in cloudserver_infos.items():
             if cloudserver_id not in self.cloudServers:
                 self.cloudServers[cloudserver_id] = CloudServer(id=cloudserver_id,
                                                                 position=cloudserver_info['position'],
-                                                                fog_profile=self.fog_profile['cloud'], task_profile={})
+                                                                fog_profile=self.config['fog_profile'].get('cloud_server', {}),
+                                                                task_profile=self.config['task_profile'].get('cloud_server', {}))
 
     def _updateTraffics(self):
         """Update the vehicle traffics.
@@ -690,8 +675,9 @@ class AirFogSimEnv():
         for vehicle_id, vehicle_traffic_info in vehicle_traffic_infos.items():
             if vehicle_id not in self.vehicles:
                 added_veh_nums += 1
-                self.vehicles[vehicle_id] = self._initVehicle(vehicle_traffic_info,
-                                                              fog_profile=self.fog_profile['vehicle'])
+                self.vehicles[vehicle_id] = self._initVehicle(vehicle_traffic_info, 
+                                                              task_profile=self.config['task_profile'].get('vehicle', {}), 
+                                                              fog_profile=self.config['fog_profile'].get('vehicle', {}))
                 # check if the vehicle_id should be in the task_node_ids
                 if 'vehicle' in self.task_node_types and np.random.rand() < self.task_node_gen_poss and self.getTaskNodeNumByType('vehicle') < self.max_task_node_num['vehicle'] and vehicle_id not in self.task_node_ids:
                     self.task_node_ids.append(vehicle_id)
@@ -703,7 +689,9 @@ class AirFogSimEnv():
             if uav_id not in self.UAVs:
                 self.UAVs[uav_id] = UAV(uav_id, uav_traffic_info['position'], uav_traffic_info['speed'],
                                         uav_traffic_info['acceleration'], uav_traffic_info['angle'],
-                                        uav_traffic_info['phi'], fog_profile=self.fog_profile['uav'], task_profile={})
+                                        uav_traffic_info['phi'], 
+                                        fog_profile=self.config['fog_profile'].get('uav', {}),
+                                        task_profile=self.config['task_profile'].get('uav', {}))
                 # check if the uav_id should be in the task_node_ids
                 if 'UAV' in self.task_node_types and np.random.rand() < self.task_node_gen_poss and self.getTaskNodeNumByType('UAV') < self.max_task_node_num['UAV'] and uav_id not in self.task_node_ids:
                     self.task_node_ids.append(uav_id)

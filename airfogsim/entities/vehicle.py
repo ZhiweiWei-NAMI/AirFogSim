@@ -20,6 +20,7 @@ class Vehicle(TaskNode, FogNode):
         TaskNode.__init__(self, id, position_x, position_y, position_z, speed, acceleration, angle, task_profile)
         FogNode.__init__(self, id, position_x, position_y, position_z, speed, acceleration, angle, fog_profile)
         self._last_updated_time = 0
+        self._node_type = 'vehicle'
 
     def update(self, vehicle_traffic_info, simulation_time):
         """Update the vehicle.

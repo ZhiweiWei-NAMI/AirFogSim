@@ -6,7 +6,7 @@ class Task:
     """ Task is the class that represents the task. 
     """
 
-    def __init__(self, task_id, task_node_id, task_cpu, task_size, task_deadline, task_priority, task_arrival_time, farther_mission: Mission = None, required_returned_size=0, to_return_node_id = None):
+    def __init__(self, task_id, task_node_id, task_cpu, task_size, task_deadline, task_priority, task_arrival_time, farther_mission: Mission = None, required_returned_size=0, to_return_node_id = None, return_lazy_set=False):
         """The constructor of the Task class.
 
         Args:
@@ -20,14 +20,18 @@ class Task:
             farther_mission (Mission): The farther mission of the task.
             required_returned_size (float): The required returned size of the task.
             to_return_node_id (str): The ID of the node that the task should be returned to. If None, the task is returned to the task node.
+            return_lazy_set (bool): The flag to indicate whether the return route is set lazily.
         """
         self._task_id = task_id
         self._task_node_id = task_node_id
         self._task_cpu = task_cpu
         self._task_size = task_size
         self._required_returned_size = required_returned_size
+        self._return_lazy_set = return_lazy_set
         if to_return_node_id is not None:
             self._to_return_node_id = to_return_node_id
+        elif return_lazy_set:
+            self._to_return_node_id = None
         else:
             self._to_return_node_id = task_node_id
         self._task_deadline = task_deadline
@@ -41,14 +45,14 @@ class Task:
         self._to_return_route = []  # If task is computed, i.e., _compute_size >= _task_cpu, the list denotes the route the returned data should be transmitted.
         self._decided_offload_time = []  # the decided offload time
         self._routed_time = [task_arrival_time]  # the time that the task is routed to the node
-        self._start_to_transmit_time = 0
-        self._last_transmission_time = 0
-        self._transmitted_size = 0
-        self._start_to_compute_time = 0
-        self._start_to_return_time = 0
-        self._last_return_time = 0
-        self._computed_size = 0
-        self._last_compute_time = 0
+        self._start_to_transmit_time = -1
+        self._last_transmission_time = -1
+        self._transmitted_size = -1
+        self._start_to_compute_time = -1
+        self._start_to_return_time = -1
+        self._last_return_time = -1
+        self._computed_size = -1
+        self._last_compute_time = -1
         self._failure_reason_code = -1
         self._farther_mission = farther_mission
 
@@ -65,6 +69,21 @@ class Task:
     def task_delay(self):
         return self.getLastOperationTime() - self._task_arrival_time
     
+    @property
+    def task_lifecycle(self):
+        # lifecycle includes generated, offloading, computing, returning, and finished
+        if self.isFinished():
+            return 'finished'
+        if self.isReturning():
+            return 'returning'
+        if self.isComputed():
+            return 'computed'
+        if self.isTransmitting():
+            return 'offloading'
+        if self._start_to_transmit_time >= 0:
+            return 'generated'
+        return 'to_generate'
+
     def to_dict(self):
         """Convert the task to dictionary.
 
@@ -121,7 +140,9 @@ class Task:
             bool: True if the task requires return, False otherwise.
         """
         assert self.isComputed(), "The task should be computed before returning."
-        if self._assigned_to != self._to_return_node_id and self._required_returned_size > 0:
+        if (self._to_return_node_id is None and self._return_lazy_set):
+            return True
+        if (self._assigned_to != self._to_return_node_id and self._required_returned_size > 0):
             assert len(self._to_offload_route) > 0, "The route to offload the task should be set."
             return True
         return False
@@ -172,6 +193,7 @@ class Task:
             to_return_route (list): The route to return. Each element is the node ID.
         """
         assert len(self._to_return_route) == 0 and len(to_return_route) > 0
+        self._return_lazy_set = False
         self._to_return_route = to_return_route
         self._to_return_node_id = self._to_return_route[-1]
 
@@ -414,6 +436,11 @@ class Task:
         """Get the last transmission time if the task is transmitted.
         """
         return self._last_transmission_time
+    
+    def getLastReturnTime(self):
+        """Get the last return time if the task is returned.
+        """
+        return self._last_return_time
 
     def getLastComputeTime(self):
         """Get the last compute time.

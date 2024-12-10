@@ -32,7 +32,7 @@ traffic:
   arrival_lambda: 1 # The rate at which vehicles arrive at the network per second (in Poisson distribution)
   distance_threshold: 50 # The distance threshold to check if the node is reach target position
 
-task:
+task: # default task profile for all nodes
   task_generation_model: "Poisson" # supported model:['Poisson', 'Uniform', 'Normal', 'Exponential']
   task_generation_kwargs:
       lambda: 1 # Poission -> lambda; Uniform -> low, high; Normal -> mean, std; Exponential -> beta
@@ -53,9 +53,36 @@ task:
     low: 0.5
     high: 1
 
-task_node:
+task_profile: # task profile for each node type
   task_node_gen_poss: 0.5 # The possibility of generating a task node when inializing the node
   task_node_profiles: [{'type':'UAV', 'max_node_num': 15}, {'type':'vehicle', 'max_node_num': 10}] # The types of task nodes and the maximum number of nodes of each type
+  vehicle: # The profile of vehicles
+    lambda: 1
+  uav: # The profile of UAVs
+    lambda: 1
+
+fog_profile:
+  vehicle:
+    cpu: 1 # CPU capacity of vehicles
+    memory: 1 # Memory capacity of vehicles
+    storage: 1 # Storage capacity of vehicles
+  uav:
+    cpu: 1 # CPU capacity of UAVs
+    memory: 1 # Memory capacity of UAVs
+    storage: 1 # Storage capacity of UAVs
+  rsu:
+    cpu: 1 # CPU capacity of RSUs
+    memory: 1 # Memory capacity of RSUs
+    storage: 1 # Storage capacity of RSUs
+  cloud:
+    cpu: 1 # CPU capacity of cloud servers
+    memory: 1 # Memory capacity of cloud servers
+    storage: 1 # Storage capacity of cloud servers
+
+state_attribute:
+  fog_node_state_attributes: ['position_x', 'position_y', 'position_z', 'speed', 'fog_profile', 'node_type']
+  task_node_state_attributes: ['position_x', 'position_y', 'position_z', 'speed', 'task_profile', 'node_type']
+  task_state_attributes: ['task_node_id', 'task_size', 'task_cpu', 'required_returned_size', 'task_deadline', 'task_priority', 'task_arrival_time']
 
 channel:
   outage_model: 'Rayleigh' # supported model:['Rayleigh'], further implementation can be added in airfogsim/channel_callback/*_callback.py
@@ -84,24 +111,6 @@ channel:
     pathloss_model: 'free_space'
     shadowing_model: '3GPP_LogNormal'
     fastfading_model: 'Rayleigh'
-
-fog_profile:
-  vehicle:
-    cpu: 1 # CPU capacity of vehicles
-    memory: 1 # Memory capacity of vehicles
-    storage: 1 # Storage capacity of vehicles
-  uav:
-    cpu: 1 # CPU capacity of UAVs
-    memory: 1 # Memory capacity of UAVs
-    storage: 1 # Storage capacity of UAVs
-  rsu:
-    cpu: 1 # CPU capacity of RSUs
-    memory: 1 # Memory capacity of RSUs
-    storage: 1 # Storage capacity of RSUs
-  cloud:
-    cpu: 1 # CPU capacity of cloud servers
-    memory: 1 # Memory capacity of cloud servers
-    storage: 1 # Storage capacity of cloud servers
 
 sensing:
   sensors_per_node: 4 # The maximum number of sensors on a node
