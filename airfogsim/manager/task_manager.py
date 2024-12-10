@@ -23,10 +23,10 @@ class TaskManager:
         self._task_generation_model = task_generation_model
         assert task_generation_model in TaskManager.SUPPORTED_TASK_GENERATION_MODELS, 'The task generation model is not supported. Only support {}'.format(TaskManager.SUPPORTED_TASK_GENERATION_MODELS)
         self._to_generate_task_infos = {} # use Node Id as the key, and the value is the task info list
-        self._to_offload_tasks = {}
-        self._to_compute_tasks = {}
-        self._waiting_to_return_tasks = {} # after computing, waiting to set return route; equal to 
-        self._to_return_tasks = {}
+        self._offloading_tasks = {}
+        self._computing_tasks = {}
+        self._waiting_to_return_tasks = {} # after computing, waiting to set return route
+        self._returning_tasks = {}
         self._done_tasks = {}
         self._out_of_ddl_tasks = {}
         self._removed_tasks = {}
@@ -102,11 +102,11 @@ class TaskManager:
         Examples:
             task_manager.addToComputeTask(task, 'vehicle1', 10.3)
         """
-        to_compute_task_list = self._to_compute_tasks.get(node_id, [])
+        to_compute_task_list = self._computing_tasks.get(node_id, [])
         to_compute_task_list.append(task)
         task.setAssignedTo(node_id) # 计算节点设为任务产生节点
         task.startToCompute(current_time)
-        self._to_compute_tasks[node_id] = to_compute_task_list
+        self._computing_tasks[node_id] = to_compute_task_list
 
     def finishOffloadingTask(self, task:Task, current_time):
         """Remove the offloading task by the task id, and then move the task to the to_compute_tasks.
@@ -124,18 +124,18 @@ class TaskManager:
         task_node_id = task.getTaskNodeId() # task node id is used for to_offload_tasks
         task_id = task.getTaskId() 
         if not task.isReturning(): # if the task is offloading
-            for task_info in self._to_offload_tasks[task_node_id]:
+            for task_info in self._offloading_tasks[task_node_id]:
                 if task_info.getTaskId() == task_id:
                     task_info.startToCompute(current_time)
-                    self._to_offload_tasks[task_node_id].remove(task_info)
-                    to_compute_task_list = self._to_compute_tasks.get(node_id, [])
+                    self._offloading_tasks[task_node_id].remove(task_info)
+                    to_compute_task_list = self._computing_tasks.get(node_id, [])
                     to_compute_task_list.append(task_info)
-                    self._to_compute_tasks[node_id] = to_compute_task_list
+                    self._computing_tasks[node_id] = to_compute_task_list
                     return True
         elif task.isReturning(): # if the task is returning
-            for task_info in self._to_return_tasks[node_id]:
+            for task_info in self._returning_tasks[node_id]:
                 if task_info.getTaskId() == task_id:
-                    self._to_return_tasks[node_id].remove(task_info)
+                    self._returning_tasks[node_id].remove(task_info)
                     self._done_tasks[task_node_id] = self._done_tasks.get(task_node_id, [])
                     self._done_tasks[task_node_id].append(task_info)
                     task_info.transmit_to_Node(task_info.getToReturnNodeId(), 1, current_time, fast_return=True)
@@ -156,17 +156,17 @@ class TaskManager:
         task_node_id = task.getTaskNodeId()
         task_id = task.getTaskId()
         if not task.isReturning():
-            for task_info in self._to_offload_tasks[task_node_id]:
+            for task_info in self._offloading_tasks[task_node_id]:
                 if task_info.getTaskId() == task_id:
-                    self._to_offload_tasks[task_node_id].remove(task_info)
+                    self._offloading_tasks[task_node_id].remove(task_info)
                     failed_task_list = self._out_of_ddl_tasks.get(task_node_id, [])
                     failed_task_list.append(task_info)
                     self._out_of_ddl_tasks[task_node_id] = failed_task_list
                     return True
         elif task.isReturning():
-            for task_info in self._to_return_tasks[node_id]:
+            for task_info in self._returning_tasks[node_id]:
                 if task_info.getTaskId() == task_id:
-                    self._to_return_tasks[node_id].remove(task_info)
+                    self._returning_tasks[node_id].remove(task_info)
                     failed_task_list = self._out_of_ddl_tasks.get(task_node_id, [])
                     failed_task_list.append(task_info)
                     self._out_of_ddl_tasks[task_node_id] = failed_task_list
@@ -181,7 +181,7 @@ class TaskManager:
             simulation_interval (float): The simulation interval.
             current_time (float): The current time.
         """
-        for node_id, task_infos in self._to_compute_tasks.items():
+        for node_id, task_infos in self._computing_tasks.items():
             for task_info in task_infos.copy(): # task_info is Task
                 task_id = task_info.getTaskId()
                 allocated_cpu = allocated_cpu_by_taskId.get(task_id, 0)
@@ -191,8 +191,8 @@ class TaskManager:
                     self._waiting_to_return_tasks[node_id]=self._waiting_to_return_tasks.get(node_id, [])
                     self._waiting_to_return_tasks[node_id].append(task_info)
                     # task_info.startToReturn(current_time)
-                    # self._to_return_tasks[node_id] = self._to_return_tasks.get(node_id, [])
-                    # self._to_return_tasks[node_id].append(task_info)
+                    # self._returning_tasks[node_id] = self._returning_tasks.get(node_id, [])
+                    # self._returning_tasks[node_id].append(task_info)
 
     def getRecentlyDoneTasks(self):
         """Get the recently done tasks (the maximum number is 100).
@@ -207,7 +207,7 @@ class TaskManager:
         Returns:
             dict: The tasks to offload. The key is the node id, and the value is the task list.
         """
-        return self._to_offload_tasks
+        return self._offloading_tasks
     
     def getOffloadingTasks(self):
         offloading_tasks, num = self.getOffloadingTasksWithNumber()
@@ -219,7 +219,7 @@ class TaskManager:
         Returns:
             dict: The tasks to compute. The key is the node id, and the value is the task list.
         """
-        return self._to_compute_tasks
+        return self._computing_tasks
 
     def getOffloadingTasksWithNumber(self):
         """Get the offloading tasks (transmission) with the total number.
@@ -234,10 +234,10 @@ class TaskManager:
         # 遍历task，if isTransmitting() == True, 则加入到offloading_tasks中
         offloading_tasks = {} # key: transmitter node id, value: list of tasks
         total_num = 0
-        for task_node_id, task_infos in self._to_offload_tasks.items():
+        for task_node_id, task_infos in self._offloading_tasks.items():
             offloading_tasks[task_node_id] = [task_info for task_info in task_infos if task_info.isTransmitting()]
             total_num += len(offloading_tasks[task_node_id])
-        for node_id, task_infos in self._to_return_tasks.items():
+        for node_id, task_infos in self._returning_tasks.items():
             to_offload_task = offloading_tasks.get(node_id, [])
             to_offload_task.extend([task_info for task_info in task_infos if task_info.isTransmitting()])
             offloading_tasks[node_id] = to_offload_task
@@ -255,16 +255,16 @@ class TaskManager:
         """
     
         # remove all related tasks in to_compute_tasks
-        for node_id in list(self._to_compute_tasks.keys()):
-            task_set = self._to_compute_tasks.get(node_id, [])
+        for node_id in list(self._computing_tasks.keys()):
+            task_set = self._computing_tasks.get(node_id, [])
             if node_id == to_remove_node_id:
                 for task_info in task_set.copy():
                     removed_task_set = self._removed_tasks.get(task_info.getTaskNodeId(), [])
                     removed_task_set.append(task_info)
                     self._removed_tasks[task_info.getTaskNodeId()] = removed_task_set
                     task_set.remove(task_info)
-                    self._to_compute_tasks[node_id] = task_set
-                del self._to_compute_tasks[node_id]
+                    self._computing_tasks[node_id] = task_set
+                del self._computing_tasks[node_id]
             else:
                 for task_info in task_set.copy():
                     if task_info.isRelatedToNode(to_remove_node_id):
@@ -272,18 +272,18 @@ class TaskManager:
                         removed_task_set.append(task_info)
                         self._removed_tasks[task_info.getTaskNodeId()] = removed_task_set
                         task_set.remove(task_info)
-                        self._to_compute_tasks[node_id] = task_set
+                        self._computing_tasks[node_id] = task_set
         # remove all related tasks in to_offload_tasks
-        for task_node_id in list(self._to_offload_tasks.keys()):
-            task_set = self._to_offload_tasks.get(task_node_id, [])
+        for task_node_id in list(self._offloading_tasks.keys()):
+            task_set = self._offloading_tasks.get(task_node_id, [])
             if task_node_id == to_remove_node_id:
                 for task_info in task_set.copy():
                     removed_task_set = self._removed_tasks.get(task_info.getTaskNodeId(), [])
                     removed_task_set.append(task_info)
                     self._removed_tasks[task_info.getTaskNodeId()] = removed_task_set
                     task_set.remove(task_info)
-                    self._to_offload_tasks[task_node_id] = task_set
-                del self._to_offload_tasks[task_node_id]
+                    self._offloading_tasks[task_node_id] = task_set
+                del self._offloading_tasks[task_node_id]
             else:
                 for task_info in task_set.copy():
                     if task_info.isRelatedToNode(to_remove_node_id):
@@ -291,18 +291,18 @@ class TaskManager:
                         removed_task_set.append(task_info)
                         self._removed_tasks[task_info.getTaskNodeId()] = removed_task_set
                         task_set.remove(task_info)
-                        self._to_offload_tasks[task_node_id] = task_set
+                        self._offloading_tasks[task_node_id] = task_set
         # remove all related tasks in to_return_tasks
-        for node_id in list(self._to_return_tasks.keys()):
-            task_set = self._to_return_tasks.get(node_id, [])
+        for node_id in list(self._returning_tasks.keys()):
+            task_set = self._returning_tasks.get(node_id, [])
             if node_id == to_remove_node_id:
                 for task_info in task_set.copy():
                     removed_task_set = self._removed_tasks.get(task_info.getTaskNodeId(), [])
                     removed_task_set.append(task_info)
                     self._removed_tasks[task_info.getTaskNodeId()] = removed_task_set
                     task_set.remove(task_info)
-                    self._to_return_tasks[node_id] = task_set
-                del self._to_return_tasks[node_id]
+                    self._returning_tasks[node_id] = task_set
+                del self._returning_tasks[node_id]
             else:
                 for task_info in task_set.copy():
                     if task_info.isRelatedToNode(to_remove_node_id):
@@ -310,7 +310,7 @@ class TaskManager:
                         removed_task_set.append(task_info)
                         self._removed_tasks[task_info.getTaskNodeId()] = removed_task_set
                         task_set.remove(task_info)
-                        self._to_return_tasks[node_id] = task_set
+                        self._returning_tasks[node_id] = task_set
         # remove all related tasks in to_generate_tasks
         for task_node_id in list(self._to_generate_task_infos.keys()):
             task_set = self._to_generate_task_infos.get(task_node_id, [])
@@ -474,9 +474,9 @@ class TaskManager:
         for task_node_id, task_infos in self._to_generate_task_infos.items():
             for task_info in task_infos.copy():
                 if task_info.getTaskArrivalTime() <= cur_time: # if the task is arrived, i.e., the task arrival time is less than the current time
-                    todo_task_list = self._to_offload_tasks.get(task_node_id, [])
+                    todo_task_list = self._offloading_tasks.get(task_node_id, [])
                     todo_task_list.append(task_info)
-                    self._to_offload_tasks[task_node_id] = todo_task_list
+                    self._offloading_tasks[task_node_id] = todo_task_list
                     self._to_generate_task_infos[task_node_id].remove(task_info)
 
         # 2. Generate new to_generate_task_infos, oblige to the task generation model, simulation_interval, and predictable_seconds
@@ -558,7 +558,7 @@ class TaskManager:
         # 2）在compute node的to_return状态和waiting_to_return下，即任务返回队列；
         # 3）在compute node的to_compute状态下，即任务计算队列；
         # 1. Check the todo tasks
-        for task_node_id, task_infos in self._to_offload_tasks.items():
+        for task_node_id, task_infos in self._offloading_tasks.items():
             for task_info in task_infos.copy():
                 if task_info.getTaskDeadline() + task_info.getTaskArrivalTime() <= cur_time:
                     task_info.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_DDL)
@@ -567,7 +567,7 @@ class TaskManager:
                     self._out_of_ddl_tasks[task_node_id] = failed_task_list
                     task_infos.remove(task_info)
         # 2. Check the return tasks
-        to_return_items = itertools.chain(self._to_return_tasks.items(), self._waiting_to_return_tasks.items())
+        to_return_items = itertools.chain(self._returning_tasks.items(), self._waiting_to_return_tasks.items())
         for node_id, task_infos in to_return_items:
             for task_info in task_infos.copy():
                 if task_info.getTaskDeadline() + task_info.getTaskArrivalTime() <= cur_time:
@@ -585,7 +585,7 @@ class TaskManager:
                     self._recently_done_100_tasks.append(task_info)
                     task_infos.remove(task_info)
         # 3. Check the computing tasks
-        for node_id, task_infos in self._to_compute_tasks.items():
+        for node_id, task_infos in self._computing_tasks.items():
             for task_info in task_infos.copy():
                 if task_info.getTaskDeadline() + task_info.getTaskArrivalTime() <= cur_time:
                     task_info.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_DDL)
@@ -613,8 +613,8 @@ class TaskManager:
         if route is None:
             route = [target_node_id]
         assert route[-1] == target_node_id, 'The last node of the route should be the target node id.'
-        if task_node_id in self._to_offload_tasks:
-            for task_info in self._to_offload_tasks[task_node_id]:
+        if task_node_id in self._offloading_tasks:
+            for task_info in self._offloading_tasks[task_node_id]:
                 if task_info.getTaskId() == task_id:
                     task_info.offloadTo(target_node_id, route, current_time)
                     assert len(task_info.getToOffloadRoute())>0
@@ -640,8 +640,8 @@ class TaskManager:
             for task_info in task_infos:
                 if task_info.getTaskId()==task_id:
                     task_info.setToReturnRoute(route)
-                    self._to_return_tasks[node_id]=self._to_return_tasks.get(node_id,[])
-                    self._to_return_tasks[node_id].append(task_info)
+                    self._returning_tasks[node_id]=self._returning_tasks.get(node_id,[])
+                    self._returning_tasks[node_id].append(task_info)
                     to_remove_tasks[node_id]=to_remove_tasks.get(node_id,[])
                     to_remove_tasks[node_id].append(task_info)
                     task_info.startToReturn(current_time)

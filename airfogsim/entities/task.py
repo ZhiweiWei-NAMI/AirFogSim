@@ -47,11 +47,11 @@ class Task:
         self._routed_time = [task_arrival_time]  # the time that the task is routed to the node
         self._start_to_transmit_time = -1
         self._last_transmission_time = -1
-        self._transmitted_size = -1
+        self._transmitted_size = 0
         self._start_to_compute_time = -1
         self._start_to_return_time = -1
         self._last_return_time = -1
-        self._computed_size = -1
+        self._computed_size = 0
         self._last_compute_time = -1
         self._failure_reason_code = -1
         self._farther_mission = farther_mission

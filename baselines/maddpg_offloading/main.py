@@ -17,7 +17,7 @@ import numpy as np
 import random
 import yaml
 from airfogsim.scheduler import RewardScheduler, TaskScheduler
-from .maddpg import MaddpgOffloadingAlgorithm
+from maddpg import MADDPGOffloadingAlgorithm
 
 def load_config(path):
     with open(path, 'r') as file:
@@ -34,7 +34,7 @@ config = load_config(config_path)
 env = AirFogSimEnv(config, interactive_mode=None)
 
 # 3. Get algorithm module
-algorithm_module = BaseAlgorithmModule()
+algorithm_module = MADDPGOffloadingAlgorithm()
 algorithm_module.initialize(env)
 RewardScheduler.setModel(env, 'REWARD', '1/task_delay')
 accumulated_reward = 0

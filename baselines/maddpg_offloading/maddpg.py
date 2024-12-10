@@ -19,7 +19,7 @@ from airfogsim.airfogsim_algorithm import BaseAlgorithmModule
 # from .algorithm.DDQN.DDQN_env import  DDQN_Env
 import numpy as np
 
-class MaddpgOffloadingAlgorithm(BaseAlgorithmModule):
+class MADDPGOffloadingAlgorithm(BaseAlgorithmModule):
     """
     Use different schedulers to interact with the environment before calling env.step(). Manipulate different environments with the same algorithm design at the same time for learning sampling efficiency.\n
     Any implementation of the algorithm should inherit this class and implement the algorithm logic in the `scheduleStep()` method.
@@ -47,7 +47,40 @@ class MaddpgOffloadingAlgorithm(BaseAlgorithmModule):
         """
         self.rewardScheduler.setModel(env, 'REWARD', '-task_delay')
         # 1. 获取一个template的fog node和task node信息，建模并且初始化state_dim和action_dim
-        fog_node_template = self.entityScheduler.getFogNodeTemplate(env)
+        self.fog_node_dim = 0
+        self.fog_type_dict = {
+            'V': 0,
+            'U': 1,
+            'I': 2,
+            'C': 3,
+        }
+        self.min_position_x, self.max_position_x = 0, 2000
+        self.min_position_y, self.max_position_y = 0, 2000
+        self.min_position_z, self.max_position_z = 0, 200
+        self.min_speed, self.max_speed = 0, 20
+
+
+    def _encode_node_state(self, node_state, node_type):
+        # id, time, position_x, position_y, position_z, speed, fog_profile, node_type
+        # ['UAV_9' 0 2655.3572089655477 1030.70353000605 100.0 0 {'lambda': 1} 'U']
+        # 选取 position_x, position_y, position_z, speed, fog_profile, node_type, 6维
+        # 注意，fog_profile要转为数字；node_type要转为encoding；position_x, position_y, position_z, speed要normalize
+        # fog_profile: {'lambda': 1} -> 1
+        if node_type == 'FN':
+            profile = node_state[5].get('cpu', 0)
+        elif node_type == 'TN':
+            profile = node_state[5].get('lambda', 0)
+        fog_type = self.fog_type_dict.get(node_state[6], -1)
+        position_x = (node_state[2] - self.min_position_x) / (self.max_position_x - self.min_position_x)
+        position_y = (node_state[3] - self.min_position_y) / (self.max_position_y - self.min_position_y)
+        position_z = (node_state[4] - self.min_position_z) / (self.max_position_z - self.min_position_z)
+        speed = (node_state[5] - self.min_speed) / (self.max_speed - self.min_speed)
+        state = [position_x, position_y, position_z, speed, profile, fog_type]
+        return np.asarray(state)
+    
+    def _encode_task_state(self, task_state):
+        pass
+
 
     def scheduleStep(self, env: AirFogSimEnv):
         """The algorithm logic. Should be implemented by the subclass.
@@ -99,8 +132,7 @@ class MaddpgOffloadingAlgorithm(BaseAlgorithmModule):
                             V2U_distance[u_idx] = distance
                         nearest_u_distance = np.max(V2U_distance)
                         nearest_u_idx = np.unravel_index(np.argmax(V2U_distance), V2U_distance.shape)
-                        nearest_u_id = self.entityScheduler.getNodeInfoByIndexAndType(env, int(nearest_u_idx[0]), 'U')[
-                            'id']
+                        nearest_u_id = self.entityScheduler.getNodeInfoByIndexAndType(env, int(nearest_u_idx[0]), 'U')['id']
 
                     if RSU_num > 0:
                         V2R_distance = np.zeros((RSU_num))
@@ -145,7 +177,7 @@ class MaddpgOffloadingAlgorithm(BaseAlgorithmModule):
         UAVs_mobile_pattern = {}
         for UAV_id, UAV_info in UAVs_info.items():
             current_position = UAV_info['position']
-            target_position = self.trafficScheduler.getNextPositionOfUav(UAV_id)
+            target_position = self.trafficScheduler.getNextPositionOfUav(env, UAV_id)
             if target_position is None:
                 # 悬停
                 mobility_pattern = {'angle': 0, 'phi': 0, 'speed': 0}

@@ -80,6 +80,8 @@ fog_profile:
     storage: 1 # Storage capacity of cloud servers
 
 state_attribute:
+  log_state: False # Whether to log the state attributes
+  time_window: 10 # The time window for state attributes statistics
   fog_node_state_attributes: ['position_x', 'position_y', 'position_z', 'speed', 'fog_profile', 'node_type']
   task_node_state_attributes: ['position_x', 'position_y', 'position_z', 'speed', 'task_profile', 'node_type']
   task_state_attributes: ['task_node_id', 'task_size', 'task_cpu', 'required_returned_size', 'task_deadline', 'task_priority', 'task_arrival_time']

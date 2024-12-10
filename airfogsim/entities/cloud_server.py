@@ -19,7 +19,7 @@ class CloudServer(FogNode, TaskNode, NetworkNode):
         TaskNode.__init__(self, id, position_x, position_y, position_z, 0, 0, 0, task_profile)
         FogNode.__init__(self, id, position_x, position_y, position_z, 0, 0, 0, fog_profile)
         NetworkNode.__init__(self, id, position_x, position_y, position_z, 0, 0, 0, network_profile)
-        self._node_type = 'cloud_server'
+        self._node_type = 'C'
 
     def to_dict(self):
         """Convert the cloud server to a dictionary.

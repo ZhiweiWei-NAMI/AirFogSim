@@ -23,7 +23,7 @@ class UAV(TaskNode, FogNode):
         FogNode.__init__(self, id, position_x, position_y, position_z, speed, acceleration, angle, fog_profile)
         self._phi = phi
         self._last_updated_time = 0
-        self._node_type = 'uav'        
+        self._node_type = 'U'        
 
     def update(self, uav_traffic_info, simulation_time):
         """Update the UAV.
