@@ -11,7 +11,7 @@ class RewardScheduler(BaseScheduler):
     ACCEPTED_MODEL=['REWARD','PUNISH']
     REWARD_SYMOBOLS = None
     PUNISH_SYMOBOLS=None
-    ACCEPTED_SYMBOLS = ['energy', 'task_deadline', 'task_delay',
+    ACCEPTED_SYMBOLS = ['energy', 'task_deadline', 'task_delay', 'task_priority',
                         '_mission_duration_sum','_mission_arrival_time','_mission_start_time','_mission_deadline','_mission_finish_time'] # mission_duration is an array
 
     @staticmethod

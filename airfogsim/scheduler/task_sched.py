@@ -34,7 +34,7 @@ class TaskScheduler(BaseScheduler):
         Examples:
             taskSched.getAllToOffloadTaskInfos(env)
         """
-        task_dict = env.task_manager.getToOffloadTasks()
+        task_dict = env.task_manager.getWaitingToOffloadTasks()
         task_info_list = []
         for task_node_id, tasks in task_dict.items():
             for task in tasks:

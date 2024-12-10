@@ -13,6 +13,14 @@ class StateInfoManager:
         self._task_node_state_df = pd.DataFrame(columns=['node_id', 'time'] + self._task_node_state_attributes)
         self._task_state_df = pd.DataFrame(columns=['task_id', 'time'] + self._task_state_attributes)
 
+    @staticmethod
+    def getAttribute(entity, attribute):
+        if hasattr(entity, attribute):
+            return getattr(entity, attribute)
+        if hasattr(entity, '_'+attribute):
+            return getattr(entity, '_'+attribute)
+        raise ValueError('The attribute {} does not exist in the entity.'.format(attribute))
+
     def logNodeState(self, fog_nodes, task_nodes, cur_time):
         self._current_time = cur_time
         # 把cur_time-time_window之前的数据删除
@@ -23,14 +31,14 @@ class StateInfoManager:
             node_id = node.getId()
             state = [node_id, cur_time]
             for attr in self._fog_node_state_attributes:
-                state.append(getattr(node, '_'+attr))
+                state.append(self.getAttribute(node, '_'+attr))
             self._fog_node_state_df.loc[len(self._fog_node_state_df)] = state
         # 存储task_node的状态
         for node in task_nodes:
             node_id = node.getId()
             state = [node_id, cur_time]
             for attr in self._task_node_state_attributes:
-                state.append(getattr(node, '_'+attr))
+                state.append(self.getAttribute(node, '_'+attr))
             self._task_node_state_df.loc[len(self._task_node_state_df)] = state
 
     def logTaskState(self, tasks, cur_time):
@@ -40,5 +48,17 @@ class StateInfoManager:
             task_id = task.getTaskId()
             state = [task_id, cur_time]
             for attr in self._task_state_attributes:
-                state.append(getattr(task, '_'+attr))
+                state.append(self.getAttribute(task, '_'+attr))
             self._task_state_df.loc[len(self._task_state_df)] = state
+
+    def transformNodeToNodeState(self, fog_node, current_time):
+        node_state = [fog_node.getId(), current_time]
+        for attr in self._fog_node_state_attributes:
+            node_state.append(self.getAttribute(fog_node, '_'+attr))
+        return node_state
+    
+    def transformTaskToTaskState(self, task, current_time):
+        task_state = [task.getTaskId(), current_time]
+        for attr in self._task_state_attributes:
+            task_state.append(self.getAttribute(task, '_'+attr))
+        return task_state

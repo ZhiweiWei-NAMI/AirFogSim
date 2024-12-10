@@ -35,7 +35,7 @@ env = AirFogSimEnv(config, interactive_mode=None)
 
 # 3. Get algorithm module
 algorithm_module = MADDPGOffloadingAlgorithm()
-algorithm_module.initialize(env)
+algorithm_module.initialize(env, config)
 RewardScheduler.setModel(env, 'REWARD', '1/task_delay')
 accumulated_reward = 0
 np.random.seed(0)
