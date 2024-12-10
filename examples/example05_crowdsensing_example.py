@@ -10,6 +10,9 @@ import yaml
 import sys
 from pyinstrument import Profiler
 
+root=os.path.abspath(__file__)
+
+
 
 def load_config(path):
     with open(path, 'r') as file:

@@ -116,7 +116,7 @@ class AirFogSimEnv():
         self.update_AI_models = {}  # dict, key是node_id, value是{"model_name": AI model}
         self.task_return_routes = {}  # dict, key是task_id, value是route=[node_id_1,node_id_2,...]
 
-        # ----------------indicators, managed by evaluation----------------
+        # ----------------indicators, used by evaluation----------------
         self.channel = {'time': 0, 'data_size': 0}
         self.V2U_channel = {'time': 0, 'data_size': 0}
         self.V2I_channel = {'time': 0, 'data_size': 0}
@@ -124,6 +124,9 @@ class AirFogSimEnv():
         self.V2U_trans_data = []
         self.V2I_trans_data = []
         self.U2I_trans_data = []
+        self.traffic_step_generate=0
+        self.traffic_step_allocate=0
+
 
         # ----------------temporary records in each timeslot----------------
         self.new_vehicle_id_list=[]
@@ -793,3 +796,10 @@ class AirFogSimEnv():
             return self.V2I_trans_data
         elif channel_type == 'U2I':
             return self.U2I_trans_data
+
+    def setMissionEvaluationIndicators(self,generate_num,allocate_num):
+        self.traffic_step_generate=generate_num
+        self.traffic_step_allocate=allocate_num
+
+    def getMissionEvaluationIndicators(self):
+        return self.traffic_step_generate,self.traffic_step_allocate

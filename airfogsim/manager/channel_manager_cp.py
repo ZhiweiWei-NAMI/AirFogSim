@@ -458,7 +458,6 @@ class ChannelManagerCP:
         self.V2V_Rate = cp.log2(1 + self.V2V_SINR) # bps, 小b
         self.V2I_Rate = cp.log2(1 + self.V2I_SINR)
         self.V2U_Rate = cp.log2(1 + self.V2U_SINR)
-        print(self.V2U_SINR)
         # isOutage的部分速率设置为0
         self.V2V_Rate = cp.where(self.is_V2V_outage, 0, self.V2V_Rate)
         self.V2I_Rate = cp.where(self.is_V2I_outage, 0, self.V2I_Rate)

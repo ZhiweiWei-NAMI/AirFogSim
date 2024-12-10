@@ -252,6 +252,7 @@ class BaseAlgorithmModule:
         """
         last_step_succ_mission_infos = self.missionScheduler.getLastStepSuccMissionInfos(env)
         last_step_fail_mission_infos = self.missionScheduler.getLastStepFailMissionInfos(env)
+        last_step_early_fail_mission_infos= self.missionScheduler.getLastStepEarlyFailMissionInfos(env)
         sum_reward = 0
         reward = 0
         punish = 0
@@ -260,6 +261,10 @@ class BaseAlgorithmModule:
             reward += mission_reward
             sum_reward += mission_reward
         for mission_info in last_step_fail_mission_infos:
+            mission_punish = self.rewardScheduler.getPunishByMission(env, mission_info)
+            punish += mission_punish
+            sum_reward += mission_punish
+        for mission_info in last_step_early_fail_mission_infos:
             mission_punish = self.rewardScheduler.getPunishByMission(env, mission_info)
             punish += mission_punish
             sum_reward += mission_punish
@@ -320,13 +325,18 @@ class NVHAUAlgorithmModule(BaseAlgorithmModule):
             env (AirFogSimEnv): The environment object.
 
         """
-        UAV_probability = 0.1
+        UAV_probability = 0.5
         cur_time = self.trafficScheduler.getCurrentTime(env)
+        traffic_interval=self.trafficScheduler.getTrafficInterval(env)
         new_missions_profile = self.missionScheduler.getToBeAssignedMissionsProfile(env, cur_time)
         delete_mission_profile_ids = []
         excluded_sensor_ids = []
 
+        generate_num=0
+        allocate_num=0
         for mission_profile in new_missions_profile:
+            if mission_profile['mission_arrival_time']>cur_time-traffic_interval:
+                generate_num+=1
             mission_sensor_type = mission_profile['mission_sensor_type']
             mission_accuracy = mission_profile['mission_accuracy']
 
@@ -357,10 +367,12 @@ class NVHAUAlgorithmModule(BaseAlgorithmModule):
                     task_set.append(new_task)
                     mission_profile['mission_task_sets'].append(task_set)
                 self.missionScheduler.generateAndAddMission(env, mission_profile)
+                allocate_num+=1
 
                 delete_mission_profile_ids.append(mission_profile['mission_id'])
                 excluded_sensor_ids.append(appointed_sensor_id)
         self.missionScheduler.deleteBeAssignedMissionsProfile(env, delete_mission_profile_ids)
+
 
     def scheduleReturning(self, env: AirFogSimEnv):
         """The returning logic. Relay or direct is controlled by probability.
@@ -430,7 +442,7 @@ class NVHAUAlgorithmModule(BaseAlgorithmModule):
                         nearest_r_id = self.entityScheduler.getNodeInfoByIndexAndType(env, int(nearest_r_idx[0]), 'R')[
                             'id']
 
-                    relay_probability = 1.0
+                    relay_probability = 0.5
                     if random.random() < relay_probability and UAV_num > 0:
                         return_route = [nearest_u_id, nearest_r_id]
                     else:
@@ -572,6 +584,7 @@ class DDQNAlgorithmModule(BaseAlgorithmModule):
         """
 
         cur_time = self.trafficScheduler.getCurrentTime(env)
+        traffic_interval=self.trafficScheduler.getTrafficInterval(env)
         new_missions_profile = self.missionScheduler.getToBeAssignedMissionsProfile(env, cur_time)
         delete_mission_profile_ids = []
         excluded_sensor_ids = []
@@ -580,7 +593,11 @@ class DDQNAlgorithmModule(BaseAlgorithmModule):
         vehicles_state = self.algorithmScheduler.getNodeStates(env, 'V', self.max_n_vehicles)
         RSUs_state = self.algorithmScheduler.getNodeStates(env, 'R', self.max_n_RSUs)
 
+        generate_num=0
+        allocate_num=0
         for mission_profile in new_missions_profile:
+            if mission_profile['mission_arrival_time']>cur_time-traffic_interval:
+                generate_num+=1
             mission_id = mission_profile['mission_id']
             mission_sensor_type = mission_profile['mission_sensor_type']
             mission_accuracy = mission_profile['mission_accuracy']
@@ -620,6 +637,7 @@ class DDQNAlgorithmModule(BaseAlgorithmModule):
                     task_set.append(new_task)
                     mission_profile['mission_task_sets'].append(task_set)
                 self.missionScheduler.generateAndAddMission(env, mission_profile)
+                allocate_num+=1
 
                 delete_mission_profile_ids.append(mission_profile['mission_id'])
                 excluded_sensor_ids.append(appointed_sensor_id)

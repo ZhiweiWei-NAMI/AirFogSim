@@ -20,6 +20,7 @@ class MissionManager:
         self._early_failed_missions = []  # list: item is early failed missions(missions failed before assigned)
         self._recently_done_100_missions = deque(maxlen=100)
         self._recently_fail_100_missions = deque(maxlen=100)
+        self._recently_early_fail_100_missions = deque(maxlen=100)
         self._mission_id_counter = 0
 
         self._config_mission = config_mission
@@ -204,7 +205,7 @@ class MissionManager:
                 dead_mission = Mission(mission_profile)
                 dead_mission.setMissionFinishTime(current_time)
                 self._early_failed_missions.append(dead_mission)
-                self._recently_fail_100_missions.append(dead_mission)
+                self._recently_early_fail_100_missions.append(dead_mission)
                 to_remove.append(dead_mission.getMissionId())
         self.deleteMissionsProfile(to_remove)
 
@@ -223,6 +224,14 @@ class MissionManager:
             list: The list of the recently done missions.
         """
         return self._recently_fail_100_missions
+
+    def getRecentlyEarlyFailMissions(self):
+        """Get the recently failed missions (the maximum number is 100).
+
+        Returns:
+            list: The list of the recently done missions.
+        """
+        return self._recently_early_fail_100_missions
 
     def getDoneMissionByMissionNodeAndMissionId(self, appointed_node_id, mission_id):
         """Get the done missions by the appointed node id and the mission id.

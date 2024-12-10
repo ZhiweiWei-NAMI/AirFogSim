@@ -4,41 +4,28 @@
     <list default="true" id="e602f890-1e94-45d2-a6d5-c612b9de4d18" name="变更" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/airfogsim/airfogsim_algorithm.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/airfogsim_algorithm.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/airfogsim/algorithm/DDQN/DDQN_env.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/algorithm/DDQN/DDQN_env.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/airfogsim/algorithm/DDQN/DDQN_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/algorithm/DDQN/DDQN_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/airfogsim/algorithm/DDQN/DDQN_network.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/algorithm/DDQN/DDQN_network.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/airfogsim/algorithm/DDQN/DDQN_relay_buffer.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/algorithm/DDQN/DDQN_relay_buffer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/airfogsim/algorithm/MADDPG/MADDPG_env.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/algorithm/MADDPG/MADDPG_env.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/airfogsim/algorithm/MADDPG/MADDPG_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/algorithm/MADDPG/MADDPG_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/airfogsim/algorithm/MADDPG/MADDPG_network.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/algorithm/MADDPG/MADDPG_network.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/airfogsim/algorithm/MADDPG/MADDPG_relay_buffer.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/algorithm/MADDPG/MADDPG_relay_buffer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/airfogsim/airfogsim_env.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/airfogsim_env.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/airfogsim/airfogsim_evaluation.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/airfogsim_evaluation.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/airfogsim/manager/channel_manager_cp.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/manager/channel_manager_cp.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/AccelerationRatio.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/episode_1/AccelerationRatio.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/ChannelRate.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/episode_1/ChannelRate.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/CompletionRatio.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/episode_1/CompletionRatio.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/ProcessMonitoring.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/episode_1/ProcessMonitoring.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/Reward.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/episode_1/Reward.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/Time.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/episode_1/Time.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/U2I_data_trans.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/episode_1/U2I_data_trans.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/V2I_data_trans.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/episode_1/V2I_data_trans.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/V2U_data_trans.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/episode_1/V2U_data_trans.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/episode_2/AccelerationRatio.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/episode_2/ChannelRate.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/episode_2/CompletionRatio.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/episode_2/ProcessMonitoring.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/episode_2/Reward.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/episode_2/Time.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/episode_2/U2I_data_trans.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/episode_2/V2I_data_trans.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/episode_2/V2U_data_trans.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/final/AccelerationRatio.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/final/AccelerationRatio.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/final/ChannelRate.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/final/ChannelRate.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/final/CompletionRatio.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/final/CompletionRatio.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/final/ProcessMonitoring.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/final/ProcessMonitoring.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/final/Reward.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/final/Reward.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/final/Time.png" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/final/Time.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example05_crowdsensing_example.py" beforeDir="false" afterPath="$PROJECT_DIR$/example05_crowdsensing_example.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/airfogsim/manager/mission_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/manager/mission_manager.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/airfogsim/scheduler/mission_sched.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/scheduler/mission_sched.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/AccelerationRatio.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/ChannelRate.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/CompletionRatio.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/ProcessMonitoring.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/Reward.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/Time.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/U2I_data_trans.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/V2I_data_trans.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/episode_1/V2U_data_trans.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/final/AccelerationRatio.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/final/ChannelRate.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/final/CompletionRatio.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/final/ProcessMonitoring.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/final/Reward.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/final/Time.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/examples/config.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/example05_crowdsensing_example.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/example05_crowdsensing_example.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

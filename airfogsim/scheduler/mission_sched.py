@@ -63,6 +63,24 @@ class MissionScheduler(BaseScheduler):
         return mission_info_list
 
     @staticmethod
+    def getLastStepEarlyFailMissionInfos(env):
+        """Get the failed mission infos for last timeslot.
+
+        Args:
+            env (AirFogSimEnv): The AirFogSim environment.
+
+        Returns:
+            list: The list of mission infos (mission: object).
+        """
+        recently_early_fail_100_missions = env.mission_manager.getRecentlyEarlyFailMissions()
+        last_step = env.simulation_time - env.traffic_interval
+        mission_info_list = []
+        for mission in recently_early_fail_100_missions:
+            if mission.getMissionFinishTime() >= last_step:
+                mission_info_list.append(mission.to_dict())
+        return mission_info_list
+
+    @staticmethod
     def getNearestMissionPosition(env,node_id,position):
         """Get the nearest position for sensing.
 

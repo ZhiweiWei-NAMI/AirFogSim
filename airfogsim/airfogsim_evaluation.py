@@ -13,7 +13,7 @@ class AirFogSimEvaluation:
         self.initOrResetStepRecords()
         self.initOrResetEpisodeRecords()
         # Path to save image
-        self.base_path = "./evaluation/"
+        self.base_path = "../evaluation/"
         if not os.path.exists(self.base_path):
             os.makedirs(self.base_path)
 
@@ -28,6 +28,12 @@ class AirFogSimEvaluation:
         self.success_missions_num = 0
         self.failed_missions_num = 0
         self.early_failed_missions_num = 0
+
+        self.slot_generate_num = 0
+        self.slot_allocate_num = 0
+        self.slot_success_num = 0
+        self.slot_fail_num = 0
+        self.slot_early_fail_num = 0
 
         # 3.信道速率指标
         self.avg_trans_rate = 0
@@ -49,6 +55,14 @@ class AirFogSimEvaluation:
         # 5.1 completion ratio
         self.finish_mission_num = 0
         self.completion_ratio = 0
+
+        self.finish_mission_num_on_vehicle=0
+        self.success_mission_num_on_vehicle=0
+        self.completion_ratio_on_vehicle=0
+
+        self.finish_mission_num_on_UAV=0
+        self.success_mission_num_on_UAV = 0
+        self.completion_ratio_on_UAV = 0
 
         # 5.2 weighted acceleration ratio
         self.sum_weight = 0
@@ -74,6 +88,12 @@ class AirFogSimEvaluation:
         self.step_failed_missions_num = []
         self.step_early_failed_missions_num = []
 
+        self.step_generate_num = []
+        self.step_allocate_num = []
+        self.step_success_num = []
+        self.step_fail_num = []
+        self.step_early_fail_num = []
+
         # 3.信道速率指标
         self.step_avg_trans_rate = []
         self.step_avg_V2U_trans_rate = []
@@ -87,6 +107,8 @@ class AirFogSimEvaluation:
         # 5.ratio
         # 5.1 completion ratio0
         self.step_completion_ratio = []
+        self.step_completion_ratio_on_vehicle = []
+        self.step_completion_ratio_on_UAV = []
 
         # 5.2 weighted acceleration ratio
         self.step_weighted_acceleration_ratio = []
@@ -120,6 +142,8 @@ class AirFogSimEvaluation:
         # 5.ratio
         # 5.1 completion ratio
         self.episode_completion_ratio = []
+        self.episode_completion_ratio_on_vehicle = []
+        self.episode_completion_ratio_on_UAV = []
 
         # 5.2 weighted acceleration ratio
         self.episode_weighted_acceleration_ratio = []
@@ -141,31 +165,41 @@ class AirFogSimEvaluation:
         early_failed_missions_num = env.mission_manager.getEarlyFailedMissionNum()
         sum_over_missions = success_missions_num + failed_missions_num + early_failed_missions_num
 
-        # 仿真时间
+        last_step_succ_mission_infos = algorithm_module.missionScheduler.getLastStepSuccMissionInfos(env)
+        last_step_fail_mission_infos = algorithm_module.missionScheduler.getLastStepFailMissionInfos(env)
+        last_step_early_fail_mission_infos = algorithm_module.missionScheduler.getLastStepEarlyFailMissionInfos(env)
+
+        # 1.仿真时间
         self.simulation_time = env.simulation_time
 
-        # reward
-        self.sum_reward += step_sum_reward
-        self.sum_success_reward += step_reward
-        self.avg_reward = self.sum_reward / sum_over_missions if sum_over_missions != 0 else 0
-        self.avg_success_reward = self.sum_success_reward / success_missions_num if success_missions_num != 0 else 0
-
-        # 过程监控
+        # 2.过程监控
         self.to_generate_missions_num = to_generate_missions_num
         self.executing_missions_num = executing_missions_num
         self.success_missions_num = success_missions_num
         self.early_failed_missions_num = early_failed_missions_num
         self.failed_missions_num = failed_missions_num
 
-        # 信道速率指标
+
+        self.slot_generate_num,self.slot_allocate_num = env.getMissionEvaluationIndicators()
+        self.slot_success_num = len(last_step_succ_mission_infos)
+        self.slot_fail_num = len(last_step_fail_mission_infos)
+        self.slot_early_fail_num = len(last_step_early_fail_mission_infos)
+
+        # 3.信道速率指标
         self.avg_trans_rate = env.getChannelAvgRate()
         self.avg_V2U_trans_rate = env.getChannelAvgRate(channel_type='V2U')
         self.avg_V2I_trans_rate = env.getChannelAvgRate(channel_type='V2I')
         self.avg_U2I_trans_rate = env.getChannelAvgRate(channel_type='U2I')
 
-        # ratio
-        last_step_succ_mission_infos = algorithm_module.missionScheduler.getLastStepSuccMissionInfos(env)
-        last_step_fail_mission_infos = algorithm_module.missionScheduler.getLastStepFailMissionInfos(env)
+        # 4.reward
+        self.sum_reward += step_sum_reward
+        self.sum_success_reward += step_reward
+        self.avg_reward = self.sum_reward / sum_over_missions if sum_over_missions != 0 else 0
+        self.avg_success_reward = self.sum_success_reward / success_missions_num if success_missions_num != 0 else 0
+
+
+        # 5.ratio
+        # 5.1 completion ratio (all)
         self.completion_ratio = env.mission_manager.getMissionCompletionRatio()[0]  # return: (ratio, mission_num)
         self.finish_mission_num += len(last_step_succ_mission_infos)
         for mission_info in last_step_succ_mission_infos:
@@ -177,18 +211,38 @@ class AirFogSimEvaluation:
             weight = math.log(10, 1 + TTL - duration)
             ratio = (TTL - duration) / (finish_time - arrival_time - duration)
 
-            # print('TTL',TTL-duration)
-            # print('executing',finish_time-arrival_time-duration)
-            # print('weight',weight )
-            # print('ratio',ratio )
-            # print('size', mission_info['mission_size'])
-
             self.sum_weight += weight
             self.sum_weighted_acceleration_ratio += weight * ratio
             self.sum_acceleration_ratio += ratio
 
         self.weighted_acceleration_ratio = self.sum_weighted_acceleration_ratio / self.sum_weight if self.sum_weight > 0.0 else 0
         self.acceleration_ratio = self.sum_acceleration_ratio / self.finish_mission_num if self.finish_mission_num > 0 else 0
+
+        # 5.2 completion ratio (Classified by type, not consider early fail)
+        for mission_info in last_step_succ_mission_infos:
+            appointed_node_id=mission_info['appointed_node_id']
+            node_type=env._getNodeTypeById(appointed_node_id)
+            if node_type=='V':
+                self.finish_mission_num_on_vehicle+=1
+                self.success_mission_num_on_vehicle+=1
+            elif node_type=='U':
+                self.finish_mission_num_on_UAV += 1
+                self.success_mission_num_on_UAV += 1
+            else:
+                raise TypeError('Node type is invalid')
+
+        for mission_info in last_step_fail_mission_infos:
+            appointed_node_id=mission_info['appointed_node_id']
+            node_type=env._getNodeTypeById(appointed_node_id)
+            if node_type=='V':
+                self.finish_mission_num_on_vehicle+=1
+            elif node_type=='U':
+                self.finish_mission_num_on_UAV += 1
+            else:
+                raise TypeError('Node type is invalid')
+
+        self.completion_ratio_on_vehicle=self.success_mission_num_on_vehicle / self.finish_mission_num_on_vehicle if self.finish_mission_num_on_vehicle > 0 else 0
+        self.completion_ratio_on_UAV=self.success_mission_num_on_UAV / self.finish_mission_num_on_UAV if self.finish_mission_num_on_UAV > 0 else 0
 
         # optimization objectives
         for mission_info in last_step_succ_mission_infos:
@@ -216,6 +270,12 @@ class AirFogSimEvaluation:
         print('failed_missions_num: ', self.failed_missions_num)
         print('early_failed_missions_num: ', self.early_failed_missions_num)
 
+        print('slot_generate_num: ', self.slot_generate_num)
+        print('slot_allocate_num: ', self.slot_allocate_num)
+        print('slot_success_num: ', self.slot_success_num)
+        print('slot_fail_num: ', self.slot_fail_num)
+        print('slot_early_fail_num: ', self.slot_early_fail_num)
+
         # 信道速率指标
         print('信道速率')
         print('avg_trans_rate: ', self.avg_trans_rate)
@@ -235,6 +295,15 @@ class AirFogSimEvaluation:
         print('比率')
         print('finish_mission_num: ', self.finish_mission_num)
         print('completion_ratio: ', self.completion_ratio)
+
+        print('finish_mission_num_on_vehicle: ', self.finish_mission_num_on_vehicle)
+        print('success_mission_num_on_vehicle: ', self.success_mission_num_on_vehicle)
+        print('completion_ratio_on_vehicle: ', self.completion_ratio_on_vehicle)
+
+        print('finish_mission_num_on_UAV: ', self.finish_mission_num_on_UAV)
+        print('success_mission_num_on_UAV: ', self.success_mission_num_on_UAV)
+        print('completion_ratio_on_UAV: ', self.completion_ratio_on_UAV)
+
 
         print('sum_weight: ', self.sum_weight)
         print('sum_weighted_acceleration_ratio: ', self.sum_weighted_acceleration_ratio)
@@ -266,6 +335,12 @@ class AirFogSimEvaluation:
         print('failed_missions_num: ', self.failed_missions_num)
         print('early_failed_missions_num: ', self.early_failed_missions_num)
 
+        print('slot_generate_num: ', self.slot_generate_num)
+        print('slot_allocate_num: ', self.slot_allocate_num)
+        print('slot_success_num: ', self.slot_success_num)
+        print('slot_fail_num: ', self.slot_fail_num)
+        print('slot_early_fail_num: ', self.slot_early_fail_num)
+
         # 信道速率指标
         print('信道速率')
         print('avg_trans_rate: {:.2f}'.format(self.avg_trans_rate))
@@ -281,8 +356,12 @@ class AirFogSimEvaluation:
         # 比率
         print('比率')
         print('completion_ratio: {:.2f}'.format(self.completion_ratio))
+        print('completion_ratio_on_vehicle: ', self.completion_ratio_on_vehicle)
+        print('completion_ratio_on_UAV: ', self.completion_ratio_on_UAV)
+
         print('weighted_acceleration_ratio: {:.2f}'.format(self.weighted_acceleration_ratio))
         print('acceleration_ratio: {:.2f}'.format(self.acceleration_ratio))
+
 
         # 优化目标
         print('优化目标')
@@ -302,6 +381,12 @@ class AirFogSimEvaluation:
         self.step_failed_missions_num.append(self.failed_missions_num)
         self.step_early_failed_missions_num.append(self.early_failed_missions_num)
 
+        self.step_generate_num.append(self.slot_generate_num)
+        self.step_allocate_num.append(self.slot_allocate_num)
+        self.step_success_num.append(self.slot_success_num)
+        self.step_fail_num.append(self.slot_fail_num)
+        self.step_early_fail_num.append(self.slot_early_fail_num)
+
         # 信道速率指标
         self.step_avg_trans_rate.append(self.avg_trans_rate)
         self.step_avg_V2U_trans_rate.append(self.avg_V2U_trans_rate)
@@ -314,6 +399,9 @@ class AirFogSimEvaluation:
 
         # 5.ratio
         self.step_completion_ratio.append(self.completion_ratio)
+        self.step_completion_ratio_on_vehicle.append(self.completion_ratio_on_vehicle)
+        self.step_completion_ratio_on_UAV.append(self.completion_ratio_on_UAV)
+
         self.step_weighted_acceleration_ratio.append(self.weighted_acceleration_ratio)
         self.step_acceleration_ratio.append(self.acceleration_ratio)
 
@@ -336,12 +424,25 @@ class AirFogSimEvaluation:
         plt.plot(x_indices, self.step_success_missions_num,label='Success', color='limegreen')
         plt.plot(x_indices, self.step_failed_missions_num,label='Fail', color='red')
         plt.plot(x_indices, self.step_early_failed_missions_num,label='Not Allocate', color='orange')
-        plt.title('Process Monitoring')
+        plt.title('Accumulate Process Monitoring')
         plt.xlabel('Step')
         plt.ylabel('The Number of Missions')
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()
-        plt.savefig(path_to_save+'ProcessMonitoring.png')
+        plt.savefig(path_to_save+'AccumulateProcessMonitoring.png')
+
+        plt.figure()
+        plt.plot(x_indices, self.step_generate_num,label='Generate', color='gray')
+        plt.plot(x_indices, self.step_allocate_num,label='Allocate', color='blueviolet')
+        plt.plot(x_indices, self.step_success_num,label='Success', color='limegreen')
+        plt.plot(x_indices, self.step_fail_num, label='Fail', color='red')
+        plt.plot(x_indices, self.step_early_fail_num,label='Not Allocate', color='orange')
+        plt.title('Timeslot Process Monitoring')
+        plt.xlabel('Step')
+        plt.ylabel('The Number of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(path_to_save+'TimeslotProcessMonitoring.png')
 
         # 信道速率指标
         plt.figure()
@@ -369,11 +470,14 @@ class AirFogSimEvaluation:
 
         # completion ratio
         plt.figure()
-        plt.plot(x_indices, self.step_completion_ratio, color='orange')
+        plt.plot(x_indices, self.step_completion_ratio,label='Sum', color='blueviolet')
+        plt.plot(x_indices, self.step_completion_ratio_on_vehicle,label='Vehicle', color='limegreen')
+        plt.plot(x_indices, self.step_completion_ratio_on_UAV,label='UAV', color='orange')
         plt.title('Completion Ratio')
         plt.xlabel('Step')
         plt.ylabel('The Completion Ratio of Missions')
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
         plt.savefig(path_to_save + 'CompletionRatio.png')
 
         # acceleration ratio
@@ -453,6 +557,9 @@ class AirFogSimEvaluation:
 
         # ratio
         self.episode_completion_ratio.append(self.completion_ratio)
+        self.episode_completion_ratio_on_vehicle.append(self.completion_ratio_on_vehicle)
+        self.episode_completion_ratio_on_UAV.append(self.completion_ratio_on_UAV)
+
         self.episode_weighted_acceleration_ratio.append(self.weighted_acceleration_ratio)
         self.episode_acceleration_ratio.append(self.acceleration_ratio)
 
@@ -476,7 +583,7 @@ class AirFogSimEvaluation:
         plt.plot(x_indices, self.episode_failed_missions_num, label='Fail', color='red')
         plt.plot(x_indices, self.episode_early_failed_missions_num, label='Not Allocate', color='orange')
         plt.title('Process Monitoring')
-        plt.xlabel('Step')
+        plt.xlabel('Episode')
         plt.ylabel('The Number of Missions')
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()
@@ -489,7 +596,7 @@ class AirFogSimEvaluation:
         plt.plot(x_indices, self.episode_avg_V2I_trans_rate, label='V2I', color='red')
         plt.plot(x_indices, self.episode_avg_U2I_trans_rate, label='U2I', color='orange')
         plt.title('Channel Rate')
-        plt.xlabel('Step')
+        plt.xlabel('Episode')
         plt.ylabel('The Average Rate of Channel')
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()
@@ -500,7 +607,7 @@ class AirFogSimEvaluation:
         plt.plot(x_indices, self.episode_avg_reward, label='Avg', color='orange')
         plt.plot(x_indices, self.episode_avg_success_reward, label='Suc', color='limegreen')
         plt.title('Reward')
-        plt.xlabel('Step')
+        plt.xlabel('Episode')
         plt.ylabel('The Average Reward of Missions')
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()
@@ -508,11 +615,14 @@ class AirFogSimEvaluation:
 
         # completion ratio
         plt.figure()
-        plt.plot(x_indices, self.episode_completion_ratio, color='orange')
+        plt.plot(x_indices, self.episode_completion_ratio, label='Sum', color='blueviolet')
+        plt.plot(x_indices, self.episode_completion_ratio_on_vehicle, label='Vehicle', color='limegreen')
+        plt.plot(x_indices, self.episode_completion_ratio_on_UAV, label='UAV', color='orange')
         plt.title('Completion Ratio')
-        plt.xlabel('Step')
+        plt.xlabel('Episode')
         plt.ylabel('The Completion Ratio of Missions')
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
         plt.savefig(path_to_save + 'CompletionRatio.png')
 
         # acceleration ratio
@@ -520,7 +630,7 @@ class AirFogSimEvaluation:
         plt.plot(x_indices, self.episode_weighted_acceleration_ratio, label='Weighted Acc', color='orange')
         plt.plot(x_indices, self.episode_acceleration_ratio, label='Not Weighted Acc', color='limegreen')
         plt.title('Acceleration Ratio')
-        plt.xlabel('Step')
+        plt.xlabel('Episode')
         plt.ylabel('The Acceleration Ratio of Missions')
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()
@@ -531,7 +641,7 @@ class AirFogSimEvaluation:
         plt.plot(x_indices, self.episode_avg_floating_time, label='Floating', color='orange')
         plt.plot(x_indices, self.episode_avg_executing_time, label='Executing', color='limegreen')
         plt.title('Time')
-        plt.xlabel('Step')
+        plt.xlabel('Episode')
         plt.ylabel('The Related Time of Missions')
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()

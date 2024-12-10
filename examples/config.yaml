@@ -7,25 +7,25 @@ simulation:
   
 
 sumo:
-  sumo_config: "./sumo_wujiaochang/osm.sumocfg"
-  sumo_osm: "./sumo_wujiaochang/osm_bbox.osm.xml"
-  sumo_net: "./sumo_wujiaochang/osm.net.xml"
+  sumo_config: "../sumo_wujiaochang/osm.sumocfg"
+  sumo_osm: "../sumo_wujiaochang/osm_bbox.osm.xml"
+  sumo_net: "../sumo_wujiaochang/osm.net.xml"
   sumo_port: 8813
   export_tripinfo: False # 如果true，则导出tripinfo.xml文件（很大）
-  tripinfo_output: "./sumo_wujiaochang/tripinfo.xml"
+  tripinfo_output: "../sumo_wujiaochang/tripinfo.xml"
 
 visualization:
-  icon_path: "./icon"
+  icon_path: "../icon"
 
 traffic:
   traffic_mode: "SUMO" # "real" or "SUMO"
-  tripinfo: "./sumo_wujiaochang/tripinfo.csv" # The path to the SUMO tripinfo file
+  tripinfo: "../sumo_wujiaochang/tripinfo.csv" # The path to the SUMO tripinfo file
   traffic_interval: 0.5 # in seconds, for traffic simulation. Remember to set the same value in the SUMO configuration file; otherwise, the simulation will not work properly
   UAV_z_range: [100, 100] # The range of z coordinates for UAVs
   UAV_speed_range: [30,30] # The speed of UAV (distance unit per timeslot)
   vehicle_traffic_file: "path/to/vehicle_traffic_file.csv" # Only required if mode is "real". The format should be in accordance with the SUMO vehicle file format
   uav_traffic_file: "path/to/uav_traffic_file.csv" # UAV traffic file
-  max_n_vehicles: 100 # Number of vehicles to simulate
+  max_n_vehicles: 20 # Number of vehicles to simulate
   max_n_UAVs: 10 # Number of UAVs to simulate. UAVs are randomly generated in the simulation area initially
   max_n_RSUs: 4 # Number of UAVs to simulate. RSU are generated in fixed position in the simulation area initially
   RSU_positions: [[100, 100, 0], [100, 2000, 0], [2500, 100, 0], [2500, 2000, 0]] # List of RSU positions, each RSU is represented by a list of x, y, z coordinates
