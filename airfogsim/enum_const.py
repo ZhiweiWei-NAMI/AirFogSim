@@ -19,7 +19,7 @@ class EnumerateConstants:
         if code == EnumerateConstants.TASK_FAIL_OUT_OF_DDL:
             return "Task fails due to out of deadline."
         elif code == EnumerateConstants.TASK_FAIL_OUT_OF_TTI:
-            return "Task fails due to out of transmission time interval."
+            return "Task fails due to transmission timeout."
         elif code == EnumerateConstants.TASK_FAIL_OUT_OF_NODE:
             return "Task fails due to out of node."
         elif code == EnumerateConstants.CONSENSUS_POW:

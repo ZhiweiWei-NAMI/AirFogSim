@@ -11,87 +11,8 @@ if os.environ.get('useCUPY') == 'True':
 else:
     import numpy as cp
 
-def OutageProbCallback(outage_prob_type):
-    """The callback function to get the outage probability.
-
-    Args:
-        outage_prob_type (str): The outage probability type.
-
-    Returns:
-        function: The callback function to get the outage probability.
-    """
-    if outage_prob_type == 'Rayleigh':
-        return rayleigh_outage_prob
-    else:
-        raise ValueError(f"Invalid outage probability type: {outage_prob_type}")
-
-def rayleigh_outage_prob(snr, snr_threshold):
-    """The Rayleigh outage probability model.
-
-    Args:
-        snr (cp.ndarray): The signal-to-noise ratio.
-        snr_threshold (float): The signal-to-noise ratio threshold.
-
-    Returns:
-        cp.ndarray: The outage probability.
-    """
-    # 如果snr有任意shape是0，则返回空数组
-    if cp.prod(snr.shape) == 0:
-        return cp.ones_like(snr)
-    # 处理snr<=0的情况
-    snr = cp.maximum(snr, 1e-9)
-    return 1 - cp.exp(-snr_threshold / snr)
-
-def addMatrix(add_ma, value, add_mb, rb_nos, txidx, rxidx, inverse=False):
-    # 判断txidx和rxidx是否都在ma和mb的范围内
-    flag1 = txidx < add_ma.shape[0] and rxidx < add_ma.shape[1]
-    flag2 = (txidx < add_mb.shape[0] and rxidx < add_mb.shape[1] and not inverse) or (txidx < add_mb.shape[1] and rxidx < add_mb.shape[0] and inverse)
-    if flag1 and flag2:
-        if inverse:
-            increment = 10 ** ((value - add_mb[rxidx, txidx, :]) / 10) * rb_nos
-        else:
-            increment = 10 ** ((value - add_mb[txidx, rxidx, :]) / 10) * rb_nos
-        # 更新 add_ma
-        add_ma[txidx, rxidx, :] += increment
-
-def subMatrix(sub_ma, value, sub_mb, rb_nos, txidx, rxidx, inverse=False):
-    # 判断txidx和rxidx是否都在ma和mb的范围内
-    flag1 = txidx < sub_ma.shape[0] and rxidx < sub_ma.shape[1]
-    flag2 = (txidx < sub_mb.shape[0] and rxidx < sub_mb.shape[1] and not inverse) or (txidx < sub_mb.shape[1] and rxidx < sub_mb.shape[0] and inverse)
-    if flag1 and flag2:
-        if inverse:
-            decrement = 10 ** ((value - sub_mb[rxidx, txidx, :]) / 10) * rb_nos
-        else:
-            decrement = 10 ** ((value - sub_mb[txidx, rxidx, :]) / 10) * rb_nos
-        sub_ma[txidx, rxidx, :] -= decrement
-
-def addTwoMatrix(add_ma, value, add_mb, rb_nos, txidx, inverse=False):
-    # interference_power_matrix_vtx_x2i[txidx, :, :] += 10 ** ((power_db - self.V2IChannel_with_fastfading[txidx, :, :]) / 10) * rb_nos
-    flag1 = txidx < add_ma.shape[0]
-    flag2 = txidx < add_mb.shape[0] and not inverse or txidx < add_mb.shape[1] and inverse
-    if flag1 and flag2:
-        if inverse:
-            increment = 10 ** ((value - add_mb[:, txidx, :]) / 10) * rb_nos
-        else:
-            increment = 10 ** ((value - add_mb[txidx, :, :]) / 10) * rb_nos
-        add_ma[txidx, :, :] += increment
-
 MAX_PL = 500 # The maximum path loss in dB, does not have a physical meaning
 
-def FastFadingCallback(fastfading_type):
-    """The callback function to get the fast fading.
-
-    Args:
-        fastfading_type (str): The fast fading type.
-
-    Returns:
-        function: The callback function to get the fast fading.
-    """
-    if fastfading_type == 'Rayleigh':
-        return Rayleigh_fastfading
-    else:
-        raise ValueError(f"Invalid fast fading type: {fastfading_type}")
-        
 
 def PathLossCallback(pathloss_type):
     """The callback function to get the path loss.
@@ -113,68 +34,7 @@ def PathLossCallback(pathloss_type):
     else:
         raise ValueError(f"Invalid path loss type: {pathloss_type}")
     
-def ShadowingCallback(shadowing_type):
-    """The callback function to get the shadowing.
-
-    Args:
-        shadowing_type (str): The shadowing type.
-
-    Returns:
-        function: The callback function to get the shadowing.
-    """
-    if shadowing_type == '3GPP_LogNormal':
-        return LogNormal_Shadowing
-    else:
-        raise ValueError(f"Invalid shadowing type: {shadowing_type}")
-
-def LogNormal_Shadowing(preShadowing, delta_distance=None, std=4, d_correlation=50):
-    """The UMa LOS shadowing model.
-
-    Args:
-        preShadowing (cp.ndarray): The pre-shadowing in dB. The shape is (num_tx, num_rx).
-        delta_distance (cp.ndarray): The distance difference in meters. The shape is (num_tx, num_rx).
-        n_tx (int): The number of transmitters.
-        n_rx (int): The number of receivers.
-        std (float): The standard deviation of the shadowing in dB. The default value is 4.
-        d_correlation (float): The decorrelation distance in meters. The default value is 50.
-
-    Returns:
-        cp.ndarray: The shadowing in dB. The shape is (num_tx, num_rx).
-    """
-    new_shadowing = cp.random.normal(0, std, preShadowing.shape)
-    if delta_distance is None:
-        delta_distance = cp.zeros(preShadowing.shape)
-    shadowing = 10 * cp.log10(1e-9+cp.exp(-1*(delta_distance/d_correlation))* (10 ** (preShadowing / 10)) + cp.sqrt(1-cp.exp(-2*(delta_distance/d_correlation)))*(10**(new_shadowing/10)))
-    return shadowing
-    
-def Rayleigh_fastfading(n_tx, n_rx, n_rb, std=1):
-    """The Rayleigh fast fading model.
-
-    Args:
-        n_tx (int): The number of transmitters.
-        n_rx (int): The number of receivers.
-        n_rb (int): The number of resource blocks.
-        std (float): The standard deviation of the fast fading in dB. The default value is 1.
-
-    Returns:
-        cp.ndarray: The fast fading in dB. The shape is (n_tx, n_rx, n_rb).
-    """
-    # 生成两个独立的高斯分布随机变量
-    gaussian1 = cp.random.normal(0, std, size=(n_tx, n_rx))
-    gaussian2 = cp.random.normal(0, std, size=(n_tx, n_rx))
-    # 计算瑞利分布的信道增益
-    r = cp.sqrt(gaussian1 ** 2 + gaussian2 ** 2)
-    # 计算信道增益的平均值
-    omega = cp.mean(r ** 2)
-    # 计算瑞利分布的概率密度函数
-    p_r = (2 * r / omega) * cp.exp(-r ** 2 / omega)
-    # 计算信道增益
-    h = 10 * cp.log10(1e-9+p_r)
-    # repeat n_rb times
-    h = h[:, :, None] * cp.ones((1, 1, n_rb))
-    return h
-
-def FreeSpacePathLoss(tx_positions, rx_positions, frequency_ranges):
+def FreeSpacePathLoss(tx_positions, rx_positions, frequency_ranges, **kwargs):
     """The free space path loss model.
 
     Args:
@@ -191,7 +51,9 @@ def FreeSpacePathLoss(tx_positions, rx_positions, frequency_ranges):
     path_loss = 20 * cp.log10(1e-9+d_2d) + 20 * cp.log10(1e-9+frequency_ranges) + 32.44 # The path loss in dB, shape: (num_tx, num_rx, num_freq)
     return path_loss
 
-def V2V_highway_pathloss(tx_positions, rx_positions, frequency_ranges, h_tx=1.5, h_rx=1.5):
+def V2V_highway_pathloss(tx_positions, rx_positions, frequency_ranges, **kwargs):
+    h_tx = kwargs.get('h_tx', 1.5) # The height of the transmitter in meters
+    h_rx = kwargs.get('h_rx', 1.5) # The height of the receiver in meters
     frequency_ranges = frequency_ranges[None, None, :] * cp.ones((tx_positions.shape[0], rx_positions.shape[0], len(frequency_ranges)))
     d_2d = cp.sqrt(cp.sum((tx_positions[:, None, :] - rx_positions[None, :, :])**2, axis=-1)) # The 2D distance in meters, shape: (num_tx, num_rx)
     d_2d = d_2d[:, :, None] * cp.ones((1, 1, frequency_ranges.shape[-1]))
@@ -199,7 +61,9 @@ def V2V_highway_pathloss(tx_positions, rx_positions, frequency_ranges, h_tx=1.5,
     path_loss = 32.4 + 20 * cp.log10(1e-9+d_3d) + 20 * cp.log10(1e-9+frequency_ranges) # The path loss in dB, shape: (num_tx, num_rx, num_freq)
     return path_loss
 
-def V2V_urban_pathloss(tx_positions, rx_positions, frequency_ranges, h_tx=1.5, h_rx=1.5):
+def V2V_urban_pathloss(tx_positions, rx_positions, frequency_ranges, **kwargs):
+    h_tx = kwargs.get('h_tx', 1.5) # The height of the transmitter in meters
+    h_rx = kwargs.get('h_rx', 1.5) # The height of the receiver in meters
     frequency_ranges = frequency_ranges[None, None, :] * cp.ones((tx_positions.shape[0], rx_positions.shape[0], len(frequency_ranges)))
     d_2d = cp.sqrt(cp.sum((tx_positions[:, None, :] - rx_positions[None, :, :])**2, axis=-1)) # The 2D distance in meters, shape: (num_tx, num_rx)
     d_2d = d_2d[:, :, None] * cp.ones((1, 1, frequency_ranges.shape[-1]))
@@ -207,7 +71,7 @@ def V2V_urban_pathloss(tx_positions, rx_positions, frequency_ranges, h_tx=1.5, h
     path_loss = 38.77 + 16.7 * cp.log10(1e-9+d_3d) + 18.2 * cp.log10(1e-9+frequency_ranges) # The path loss in dB, shape: (num_tx, num_rx, num_freq)
     return path_loss
 
-def UMa_LOS_pathloss(tx_positions_cp, rx_positions_cp, frequency_ranges, h_BS=25, h_UT=1.5, h_E=1):
+def UMa_LOS_pathloss(tx_positions_cp, rx_positions_cp, frequency_ranges, **kwargs):
     """The path loss model of UMa. 3GPP TR38.901 Table 7.4.1-1. Mostly used for V2I.
 
     Args:
@@ -221,6 +85,9 @@ def UMa_LOS_pathloss(tx_positions_cp, rx_positions_cp, frequency_ranges, h_BS=25
     Returns:
         cp.ndarray: The path loss in dB. The shape is (num_tx, num_rx, num_freq).
     """
+    h_BS = kwargs.get('h_BS', 25) # The height of the base station in meters
+    h_UT = kwargs.get('h_UT', 1.5) # The height of the user terminal in meters
+    h_E = kwargs.get('h_E', 1) # The effective environment height in meters
     # 1. Calculate the distance between the transmitter and the receiver
     # frequency_ranges repeated num_tx*num_rx times, shape: (num_tx, num_rx, num_freq)
     frequency_ranges = frequency_ranges[None, None, :] * cp.ones((tx_positions_cp.shape[0], rx_positions_cp.shape[0], len(frequency_ranges)))

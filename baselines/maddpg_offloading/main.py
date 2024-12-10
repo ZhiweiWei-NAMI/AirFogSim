@@ -1,13 +1,21 @@
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# 直到airfogsim的根目录
+isAirFogSim = False
+root_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+cnt = 0
+while not isAirFogSim:
+    cnt += 1
+    if 'airfogsim' in os.listdir(root_path) or cnt > 10:
+        isAirFogSim = True
+    else:
+        root_path = os.path.abspath(os.path.join(root_path, os.path.pardir))
+sys.path.append(root_path)
 dir_name = os.path.dirname(__file__)
-
 from airfogsim import AirFogSimEnv, BaseAlgorithmModule
 import numpy as np
 import random
 import yaml
-import sys
 from airfogsim.scheduler import RewardScheduler, TaskScheduler
 
 def load_config(path):
@@ -16,7 +24,8 @@ def load_config(path):
         return config
 
 # 1. Load the configuration file
-config_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), 'config.yaml')
+    
+config_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), 'maddpg_airfogsim_config.yaml')
 config = load_config(config_path)
 
 # 2. Create the environment
@@ -30,9 +39,6 @@ RewardScheduler.setModel(env, 'REWARD', '1/task_delay')
 accumulated_reward = 0
 np.random.seed(0)
 random.seed(0)
-v2u_rate = [0]
-v2i_rate = [0]
-u2i_rate = [0]
 while not env.isDone():
     algorithm_module.scheduleStep(env)
     env.step()
@@ -41,16 +47,5 @@ while not env.isDone():
     out_of_ddl_task_num = TaskScheduler.getOutOfDDLTasks(env)
     succ_ratio = task_num / max(1,task_num + out_of_ddl_task_num)
     env.render()
-    v2u_rate.append(env.getChannelAvgRate('V2U'))
-    v2i_rate.append(env.getChannelAvgRate('V2I'))
-    u2i_rate.append(env.getChannelAvgRate('U2I'))
-    print(f'Simulation time: {env.simulation_time}, ACC_Reward: {succ_ratio*accumulated_reward/max(1,task_num)} V2U: {v2u_rate[-1]}, V2I: {v2i_rate[-1]}, U2I: {u2i_rate[-1]}', end='\r')
+    print(f'Simulation time: {env.simulation_time}, ACC_Reward: {succ_ratio*accumulated_reward/max(1,task_num)}', end='\r')
 env.close()
-# plt绘制
-import matplotlib.pyplot as plt
-plt.plot(v2u_rate[1:],label='V2U')
-plt.plot(v2i_rate[1:],label='V2I')
-plt.plot(u2i_rate[1:],label='U2I')
-plt.legend()
-plt.savefig('rate.png',dpi=300)
-print('Simulation done!')

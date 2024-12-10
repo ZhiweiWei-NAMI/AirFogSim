@@ -1,4 +1,7 @@
+import sys
 import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+dir_name = os.path.dirname(__file__)
 
 os.environ['useCUPY'] = 'False'
 print('useCUPY:', os.environ['useCUPY'])
@@ -7,7 +10,6 @@ print('useCUPY:', os.environ['useCUPY'])
 from airfogsim import AirFogSimEnv, BaseAlgorithmModule, NVHAUAlgorithmModule, DDQNAlgorithmModule, AirFogSimEvaluation
 import numpy as np
 import yaml
-import sys
 from pyinstrument import Profiler
 
 root=os.path.abspath(__file__)
@@ -28,7 +30,7 @@ profiler = Profiler()
 profiler.start()
 
 # 1. Load the configuration file
-config_path = sys.argv[1] if len(sys.argv) > 1 else 'config.yaml'
+config_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), 'config.yaml')
 config = load_config(config_path)
 
 # 2. Get algorithm module
