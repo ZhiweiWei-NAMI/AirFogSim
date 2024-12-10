@@ -41,8 +41,7 @@ class BaseAlgorithmModule:
         Args:
             env (AirFogSimEnv): The environment object.
         """
-        self.rewardScheduler.setModel(env, 'REWARD',
-                                      '5 * log(10, 1 + (_mission_deadline-_mission_duration_sum)) * (1 / (1 + exp(-(_mission_deadline-_mission_duration_sum) / (_mission_finish_time - _mission_arrival_time-_mission_duration_sum))) - 1 / (1 + exp(-1)))')
+        self.rewardScheduler.setModel(env, 'REWARD', '-task_delay')
         self.rewardScheduler.setModel(env, 'PUNISH', '-1')
 
     def scheduleStep(self, env: AirFogSimEnv):
@@ -71,8 +70,7 @@ class BaseAlgorithmModule:
                 distance_dict = {}
                 current_node_id = task.getCurrentNodeId()
                 for RSU_id, RSU_info in RSU_infos.items():
-                    distance_dict[RSU_id] = self.trafficScheduler.getDistanceBetweenNodesById(env, current_node_id,
-                                                                                              RSU_id)
+                    distance_dict[RSU_id] = self.trafficScheduler.getDistanceBetweenNodesById(env, current_node_id, RSU_id)
                 distance_list = sorted(distance_dict.items(), key=lambda d: d[1],
                                        reverse=False)  # distance_list[idx][0]:key [1]:value
                 return_route = [distance_list[0][0]]  # Select the nearest RSU
@@ -341,7 +339,7 @@ class NVHAUAlgorithmModule(BaseAlgorithmModule):
                         'task_node_id': appointed_node_id,
                         'task_deadline': mission_profile['mission_deadline'],
                         'arrival_time': mission_profile['mission_arrival_time'],
-                        'return_size': mission_profile['mission_size']
+                        'return_size': mission_profile['mission_size'],
                     }
                     new_task = self.taskScheduler.generateTaskOfMission(env, mission_task_profile)
                     task_set.append(new_task)

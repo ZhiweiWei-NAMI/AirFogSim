@@ -2,6 +2,7 @@ import numpy as np
 from ..entities.task import Task
 from ..enum_const import EnumerateConstants
 from collections import deque
+import itertools
 class TaskManager:
     """ Task Manager is responsible for generating tasks and managing the task status. 
     """
@@ -24,7 +25,7 @@ class TaskManager:
         self._to_generate_task_infos = {} # use Node Id as the key, and the value is the task info list
         self._to_offload_tasks = {}
         self._to_compute_tasks = {}
-        self._waiting_to_return_tasks = {} # after computing, waiting to set return route
+        self._waiting_to_return_tasks = {} # after computing, waiting to set return route; equal to 
         self._to_return_tasks = {}
         self._done_tasks = {}
         self._out_of_ddl_tasks = {}
@@ -186,7 +187,7 @@ class TaskManager:
                 allocated_cpu = allocated_cpu_by_taskId.get(task_id, 0)
                 task_info.compute(allocated_cpu, simulation_interval, current_time)
                 if task_info.isComputed():
-                    self._to_compute_tasks[node_id].remove(task_info)
+                    task_infos.remove(task_info)
                     self._waiting_to_return_tasks[node_id]=self._waiting_to_return_tasks.get(node_id, [])
                     self._waiting_to_return_tasks[node_id].append(task_info)
                     # task_info.startToReturn(current_time)
@@ -452,7 +453,7 @@ class TaskManager:
                     task_size = self._generateSize(), task_deadline = self._generateDeadline(),
                     task_priority = self._generatePriority(), task_arrival_time = arrival_time)
 
-    def generateTaskInfoOfMission(self,task_node_id,task_deadline,arrival_time,return_size):
+    def generateTaskInfoOfMission(self,task_node_id,task_deadline,arrival_time,return_size, to_return_node_id=None, return_lazy_set=False):
         """Generate the tasks for mission by the node id.
 
         Args:
@@ -464,9 +465,9 @@ class TaskManager:
             Task: The task.
         """
         self._task_id += 1
-        return Task(task_id=f'Task_{self._task_id}', task_node_id=task_node_id, task_cpu=0,
-                    task_size=0, task_deadline=task_deadline,task_priority=self._generatePriority(),
-                    task_arrival_time=arrival_time,required_returned_size= return_size,return_lazy_set=True)
+        return Task(task_id=f'Task_{self._task_id}', task_node_id=task_node_id, task_cpu=0, to_return_node_id=to_return_node_id,
+                    task_size=0, task_deadline=task_deadline,task_priority=self._generatePriority(), return_lazy_set=True ,
+                    task_arrival_time=arrival_time,required_returned_size= return_size)
 
     def _generateTasks(self, task_node_ids_kwardsDict, cur_time, simulation_interval):
         # 1. Move the tasks from the to_generate_task_infos to the todo_tasks according to the current time
@@ -554,7 +555,7 @@ class TaskManager:
     def checkTasks(self, cur_time):
         # 仅当任务在队列的时候，才查看是否超时：
         # 1）在task node的to_offload状态下，即任务生成队列；
-        # 2）在compute node的to_return状态下，即任务返回队列；
+        # 2）在compute node的to_return状态和waiting_to_return下，即任务返回队列；
         # 3）在compute node的to_compute状态下，即任务计算队列；
         # 1. Check the todo tasks
         for task_node_id, task_infos in self._to_offload_tasks.items():
@@ -564,16 +565,17 @@ class TaskManager:
                     failed_task_list = self._out_of_ddl_tasks.get(task_node_id, [])
                     failed_task_list.append(task_info)
                     self._out_of_ddl_tasks[task_node_id] = failed_task_list
-                    self._to_offload_tasks[task_node_id].remove(task_info)
+                    task_infos.remove(task_info)
         # 2. Check the return tasks
-        for node_id, task_infos in self._to_return_tasks.items():
+        to_return_items = itertools.chain(self._to_return_tasks.items(), self._waiting_to_return_tasks.items())
+        for node_id, task_infos in to_return_items:
             for task_info in task_infos.copy():
                 if task_info.getTaskDeadline() + task_info.getTaskArrivalTime() <= cur_time:
                     task_info.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_DDL)
                     failed_task_list = self._out_of_ddl_tasks.get(node_id, [])
                     failed_task_list.append(task_info)
                     self._out_of_ddl_tasks[node_id] = failed_task_list
-                    self._to_return_tasks[node_id].remove(task_info)
+                    task_infos.remove(task_info)
                 elif not task_info.requireReturn():
                     # 直接跳到下一个阶段
                     task_node_id = task_info.getTaskNodeId()
@@ -581,7 +583,7 @@ class TaskManager:
                     self._done_tasks[task_node_id].append(task_info)
                     task_info.transmit_to_Node(task_info.getToReturnNodeId(), 1, task_info.getLastComputeTime(), fast_return=True)
                     self._recently_done_100_tasks.append(task_info)
-                    self._to_return_tasks[node_id].remove(task_info)
+                    task_infos.remove(task_info)
         # 3. Check the computing tasks
         for node_id, task_infos in self._to_compute_tasks.items():
             for task_info in task_infos.copy():
@@ -590,7 +592,7 @@ class TaskManager:
                     failed_task_list = self._out_of_ddl_tasks.get(node_id, [])
                     failed_task_list.append(task_info)
                     self._out_of_ddl_tasks[node_id] = failed_task_list
-                    self._to_compute_tasks[node_id].remove(task_info)
+                    task_infos.remove(task_info)
 
     def offloadTask(self, task_node_id, task_id, target_node_id, current_time, route = None):
         """Offload the task by the task id and the target node id.
@@ -610,6 +612,7 @@ class TaskManager:
         """
         if route is None:
             route = [target_node_id]
+        assert route[-1] == target_node_id, 'The last node of the route should be the target node id.'
         if task_node_id in self._to_offload_tasks:
             for task_info in self._to_offload_tasks[task_node_id]:
                 if task_info.getTaskId() == task_id:

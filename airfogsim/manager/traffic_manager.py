@@ -501,5 +501,16 @@ class TrafficManager():
         assert UAV_id in self._UAV_infos.keys(), 'UAV_id not in _UAV_infos'
         return UAV_info['speed'] > 0
 
-    def getConfig(self, name):
-        return self._config_traffic.get(name, None)
+    def getConfig(self,name):
+        return self._config_traffic.get(name,None)
+    
+    def getNodePositionById(self, id):
+        if id in self._vehicle_infos:
+            return self._vehicle_infos[id]["position"]
+        elif id in self._UAV_infos:
+            return self._UAV_infos[id]["position"]
+        elif id in self._RSU_infos:
+            return self._RSU_infos[id]["position"]
+        elif id in self._cloudServer_infos:
+            return self._cloudServer_infos[id]["position"]
+        return None
