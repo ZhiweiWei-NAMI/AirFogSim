@@ -27,6 +27,9 @@ class CommunicationScheduler(BaseScheduler):
             task_id (str): The task id.
             RB_nos (list): The list of resource block numbers.
         """
+        # 确保RB_nos中每个数字都在0到n_RB-1之间，n_RB = getNumberOfRB(env)
+        n_RB = CommunicationScheduler.getNumberOfRB(env)
+        RB_nos = [RB_no % n_RB for RB_no in RB_nos]
         env.activated_offloading_tasks_with_RB_Nos[task_id] = RB_nos
 
     @staticmethod
