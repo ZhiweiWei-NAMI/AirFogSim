@@ -1,9 +1,69 @@
 from madrl_environments.pursuit import MAWaterWorld_mod
-from MADDPG import MADDPG
+from .MADDPG_model import MADDPG
 import numpy as np
-import torch as th
+import torch
 import visdom
 from params import scale_reward
+
+class DDQN_Env:
+
+    def __init__(self,n_agents, dim_obs, dim_act):
+        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        # 智能体数量
+        self.n_agents=n_agents
+        # 观测状态维度
+        self.dim_obs = dim_obs
+        # 动作空间维度（连续动作，因此每个维度表示一个动作特征）
+        self.dim_act = dim_act
+
+        # 超参数
+        self.lr = 2e-3  # 学习率
+        self.gamma = 0.9  # 折扣因子
+        self.buffer_size = 500  # 经验池容量
+        self.batch_size = 32  # 每次训练选取的经验数量
+        self.episodes_before_train = 10
+        self.epsilon = 0.9  # 探索系数
+        self.eps_end = 0.01  # 最低探索系数
+        self.eps_dec = 5e-7  # 探索系数衰减率
+        self.target_update = 200  # 目标网络的参数的更新频率
+
+        self.dim_hidden = 128  # 隐含层神经元个数
+        self.train_min_size = 200  # 经验池超过200后再训练(train_min_size>batch_size)
+        self.tau = 0.995  # 目标网络软更新平滑因子（策略网络权重）
+        self.smooth_factor = 0.995  # 最大q值平滑因子（旧值权重）
+
+        # self.return_list = []  # 记录每次迭代的return，即链上的reward之和
+        self.max_q_value = 0  # 最大state_value
+        # self.max_q_value_list = []  # 保存所有最大的state_value
+
+        # 模型文件路径
+        self.model_base_dir = "./airfogsim/algorithm/DDQN/model/"
+
+        # 实例化 Double-DQN
+        self.agent = MADDPG(self.n_agents, self.dim_obs, self.dim_act,self.lr, self.gamma, self.buffer_size, self.batch_size,
+                 self.episodes_before_train, self.train_min_size, self.tau, self.device)
+
+    def takeAction(self, state, mask):
+        # 状态state时做动作选择，action为动作索引
+        is_random, max_q_value, action = self.agent.take_action(state,mask)
+        # 平滑处理最大state_value
+        self.max_q_value = max_q_value * (1 - self.smooth_factor) + self.max_q_value * self.smooth_factor
+        # 保存每次迭代的最大state_value
+        # self.max_q_value_list.append(self.max_q_value)
+        return is_random,self.max_q_value,action
+
+    def addExperience(self, state, action,mask, reward, next_state,next_mask, done):
+        # 添加经验池
+        self.agent.remember(state, action,mask, reward, next_state,next_mask, done)
+
+    def train(self):
+        self.agent.update()
+
+    def saveModel(self,episode):
+        self.agent.save_models(episode,self.model_base_dir)
+
+    def loadModel(self,episode):
+        self.agent.load_models(episode,self.model_base_dir)
 
 # do not render the scene
 e_render = False

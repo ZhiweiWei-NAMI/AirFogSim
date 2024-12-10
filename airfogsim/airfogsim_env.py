@@ -114,11 +114,14 @@ class AirFogSimEnv():
         self.V2U_trans_data = []
         self.V2I_trans_data = []
         self.U2I_trans_data = []
+        self.V2U_link_sim_step_using = []
+        self.V2I_link_sim_step_using = []
+        self.U2I_link_sim_step_using = []
         self.traffic_step_generate=0
         self.traffic_step_allocate=0
 
 
-        # ----------------temporary records in each timeslot----------------
+        # ----------------temporary records in each traffic simulation step----------------
         self.new_vehicle_id_list=[]
 
     def _configManagersModels(self):
@@ -279,6 +282,62 @@ class AirFogSimEnv():
         self._compute_communication_rate(activated_task_dict)
         self._execute_communication(activated_task_dict)
 
+    def _allocate_communication_RBs(self, activated_offloading_tasks_with_RB_Nos: dict):
+        """Allocate the communication resources (RBs) for the offloading tasks.
+
+        Args:
+            activated_offloading_tasks_with_RB_Nos (dict): The activated offloading tasks with RB numbers. The key is the task ID, and the value is the list of RB numbers.
+
+        Returns:
+            dict: The activated offloading tasks profiles. The key is the task ID, and the value is the dict {tx_idx, rx_idx, channel_type, task}
+
+        Examples:
+            activated_offloading_tasks_with_RB_Nos = {
+                'Task_1': [1, 2, 3],
+                'Task_2': [4, 5, 6],
+                'Task_3': [7, 8, 9]
+            }
+
+        """
+        offloading_tasks, total_num = self.task_manager.getOffloadingTasksWithNumber()  # dict, key是node_id, value是task
+        activated_tasks = {}
+        if total_num == 0:
+            return activated_tasks
+
+        # 初始化
+        self.channel_manager.resetActiveLinks()
+        # 遍历激活连接
+        for _, task_set in offloading_tasks.items():
+            for task in task_set:
+                assert isinstance(task, Task)
+                task_id = task.getTaskId()
+                if task_id not in activated_offloading_tasks_with_RB_Nos:
+                    continue
+                path = task.getToOffloadRoute()
+                assert not task.isExecutedLocally(), '任务已经在本地执行，不需要分配RB！'
+                if len(path) == 0: continue
+                allocated_RBs = activated_offloading_tasks_with_RB_Nos[task_id]
+                tx, rx = task.getCurrentNodeId(), path[0]
+                tx_idx = self._getNodeIdxById(tx)
+                rx_idx = self._getNodeIdxById(rx)
+                TX_Node = self._getNodeById(tx)
+                RX_Node = self._getNodeById(rx)
+                TX_Node.setTransmitting(True)
+                RX_Node.setReceiving(True)
+                TX_Node_type = self._getNodeTypeById(tx)  # 'V', 'U', 'I'
+                RX_Node_type = self._getNodeTypeById(rx)  # 'V', 'U', 'I'
+                assert TX_Node_type in ['V', 'U', 'I'], 'TX_Node_type不在["Vehicle", "UAV", "RSU"]中！'
+                assert RX_Node_type in ['V', 'U', 'I'], 'RX_Node_type不在["Vehicle", "UAV", "RSU"]中！'
+                channel_type = f'{TX_Node_type}2{RX_Node_type}'
+                self.channel_manager.activateLink(tx_idx, rx_idx, allocated_RBs, channel_type)
+                activated_tasks[task_id] = {
+                    'tx_idx': tx_idx,
+                    'rx_idx': rx_idx,
+                    'channel_type': channel_type,
+                    'task': task
+                }
+        return activated_tasks
+
     def _compute_communication_rate(self, activated_task_dict):
         """Compute the communication rate for the offloading tasks. The communication rate is computed based on the channel model, such as path loss, shadowing, fading, etc.
 
@@ -299,6 +358,9 @@ class AirFogSimEnv():
         tmp_failed_tasks = [] # 临时存储失败的任务，仅包括传输层面的失败1）节点不在场景中；2）两次传输间隔超过channel timeout
         tx_size_dict = {}
         rx_size_dict = {}
+        V2I_link_step_using = 0
+        V2U_link_step_using = 0
+        U2I_link_step_using = 0
         for task_idx, task_profile in activated_task_dict.items():
             task = task_profile['task']
             assert isinstance(task, Task)
@@ -316,12 +378,13 @@ class AirFogSimEnv():
             RX_Node.receiving = False  
             # check if the task is out of the transmission time
             last_transmission_time = task.getLastTransmissionTime()
-            if self.channel_manager.transmissionTimeOut(last_transmission_time, self.simulation_time):
-                task.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_TTI)
-                tmp_failed_tasks.append(task_profile)
-                continue
+            # if self.channel_manager.transmissionTimeOut(last_transmission_time, self.simulation_time):
+            #     task.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_TTI)
+            #     tmp_failed_tasks.append(task_profile)
+            #     continue
             trans_data = np.sum(
                 self.channel_manager.getRateByChannelType(tx_idx, rx_idx, channel_type)) * self.simulation_interval
+            print(trans_data)
 
             tx_size = tx_size_dict.get(tx_id, 0)
             tx_size += trans_data
@@ -335,22 +398,28 @@ class AirFogSimEnv():
             if trans_flag:
                 tmp_succeed_tasks.append(task_profile)
 
+            # update indicators for evaluation
             self.channel['time'] += self.simulation_interval
             self.channel['data_size'] += trans_data
-
             if channel_type == 'V2I':
                 self.V2I_channel['time'] += self.simulation_interval
                 self.V2I_channel['data_size'] += trans_data
                 self.V2I_trans_data.append(trans_data)
+                V2I_link_step_using += 1
             elif channel_type == 'V2U':
                 self.V2U_channel['time'] += self.simulation_interval
                 self.V2U_channel['data_size'] += trans_data
                 self.V2U_trans_data.append(trans_data)
+                V2U_link_step_using += 1
             elif channel_type == 'U2I':
                 self.U2I_channel['time'] += self.simulation_interval
                 self.U2I_channel['data_size'] += trans_data
                 self.U2I_trans_data.append(trans_data)
+                U2I_link_step_using += 1
 
+        self.V2I_link_sim_step_using.append(V2I_link_step_using)
+        self.V2U_link_sim_step_using.append(V2U_link_step_using)
+        self.U2I_link_sim_step_using.append(U2I_link_step_using)
         self.channel_manager.setThisTimeslotTransSize(tx_size_dict, rx_size_dict)  # used for update energy in self._updateEnergy()
 
         for task_profile in tmp_succeed_tasks:
@@ -418,62 +487,6 @@ class AirFogSimEnv():
             node = self.cloudServers.get(node_id, None)
         return node
 
-    def _allocate_communication_RBs(self, activated_offloading_tasks_with_RB_Nos: dict):
-        """Allocate the communication resources (RBs) for the offloading tasks.
-        
-        Args:
-            activated_offloading_tasks_with_RB_Nos (dict): The activated offloading tasks with RB numbers. The key is the task ID, and the value is the list of RB numbers.
-
-        Returns:
-            dict: The activated offloading tasks profiles. The key is the task ID, and the value is the dict {tx_idx, rx_idx, channel_type, task}
-
-        Examples:
-            activated_offloading_tasks_with_RB_Nos = {
-                'Task_1': [1, 2, 3],
-                'Task_2': [4, 5, 6],
-                'Task_3': [7, 8, 9]
-            }
-
-        """
-        offloading_tasks, total_num = self.task_manager.getOffloadingTasksWithNumber()  # dict, key是node_id, value是task
-        activated_tasks = {}
-        if total_num == 0:
-            return activated_tasks
-
-        # 初始化
-        self.channel_manager.resetActiveLinks()
-        # 遍历激活连接
-        for _, task_set in offloading_tasks.items():
-            for task in task_set:
-                assert isinstance(task, Task)
-                task_id = task.getTaskId()
-                if task_id not in activated_offloading_tasks_with_RB_Nos:
-                    continue
-                path = task.getToOffloadRoute()
-                assert not task.isExecutedLocally(), '任务已经在本地执行，不需要分配RB！'
-                if len(path) == 0: continue
-                allocated_RBs = activated_offloading_tasks_with_RB_Nos[task_id]
-                tx, rx = task.getCurrentNodeId(), path[0]
-                tx_idx = self._getNodeIdxById(tx)
-                rx_idx = self._getNodeIdxById(rx)
-                TX_Node = self._getNodeById(tx)
-                RX_Node = self._getNodeById(rx)
-                TX_Node.setTransmitting(True)
-                RX_Node.setReceiving(True)
-                TX_Node_type = self._getNodeTypeById(tx)  # 'V', 'U', 'I'
-                RX_Node_type = self._getNodeTypeById(rx)  # 'V', 'U', 'I'
-                assert TX_Node_type in ['V', 'U', 'I'], 'TX_Node_type不在["Vehicle", "UAV", "RSU"]中！'
-                assert RX_Node_type in ['V', 'U', 'I'], 'RX_Node_type不在["Vehicle", "UAV", "RSU"]中！'
-                channel_type = f'{TX_Node_type}2{RX_Node_type}'
-                self.channel_manager.activateLink(tx_idx, rx_idx, allocated_RBs, channel_type)
-                activated_tasks[task_id] = {
-                    'tx_idx': tx_idx,
-                    'rx_idx': rx_idx,
-                    'channel_type': channel_type,
-                    'task': task
-                }
-        return activated_tasks
-
     def _updateWiredCommunication(self):
         """Update the wired communication for the cloud computing network nodes.
 
@@ -496,15 +509,14 @@ class AirFogSimEnv():
     def _updateTask(self):
         """Update and generate the task for the entities. 
         """
-        # task_node_ids_kwardsDict = {}
-        # for task_node_ids in self.task_node_ids:
-        #     task_node_ids_kwardsDict[task_node_ids] = self._getNodeById(task_node_ids).getTaskProfile()
-        # # generate task for each task node. It generates the future tasks, and stored in "to_generate_tasks" in the task manager. These tasks are viewed as ``predictable'' tasks.
-        # self.task_manager.generateAndCheckTasks(task_node_ids_kwardsDict, self.simulation_time, self.simulation_interval)
+        task_node_ids_kwardsDict = {}
+        for task_node_ids in self.task_node_ids:
+            task_node_ids_kwardsDict[task_node_ids] = self._getNodeById(task_node_ids).getTaskProfile()
+        # generate task for each task node. It generates the future tasks, and stored in "to_generate_tasks" in the task manager. These tasks are viewed as ``predictable'' tasks.
+        self.task_manager.generateAndCheckTasks(task_node_ids_kwardsDict, self.simulation_time, self.simulation_interval)
         for task_id, route in self.task_return_routes.items():
             self.task_manager.setTaskReturnRouteAndStartReturn(task_id, route, self.simulation_time)
         self.task_return_routes = {}
-        self.task_manager.checkTasks(self.simulation_time)
 
     def _updateEnergy(self):
         """Update the energy for the entities. For example, the battery consumption, the battery charging, etc.
@@ -799,7 +811,7 @@ class AirFogSimEnv():
         elif channel_type == 'U2I':
             return self.U2I_channel['data_size'] / self.U2I_channel['time'] if self.U2I_channel['time'] != 0 else 0
 
-    def getChannelTransData(self,channel_type):
+    def getChannelTransDataHistory(self,channel_type):
         assert channel_type in ['V2U', 'V2I', 'U2I']
         if channel_type == 'V2U':
             return self.V2U_trans_data
@@ -807,6 +819,15 @@ class AirFogSimEnv():
             return self.V2I_trans_data
         elif channel_type == 'U2I':
             return self.U2I_trans_data
+
+    def getLinkUsingHistory(self, channel_type):
+        assert channel_type in ['V2U', 'V2I', 'U2I']
+        if channel_type == 'V2U':
+            return self.V2U_link_sim_step_using
+        elif channel_type == 'V2I':
+            return self.V2I_link_sim_step_using
+        elif channel_type == 'U2I':
+            return self.U2I_link_sim_step_using
 
     def setMissionEvaluationIndicators(self,generate_num,allocate_num):
         self.traffic_step_generate=generate_num

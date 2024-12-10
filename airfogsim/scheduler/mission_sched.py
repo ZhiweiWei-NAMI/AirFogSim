@@ -109,5 +109,10 @@ class MissionScheduler(BaseScheduler):
         return position_list[nearest_index]  # Return the nearest position as a list
 
     @staticmethod
+    def setMissionEvaluationIndicators(env,generate_num,allocate_num):
+        env.setMissionEvaluationIndicators(generate_num,allocate_num)
+
+
+    @staticmethod
     def getConfig(env,name):
         return env.mission_manager.getConfig(name)

@@ -22,7 +22,7 @@ def hard_update(target, source):
 
 
 class MADDPG:
-    def __init__(self, n_agents, dim_obs, dim_act, gamma, buffer_size, batch_size,
+    def __init__(self, n_agents, dim_obs, dim_act,lr, gamma, buffer_size, batch_size,
                  episodes_before_train, train_min_size, tau, device):
         self.n_agents = n_agents
         self.dim_states = dim_obs
@@ -34,10 +34,11 @@ class MADDPG:
         self.train_min_size = train_min_size
         self.episodes_before_train = episodes_before_train
 
+        self.lr=lr
         self.gamma = gamma
         self.tau = tau
 
-        self.var = [1.0 for i in range(n_agents)]
+        self.var = [1.0 for i in range(n_agents)]  # 动作探索随机噪声
 
         # 实例化策略训练网络*n
         self.actors = [Actor(dim_obs, dim_act) for i in range(n_agents)]
@@ -50,10 +51,10 @@ class MADDPG:
         self.critics_target = deepcopy(self.critics)
         # 策略训练网络优化器
         self.critic_optimizer = [Adam(x.parameters(),
-                                      lr=0.001) for x in self.critics]
+                                      lr=self.lr) for x in self.critics]
         # 目标训练网络优化器
         self.actor_optimizer = [Adam(x.parameters(),
-                                     lr=0.0001) for x in self.actors]
+                                     lr=self.lr) for x in self.actors]
 
         # 经验池
         self.memory = ReplayBuffer(buffer_size=self.buffer_size, train_min_size=self.train_min_size)
@@ -76,7 +77,7 @@ class MADDPG:
             return
         # do not train until exploration is enough
         if self.episode_done <= self.episodes_before_train:
-            return None, None
+            return
 
         c_loss = []
         a_loss = []
@@ -133,24 +134,16 @@ class MADDPG:
 
         return c_loss, a_loss
 
-    def select_action(self, state_batch):
-        # state_batch: n_agents x state_dim
-        actions = th.zeros(
-            self.n_agents,
-            self.n_actions)
-        FloatTensor = th.cuda.FloatTensor if self.use_cuda else th.FloatTensor
+    def select_action(self, agents_state):
+        # agents_state: n_agents x state_dim
         for i in range(self.n_agents):
-            sb = state_batch[i, :].detach()
-            act = self.actors[i](sb.unsqueeze(0)).squeeze()
-
-            act += th.from_numpy(
-                np.random.randn(2) * self.var[i]).type(FloatTensor)
-
+            state = agents_state[i, :].detach()
+            actions = self.actors[i](state.unsqueeze(0)).squeeze()
+            actions += torch.from_numpy(np.random.randn(2) * self.var[i])
             if self.episode_done > self.episodes_before_train and self.var[i] > 0.05:
                 self.var[i] *= 0.999998
-            act = th.clamp(act, -1.0, 1.0)
-
-            actions[i, :] = act
+            # act = th.clamp(act, -1.0, 1.0)
+            # actions[i, :] = act
         self.steps_done += 1
 
         return actions

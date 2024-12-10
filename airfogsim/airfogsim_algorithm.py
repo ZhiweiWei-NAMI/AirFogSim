@@ -120,25 +120,6 @@ class BaseAlgorithmModule:
                 excluded_sensor_ids.append(appointed_sensor_id)
         self.missionScheduler.deleteBeAssignedMissionsProfile(env, delete_mission_profile_ids)
 
-        # 1. generate mission (according to Poisson)
-        # missionScheduler = AirFogSimScheduler.getMissionScheduler()
-        # mission_profiles = [{
-        #     'id':'Mission-1',
-        #     'position': (100,230),
-        #     'duration': 100,
-        #     'task_profiles': [{
-        #         'id':'Task-1',
-        #         'task_type':'classification',
-        #         'task_node_id':'Node-1',
-        #         'task_deadline': 100,
-        #         'task_data_size': 100,
-        #         'task_computation': 100,
-        #         'task_offloading': 100
-        #     }]
-        #     } for _ in range(3)]
-        # for mission_profile in mission_profiles:
-        #     missionScheduler.generateMission(env, mission_profile)
-
     def scheduleTraffic(self, env: AirFogSimEnv):
         """The UAV traffic scheduling logic. Should be implemented by the subclass. Default is move to the nearest
          mission sensing or task position. If there is no mission allocated to UAV, movement is random.
@@ -291,13 +272,15 @@ class NVHAUAlgorithmModule(BaseAlgorithmModule):
     def __init__(self):
         super().__init__()
 
-    def initialize(self, env: AirFogSimEnv):
+    def initialize(self, env: AirFogSimEnv, config={}):
         """Initialize the algorithm with the environment. Including setting the task generation model, setting the reward model, etc.
 
         Args:
             env (AirFogSimEnv): The environment object.
         """
-        super().initialize(env)
+        self.rewardScheduler.setModel(env, 'REWARD',
+                                      '5 * log(10, 1 + (_mission_deadline-_mission_duration_sum)) * (1 / (1 + exp(-(_mission_deadline-_mission_duration_sum) / (_mission_finish_time - _mission_arrival_time-_mission_duration_sum))) - 1 / (1 + exp(-1)))')
+        self.rewardScheduler.setModel(env, 'PUNISH', '-1')
 
     def scheduleStep(self, env: AirFogSimEnv):
         """The algorithm logic. Should be implemented by the subclass.
@@ -368,6 +351,8 @@ class NVHAUAlgorithmModule(BaseAlgorithmModule):
 
                 delete_mission_profile_ids.append(mission_profile['mission_id'])
                 excluded_sensor_ids.append(appointed_sensor_id)
+
+        self.missionScheduler.setMissionEvaluationIndicators(env,generate_num,allocate_num)
         self.missionScheduler.deleteBeAssignedMissionsProfile(env, delete_mission_profile_ids)
 
 
@@ -466,7 +451,6 @@ class NVHAUAlgorithmModule(BaseAlgorithmModule):
     def scheduleOffloading(self, env: AirFogSimEnv):
         # super().scheduleOffloading(env)
         pass
-
     def scheduleCommunication(self, env: AirFogSimEnv):
         super().scheduleCommunication(env)
 
@@ -544,13 +528,15 @@ class DDQNAlgorithmModule(BaseAlgorithmModule):
             self.DDQN_env.loadModel(last_episode)
 
 
-    def initialize(self, env: AirFogSimEnv):
+    def initialize(self, env: AirFogSimEnv, config={}):
         """Initialize the algorithm with the environment. Including setting the task generation model, setting the reward model, etc.
 
         Args:
             env (AirFogSimEnv): The environment object.
         """
-        super().initialize(env)
+        self.rewardScheduler.setModel(env, 'REWARD',
+                                      '5 * log(10, 1 + (_mission_deadline-_mission_duration_sum)) * (1 / (1 + exp(-(_mission_deadline-_mission_duration_sum) / (_mission_finish_time - _mission_arrival_time-_mission_duration_sum))) - 1 / (1 + exp(-1)))')
+        self.rewardScheduler.setModel(env, 'PUNISH', '-1')
         self.max_n_vehicles = env.traffic_manager.getConfig('max_n_vehicles')
         self.max_n_UAVs = env.traffic_manager.getConfig('max_n_UAVs')
         self.max_n_RSUs = env.traffic_manager.getConfig('max_n_RSUs')
@@ -640,6 +626,7 @@ class DDQNAlgorithmModule(BaseAlgorithmModule):
                 delete_mission_profile_ids.append(mission_profile['mission_id'])
                 excluded_sensor_ids.append(appointed_sensor_id)
 
+        self.missionScheduler.setMissionEvaluationIndicators(generate_num, allocate_num)
         self.missionScheduler.deleteBeAssignedMissionsProfile(env, delete_mission_profile_ids)
 
     def scheduleReturning(self, env: AirFogSimEnv):

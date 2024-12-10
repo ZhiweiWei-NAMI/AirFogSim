@@ -34,7 +34,7 @@ traffic:
   distance_threshold: 50 # The distance threshold to check if the node is reach target position
 
 task:
-  task_generation_model: "Poisson" # supported model:['Poisson', 'Uniform', 'Normal', 'Exponential']
+  task_generation_model: "Poisson" # supported model:['Poisson', 'Uniform', 'Normal', 'Exponential', 'None']
   task_generation_kwargs:
       lambda: 1 # Poission -> lambda; Uniform -> low, high; Normal -> mean, std; Exponential -> beta
   cpu_model: "Uniform" # supported model:['Uniform', 'Normal']
@@ -120,7 +120,7 @@ mission:
   mission_generation_model: "Poisson" # supported model:['Poisson', 'Uniform', 'Normal', 'Exponential']
   generation_model_args:
     Poisson:
-      lambda: 1
+      lambda: 0.5
     Uniform:
       low: 0
       high: 1

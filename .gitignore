@@ -2,3 +2,4 @@
 *.log
 *.run
 **/__pycache__/
+/evaluation
