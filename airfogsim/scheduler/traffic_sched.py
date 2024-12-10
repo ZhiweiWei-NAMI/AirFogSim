@@ -95,3 +95,15 @@ class TrafficScheduler(BaseScheduler):
         if route[0]['to_stay_time'] <= 0:
             del route[0]
         env.uav_routes[UAV_id] = route
+
+    @staticmethod
+    def getNearestRSUById(env, node_id):
+        rsu_infos = env.traffic_manager.getRSUInfos()
+        rsu_ids = list(rsu_infos.keys())
+        rsu_positions = [rsu_infos[rsu_id]['position'] for rsu_id in rsu_ids]
+        node_position = env.traffic_manager.getNodePositionById(node_id)
+        if node_position is None:
+            return rsu_ids[0]
+        distances = np.linalg.norm(np.asarray(rsu_positions) - np.asarray(node_position), axis=1)
+        nearest_idx = np.argmin(distances)
+        return rsu_ids[nearest_idx]

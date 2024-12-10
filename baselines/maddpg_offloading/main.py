@@ -17,6 +17,7 @@ import numpy as np
 import random
 import yaml
 from airfogsim.scheduler import RewardScheduler, TaskScheduler
+from .maddpg import MaddpgOffloadingAlgorithm
 
 def load_config(path):
     with open(path, 'r') as file:
