@@ -4,4 +4,10 @@
 
 This is a baseline implementation of the DQN algorithm for task offloading in a multi-agent system. The algorithm is implemented in the `dqn_offloading` directory.
 
-(To be updated.)
+Run the following command to train and test the DQN model:
+
+```bash
+python main_dqn_offloading.py
+```
+
+Further implementation will be added in the future.
