@@ -81,7 +81,7 @@ class AirFogSimEnv():
         # ----------------decisions, managed by schedulers----------------
         self.vehicle_mobility_patterns = {}  # dict, key是vehicle_id, value是mobility pattern={speed}
         self.uav_mobility_patterns = {}  # dict, key是uav_id, value是mobility pattern={angle, phi, speed}
-        self.uav_routes={} # dict, key是uav_id,value是route -> [{position -> [x,y,z]},{to_stay_time -> time}],...]
+        self.uav_routes={} # dict, key是uav_id,value是route -> [{position: [x,y,z]},{to_stay_time: time}],...]
         self.new_missions = []  # missions list
         self.activated_offloading_tasks_with_RB_Nos = {}  # dict, key是task_id, value 是RB的list
         self.compute_tasks_with_cpu = {}  # dict, key是task_id, value是对应assigned node分配的cpu
@@ -99,7 +99,7 @@ class AirFogSimEnv():
     def _configManagersModels(self):
         config = self.config
         # 1. Config the traffic manager
-        self.traffic_manager = TrafficManager(config['traffic'], self.traci_connection) 
+        self.traffic_manager = TrafficManager(config['traffic'], self.traci_connection, config['sumo']['sumo_net'])
         self._initRSUsAndCloudServers()
         # 2. Config the task manager
         self.task_manager = TaskManager(config['task'], predictable_seconds=self.traffic_interval)  # suppose tasks are generated every traffic interval

@@ -141,33 +141,9 @@ class MADDPGOffloadingAlgorithm(BaseAlgorithmModule):
         UAVs_mobile_pattern = {}
         for UAV_id, UAV_info in UAVs_info.items():
             current_position = UAV_info['position']
-            target_position = self.trafficScheduler.getNextPositionOfUav(env, UAV_id)
-            if target_position is None:
-                # 悬停
-                mobility_pattern = {'angle': 0, 'phi': 0, 'speed': 0}
-                UAVs_mobile_pattern[UAV_id] = mobility_pattern
-            else:
-                # Update stay time at first position in route
-                distance_threshold = self.trafficScheduler.getConfig(env, 'distance_threshold')
-                distance = np.linalg.norm(np.array(target_position) - np.array(current_position))
-                if distance < distance_threshold:
-                    self.trafficScheduler.updateRoute(env, UAV_id, self.trafficScheduler.getTrafficInterval())
-
-                delta_x = target_position[0] - current_position[0]
-                delta_y = target_position[1] - current_position[1]
-                delta_z = target_position[2] - current_position[2]
-
-                # 计算 xy 平面的方位角
-                angle = np.arctan2(delta_y, delta_x)
-
-                # 计算 z 相对于 xy 平面的仰角
-                distance_xy = np.sqrt(delta_x ** 2 + delta_y ** 2)
-                phi = np.arctan2(delta_z, distance_xy)
-
-                mobility_pattern = {'angle': angle, 'phi': phi}
-                UAV_speed_range = self.trafficScheduler.getConfig(env, 'UAV_speed_range')
-                mobility_pattern['speed'] = random.uniform(UAV_speed_range[0], UAV_speed_range[1])
-                UAVs_mobile_pattern[UAV_id] = mobility_pattern
+            target_position = self.trafficScheduler.getRandomTargetPositionForUAV(env, UAV_id)
+            mobility_pattern = self.trafficScheduler.getDefaultUAVMobilityPattern(env, UAV_id, current_position, target_position)
+            UAVs_mobile_pattern[UAV_id] = mobility_pattern
         self.trafficScheduler.setUAVMobilityPatterns(env, UAVs_mobile_pattern)
 
     def scheduleOffloading(self, env: AirFogSimEnv):

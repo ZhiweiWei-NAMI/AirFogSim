@@ -23,7 +23,6 @@ traffic:
   traffic_interval: 0.5 # in seconds, for traffic simulation. Remember to set the same value in the SUMO configuration file; otherwise, the simulation will not work properly
   UAV_z_range: [100, 200] # The range of z coordinates for UAVs
   UAV_speed_range: [10,30] # The speed of UAV (distance unit per timeslot)
-  vehicle_traffic_file: "path/to/vehicle_traffic_file.csv" # Only required if mode is "real". The format should be in accordance with the SUMO vehicle file format
   uav_traffic_file: "path/to/uav_traffic_file.csv" # UAV traffic file
   max_n_vehicles: 100 # Number of vehicles to simulate
   max_n_UAVs: 10 # Number of UAVs to simulate. UAVs are randomly generated in the simulation area initially
@@ -31,6 +30,7 @@ traffic:
   max_n_cloudServers: 1 # Number of cloud servers
   arrival_lambda: 1 # The rate at which vehicles arrive at the network per second (in Poisson distribution)
   distance_threshold: 50 # The distance threshold to check if the node is reach target position
+  nonfly_zone_coordinates: [[[1000, 1200], [1200, 1200], [1200, 1000], [1000, 1000]],[[1500, 1700], [1700, 1700], [1700, 1500], [1500, 1500]]] # The non-fly zones in the simulation area, each zone is represented by a list of x1, y1, x2, y2, x3, y3 coordinates
 
 task: # default task profile for all nodes
   task_generation_model: "Poisson" # supported model:['Poisson', 'Uniform', 'Normal', 'Exponential']
