@@ -21,8 +21,8 @@ traffic:
   traffic_mode: "real" # "real" or "SUMO"
   tripinfo: "./sumo_wujiaochang/tripinfo.csv" # The path to the SUMO tripinfo file
   traffic_interval: 0.5 # in seconds, for traffic simulation. Remember to set the same value in the SUMO configuration file; otherwise, the simulation will not work properly
-  UAV_z_range: [100, 100] # The range of z coordinates for UAVs
-  UAV_speed_range: [30,30] # The speed of UAV (distance unit per timeslot)
+  UAV_z_range: [100, 200] # The range of z coordinates for UAVs
+  UAV_speed_range: [10,30] # The speed of UAV (distance unit per timeslot)
   uav_traffic_file: "path/to/uav_traffic_file.csv" # UAV traffic file
   max_n_vehicles: 100 # Number of vehicles to simulate
   max_n_UAVs: 10 # Number of UAVs to simulate. UAVs are randomly generated in the simulation area initially
@@ -30,27 +30,42 @@ traffic:
   max_n_cloudServers: 1 # Number of cloud servers
   arrival_lambda: 1 # The rate at which vehicles arrive at the network per second (in Poisson distribution)
   distance_threshold: 50 # The distance threshold to check if the node is reach target position
+  nonfly_zone_coordinates: [[[1000, 1200], [1200, 1200], [1200, 1000], [1000, 1000]],[[1500, 1700], [1700, 1700], [1700, 1500], [1500, 1500]]] # The non-fly zones in the simulation area, each zone is represented by a list of x1, y1, x2, y2, x3, y3 coordinates
 
 task: # default task profile for all nodes
   task_generation_model: "Poisson" # supported model:['Poisson', 'Uniform', 'Normal', 'Exponential']
   task_generation_kwargs:
-      lambda: 1 # Poission -> lambda; Uniform -> low, high; Normal -> mean, std; Exponential -> beta
+    lambda: 1 # Poission -> lambda; Uniform -> low, high; Normal -> mean, std; Exponential -> beta
+  task_min_cpu: 0.5
+  task_max_cpu: 1
+  task_min_size: 0.5
+  task_max_size: 1
+  task_min_required_returned_size: 0
+  task_max_required_returned_size: 0
+  task_min_deadline: 0.5
+  task_max_deadline: 1
+  task_min_priority: 0.5
+  task_max_priority: 1
   cpu_model: "Uniform" # supported model:['Uniform', 'Normal']
-  cpu_model_kwargs:
+  cpu_kwargs:
     low: 0.5
     high: 1
   size_model: "Uniform" # supported model:['Uniform', 'Normal']
-  size_model_kwargs:
+  size_kwargs:
     low: 0.5
     high: 1
   deadline_model: "Uniform" # supported model:['Uniform', 'Normal']
-  deadline_model_kwargs:
+  deadline_kwargs:
     low: 0.5
     high: 1
   priority_model: "Uniform" # supported model:['Uniform', 'Normal']
-  priority_model_kwargs:
+  priority_kwargs:
     low: 0.5
     high: 1
+  required_returned_size_model: "Uniform" # supported model:['Uniform', 'Normal']
+  required_returned_size_kwargs:
+    low: 0
+    high: 0
 
 task_profile: # task profile for each node type
   task_node_gen_poss: 0.5 # The possibility of generating a task node when inializing the node
@@ -62,26 +77,28 @@ task_profile: # task profile for each node type
 
 fog_profile:
   vehicle:
-    cpu: 1 # CPU capacity of vehicles
+    cpu: 2 # CPU capacity of vehicles
     memory: 1 # Memory capacity of vehicles
     storage: 1 # Storage capacity of vehicles
   uav:
-    cpu: 1 # CPU capacity of UAVs
+    cpu: 3 # CPU capacity of UAVs
     memory: 1 # Memory capacity of UAVs
     storage: 1 # Storage capacity of UAVs
   rsu:
-    cpu: 1 # CPU capacity of RSUs
+    cpu: 10 # CPU capacity of RSUs
     memory: 1 # Memory capacity of RSUs
     storage: 1 # Storage capacity of RSUs
   cloud:
-    cpu: 1 # CPU capacity of cloud servers
+    cpu: 100 # CPU capacity of cloud servers
     memory: 1 # Memory capacity of cloud servers
     storage: 1 # Storage capacity of cloud servers
 
 state_attribute:
+  log_state: False # Whether to log the state attributes
+  time_window: 3 # The time window for state attributes statistics
   fog_node_state_attributes: ['position_x', 'position_y', 'position_z', 'speed', 'fog_profile', 'node_type']
   task_node_state_attributes: ['position_x', 'position_y', 'position_z', 'speed', 'task_profile', 'node_type']
-  task_state_attributes: ['task_node_id', 'task_size', 'task_cpu', 'required_returned_size', 'task_deadline', 'task_priority', 'task_arrival_time']
+  task_state_attributes: ['task_node_id', 'task_size', 'task_cpu', 'required_returned_size', 'task_deadline', 'task_priority', 'task_arrival_time', 'task_lifecycle_state']
 
 channel:
   outage_model: 'Rayleigh' # supported model:['Rayleigh'], further implementation can be added in airfogsim/channel_callback/*_callback.py
