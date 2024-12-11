@@ -1,22 +1,6 @@
-import sys
-import os
-# 直到airfogsim的根目录
-isAirFogSim = False
-root_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
-cnt = 0
-while not isAirFogSim:
-    cnt += 1
-    if 'airfogsim' in os.listdir(root_path) or cnt > 10:
-        isAirFogSim = True
-    else:
-        root_path = os.path.abspath(os.path.join(root_path, os.path.pardir))
-sys.path.append(root_path)
-
-import random
-
 from airfogsim.airfogsim_env import AirFogSimEnv
 from airfogsim.airfogsim_algorithm import BaseAlgorithmModule
-# from .algorithm.DDQN.DDQN_env import  DDQN_Env
+from airfogsim.algorithm.TransMADDPG.maddpg import MADDPG_Agent
 import numpy as np
 
 class MADDPGOffloadingAlgorithm(BaseAlgorithmModule):
@@ -53,7 +37,6 @@ class MADDPGOffloadingAlgorithm(BaseAlgorithmModule):
         self.task_min_size, self.task_max_size = config['task'].get('task_min_size', 0), config['task'].get('task_max_size', 1)
         self.task_min_deadline, self.task_max_deadline = config['task'].get('task_min_deadline', 0), config['task'].get('task_max_deadline', 1)
         self.task_min_priority, self.task_max_priority = config['task'].get('task_min_priority', 0), config['task'].get('task_max_priority', 1)
-        self.rewardScheduler.setModel(env, 'REWARD', '-task_priority*task_delay')
         self.node_dim = 6
         self.task_dim = 7
         self.fog_type_dict = {

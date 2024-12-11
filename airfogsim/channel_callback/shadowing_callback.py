@@ -42,9 +42,12 @@ def LogNormal_Shadowing(preShadowing, **kwargs):
     std = kwargs.get('std', 4)
     d_correlation = kwargs.get('d_correlation', 50)
     delta_distance = kwargs.get('delta_distance', None)
-    new_shadowing = cp.random.normal(0, std, preShadowing.shape)
     if delta_distance is None:
         delta_distance = cp.zeros(preShadowing.shape)
+    if preShadowing.shape != delta_distance.shape:
+        preShadowing = cp.random.normal(0, std, delta_distance.shape)
+    new_shadowing = cp.random.normal(0, std, preShadowing.shape)
+        
     shadowing = 10 * cp.log10(1e-9+cp.exp(-1*(delta_distance/d_correlation))* (10 ** (preShadowing / 10)) + cp.sqrt(1-cp.exp(-2*(delta_distance/d_correlation)))*(10**(new_shadowing/10)))
     return shadowing
     

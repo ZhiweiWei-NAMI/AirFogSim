@@ -70,6 +70,10 @@ class Task:
         return self.getLastOperationTime() - self._task_arrival_time
     
     @property
+    def task_priority(self):
+        return self._task_priority
+    
+    @property
     def task_lifecycle_state(self):
         # lifecycle includes to_generate, to_offload, to_return, computing, computed, returning, finished
         if self.isFinished():

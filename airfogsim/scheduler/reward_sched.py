@@ -69,7 +69,7 @@ class RewardScheduler(BaseScheduler):
             raise ValueError("Symbols are not set, please set the reward model first.")
         if env not in RewardScheduler.REWARD_MODEL or env not in RewardScheduler.REWARD_SYMOBOLS:
             raise ValueError(f"Reward model is not set for {env}, please set the reward model first.")
-        task = env.task_manager.getDoneTaskByTaskNodeAndTaskId(task_info['task_node_id'], task_info['task_id'])
+        task = env.task_manager.getTaskByTaskNodeAndTaskId(task_info['task_node_id'], task_info['task_id'])
         if task is None:
             raise ValueError(f"Task not found: {task_info}")
         # 调用task.getXXX()获取任务信息

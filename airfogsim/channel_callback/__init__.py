@@ -16,6 +16,7 @@ def addMatrix(add_ma, value, add_mb, rb_nos, txidx, rxidx, inverse=False):
         # 更新 add_ma
         add_ma[txidx, rxidx, :] += increment
 
+# (interference_power_matrix_utx_x2v, self.U2V_power_dB, self.V2UChannel_with_fastfading, rb_nos, txidx, rxidx)
 def subMatrix(sub_ma, value, sub_mb, rb_nos, txidx, rxidx, inverse=False):
     # 判断txidx和rxidx是否都在ma和mb的范围内
     flag1 = txidx < sub_ma.shape[0] and rxidx < sub_ma.shape[1]

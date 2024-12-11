@@ -37,6 +37,16 @@ class MissionManager:
 
         self._sensor_type_num = config_sensing['sensor_type_num']
 
+    def reset(self):
+        self._to_generate_missions_profile = []  # list: item is mission_profile dicts
+        self._executing_missions = {}  # key: node_id, value: list of missions
+        self._success_missions = {}  # key: node_id, value: list of success missions
+        self._failed_missions = {}  # key: node_id, value: list of failed missions
+        self._early_failed_missions = []  # list: item is early failed missions(missions failed before assigned)
+        self._recently_done_100_missions = deque(maxlen=100)
+        self._recently_fail_100_missions = deque(maxlen=100)
+        self._mission_id_counter = 0
+
     def __getNewMissionId(self):
         self._mission_id_counter += 1
         return self._mission_id_counter

@@ -1,5 +1,6 @@
 
 from .base_sched import BaseScheduler
+import numpy as np
 class EntityScheduler(BaseScheduler):
     """The entity scheduler for entities.
     """
@@ -202,4 +203,73 @@ class EntityScheduler(BaseScheduler):
         """
         return env._getNodeIdxById(node_id)
 
+    @staticmethod
+    def getTaskStates(env, all_tasks):
+        """Get the task states numpy.
 
+        Args:
+            env (AirFogSimEnv): The environment.
+            all_tasks (list): The list of the task infos.
+
+        Returns:
+            list: The list of the task states.
+        """
+        task_states = []
+        for task in all_tasks:
+            task_states.append(env.node_state_manager.transformTaskToTaskState(task, env.simulation_time))
+        return task_states
+
+    @staticmethod
+    def getTaskNodeStates(env):
+        """Get the task node states numpy.
+
+        Args:
+            env (AirFogSimEnv): The environment.
+
+        Returns:
+            list: The list of the task node states.
+        """
+        task_node_states = []
+        for task_node_id in env.task_node_ids:
+            task_node = env._getNodeById(task_node_id)
+            task_node_states.append(env.node_state_manager.transformNodeToNodeState(task_node, env.simulation_time, 'TN'))
+        return task_node_states
+
+    @staticmethod
+    def getFogNodeStates(env):
+        """Get the fog node states numpy.
+
+        Args:
+            env (AirFogSimEnv): The environment.
+
+        Returns:
+            list: The list of the fog node states.
+        """
+        fog_node_states = []
+        uav_fog_nodes = EntityScheduler.getFogNodesByType(env, 'uav')
+        rsu_fog_nodes = EntityScheduler.getFogNodesByType(env, 'rsu')
+        vehicle_fog_nodes = EntityScheduler.getFogNodesByType(env, 'vehicle')
+        for fog_node in uav_fog_nodes + rsu_fog_nodes + vehicle_fog_nodes:
+            fog_node_states.append(env.node_state_manager.transformNodeToNodeState(fog_node, env.simulation_time, 'FN'))
+        return fog_node_states
+    
+    @staticmethod
+    def getFogNodesByType(env, type):
+        """Get the fog nodes by the type.
+
+        Args:
+            env (AirFogSimEnv): The environment.
+            type (str): The type, ['vehicle' or 'v', 'uav' or 'u', 'rsu' or 'r']
+
+        Returns:
+            list: The list of the fog nodes.
+        """
+        if type in ['vehicle', 'v']:
+            fog_nodes = [vehicle for vehicle in env.vehicles.values()]
+        elif type in ['uav', 'u']:
+            fog_nodes = [uav for uav in env.UAVs.values()]
+        elif type in ['rsu', 'r']:
+            fog_nodes = [rsu for rsu in env.RSUs.values()]
+        # 判断fog_nodes.getId()是否在env.task_node_ids中
+        fog_nodes = [fog_node for fog_node in fog_nodes if fog_node.getId() in env.task_node_ids]
+        return fog_nodes

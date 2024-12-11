@@ -13,12 +13,18 @@ class StateInfoManager:
         self._task_node_state_df = pd.DataFrame(columns=['node_id', 'time'] + self._task_node_state_attributes)
         self._task_state_df = pd.DataFrame(columns=['task_id', 'time'] + self._task_state_attributes)
 
+    def reset(self):
+        self._current_time = -1
+        self._fog_node_state_df = pd.DataFrame(columns=['node_id', 'time'] + self._fog_node_state_attributes)
+        self._task_node_state_df = pd.DataFrame(columns=['node_id', 'time'] + self._task_node_state_attributes)
+        self._task_state_df = pd.DataFrame(columns=['task_id', 'time'] + self._task_state_attributes)
+
     @staticmethod
     def getAttribute(entity, attribute):
         if hasattr(entity, attribute):
             return getattr(entity, attribute)
-        if hasattr(entity, '_'+attribute):
-            return getattr(entity, '_'+attribute)
+        if attribute.startswith('_') and hasattr(entity, attribute[1:]):
+            return getattr(entity, attribute[1:])
         raise ValueError('The attribute {} does not exist in the entity.'.format(attribute))
 
     def logNodeState(self, fog_nodes, task_nodes, cur_time):
@@ -51,10 +57,16 @@ class StateInfoManager:
                 state.append(self.getAttribute(task, '_'+attr))
             self._task_state_df.loc[len(self._task_state_df)] = state
 
-    def transformNodeToNodeState(self, fog_node, current_time):
-        node_state = [fog_node.getId(), current_time]
-        for attr in self._fog_node_state_attributes:
-            node_state.append(self.getAttribute(fog_node, '_'+attr))
+    def transformNodeToNodeState(self, node, current_time, node_type):
+        assert node_type in ['FN', 'TN']
+        if node_type == 'FN':
+            node_state = [node.getId(), current_time]
+            for attr in self._fog_node_state_attributes:
+                node_state.append(self.getAttribute(node, '_'+attr))
+        else:
+            node_state = [node.getId(), current_time]
+            for attr in self._task_node_state_attributes:
+                node_state.append(self.getAttribute(node, '_'+attr))
         return node_state
     
     def transformTaskToTaskState(self, task, current_time):

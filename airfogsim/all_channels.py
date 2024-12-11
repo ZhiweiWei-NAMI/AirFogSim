@@ -31,7 +31,7 @@ class V2IChannel:
         self.pathloss_callback = PathLossCallback(kwargs.get('pathloss_type', 'UMa_LOS_tr38901'))
         self.shadow_callback = ShadowingCallback(kwargs.get('shadowing_type', '3GPP_LogNormal'))
         self.fast_fading_callback = FastFadingCallback(kwargs.get('fastfading_type', 'Rayleigh'))
-        self.update_shadow([])
+        self.update_shadow()
 
     
     def remove_vehicle_shadow(self, v_index):
@@ -59,8 +59,9 @@ class V2IChannel:
         BS_positions = self.BS_positions
         self.PathLoss = self.pathloss_callback(veh_positions, BS_positions, self.frequency_ranges)
 
-    def update_shadow(self, delta_distance_list):
-        if len(delta_distance_list) == 0:
+    def update_shadow(self, delta_distance_list=None):
+        # 如果shadow的任意一个shape为0，那么就重新生成shadow
+        if delta_distance_list is None:
             # 1 如果过去一个时间片的车辆数量发生了变化
             self.Shadow = self.shadow_callback(cp.zeros((self.n_Veh, self.n_BS)), std=self.shadow_std)
         else:
@@ -85,7 +86,7 @@ class V2VChannel:
         self.pathloss_callback = PathLossCallback(kwargs.get('pathloss_type', 'V2V_urban_tr37885'))
         self.shadow_callback = ShadowingCallback(kwargs.get('shadowing_type', '3GPP_LogNormal'))
         self.fast_fading_callback = FastFadingCallback(kwargs.get('fastfading_type', 'Rayleigh'))
-        self.update_shadow([])
+        self.update_shadow()
 
     def update_positions(self, positions):
         # 把字典转换成列表，通过vid_index来根据index排序
@@ -116,14 +117,11 @@ class V2VChannel:
         self.Shadow = cp.concatenate((self.Shadow, new_shadow), axis=1)
         self.n_Veh += 1
 
-    def update_shadow(self, delta_distance_list):
-        if len(delta_distance_list) == 0:
-            # 1 如果过去一个时间片的车辆数量发生了变化
+    def update_shadow(self, delta_distance_list=None):
+        if delta_distance_list is None:
             self.Shadow = self.shadow_callback(cp.zeros((self.n_Veh, self.n_Veh)), std=self.shadow_std)
         else:
             delta_distance_list = cp.asarray(delta_distance_list)
-            # delta_distance_list is the distance change of each vehicle; should calculate the relative distance between each pair of vehicles
-            # 这里不考虑向量delta_distance_list的长度变化，直接将变化的距离加到原来的距离上
             delta_distance = cp.add.outer(delta_distance_list, delta_distance_list)
             self.Shadow = self.shadow_callback(self.Shadow, delta_distance=delta_distance, std=self.shadow_std, d_correlation=self.decorrelation_distance)
 
@@ -146,7 +144,7 @@ class V2UChannel:
         self.pathloss_callback = PathLossCallback(kwargs.get('pathloss_type', 'free_space'))
         self.shadow_callback = ShadowingCallback(kwargs.get('shadowing_type', '3GPP_LogNormal'))
         self.fast_fading_callback = FastFadingCallback(kwargs.get('fastfading_type', 'Rayleigh'))
-        self.update_shadow([], [])
+        self.update_shadow()
     
     def remove_vehicle_shadow(self, v_index):
         '''删除车辆，删除车辆的阴影'''
@@ -186,8 +184,8 @@ class V2UChannel:
             return
         self.PathLoss = self.pathloss_callback(self.veh_positions, self.uav_positions, self.frequency_ranges)
 
-    def update_shadow(self, veh_delta_distance_list, uav_delta_distance_list):
-        if len(veh_delta_distance_list) == 0 and len(uav_delta_distance_list) == 0:
+    def update_shadow(self, veh_delta_distance_list=None, uav_delta_distance_list=None):
+        if veh_delta_distance_list is None and uav_delta_distance_list is None:
             # 1 如果过去一个时间片的车辆数量发生了变化（只会增加）或无人机数量发生了变化（只会减少）
             self.Shadow = cp.random.normal(0, self.shadow_std, size=(self.n_Veh, self.n_UAV))
         else:
@@ -215,7 +213,7 @@ class U2IChannel:
         self.pathloss_callback = PathLossCallback(kwargs.get('pathloss_type', 'free_space'))
         self.shadow_callback = ShadowingCallback(kwargs.get('shadowing_type', '3GPP_LogNormal'))
         self.fast_fading_callback = FastFadingCallback(kwargs.get('fastfading_type', 'Rayleigh'))
-        self.update_shadow([])
+        self.update_shadow()
 
     def remove_UAV_shadow(self, vid, vid_index):
         '''删除无人机，删除无人机的阴影'''
@@ -240,8 +238,8 @@ class U2IChannel:
             return
         self.PathLoss = self.pathloss_callback(self.UAV_positions, self.BS_positions, self.frequency_ranges)
 
-    def update_shadow(self, delta_distance_list):
-        if len(delta_distance_list) == 0:
+    def update_shadow(self, delta_distance_list=None):
+        if delta_distance_list is None:
             # 1 如果过去一个时间片的车辆数量发生了变化
             self.Shadow = cp.random.normal(0, self.shadow_std, size=(self.n_UAV, self.n_BS))
         else: 
@@ -267,7 +265,7 @@ class U2UChannel:
         self.pathloss_callback = PathLossCallback(kwargs.get('pathloss_type', 'free_space'))
         self.shadow_callback = ShadowingCallback(kwargs.get('shadowing_type', '3GPP_LogNormal'))
         self.fast_fading_callback = FastFadingCallback(kwargs.get('fastfading_type', 'Rayleigh'))
-        self.update_shadow([])
+        self.update_shadow()
 
     def remove_UAV_shadow(self, vid, vid_index):
         '''删除车辆，删除车辆的阴影'''
@@ -297,12 +295,12 @@ class U2UChannel:
         for i in range(self.PathLoss.shape[0]):
             self.PathLoss[i, i, :] = 0
                 
-    def update_shadow(self, delta_distance_list):
+    def update_shadow(self, delta_distance_list = None):
         '''输入距离变化，计算阴影变化，基于3GPP的规范'''
-        delta_distance = cp.add.outer(delta_distance_list, delta_distance_list)
-        if len(delta_distance_list) == 0: 
+        if delta_distance_list is None: 
             self.Shadow = cp.random.normal(0,self.shadow_std, size=(self.n_UAV, self.n_UAV))
         else:
+            delta_distance = cp.add.outer(delta_distance_list, delta_distance_list)
             delta_distance_list = cp.asarray(delta_distance_list)
             self.Shadow = self.shadow_callback(self.Shadow, delta_distance=delta_distance, std=self.shadow_std, d_correlation=self.decorrelation_distance)
 
