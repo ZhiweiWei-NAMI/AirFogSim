@@ -95,6 +95,11 @@ class ChannelManagerCP:
         self._initialize_Interference_and_active()
         self.resetActiveLinks()
 
+    def reset(self):
+        self._initialize_Channels()
+        self._initialize_Interference_and_active()
+        self.resetActiveLinks()
+
     
     def transmissionTimeOut(self, last_transmission_time, simulation_time):
         assert last_transmission_time >= 0 and simulation_time >= 0
@@ -371,7 +376,7 @@ class ChannelManagerCP:
             elif channel_type == 'U2V':
                 rb_nos = self.U2V_active_links[txidx, rxidx, :]
                 addMatrix(U2V_Signal, self.U2V_power_dB, self.V2UChannel_with_fastfading, rb_nos, txidx, rxidx)
-                subMatrix(interference_power_matrix_utx_x2v, self.U2V_power_dB, self.V2UChannel_with_fastfading, rb_nos, txidx, rxidx)
+                subMatrix(interference_power_matrix_utx_x2v, self.U2V_power_dB, self.V2UChannel_with_fastfading, rb_nos, txidx, rxidx, inverse=True)
                 power_db = self.U2V_power_dB
             elif channel_type == 'U2I':
                 rb_nos = self.U2I_active_links[txidx, rxidx, :]
@@ -479,6 +484,14 @@ class ChannelManagerCP:
         self.U2U_Rate = cp.where(self.is_U2U_outage, 0, self.U2U_Rate)
         self.U2V_Rate = cp.where(self.is_U2V_outage, 0, self.U2V_Rate)
         self.U2I_Rate = cp.where(self.is_U2I_outage, 0, self.U2I_Rate)
+        # 如果u2v_rate有nan
+        if cp.isnan(cp.sum(self.U2V_Rate)):
+            # 获取nan的行列数
+            nan_index = cp.where(cp.isnan(self.U2V_Rate))
+            print(nan_index)
+            print(self.U2V_SINR[nan_index])
+            print(self.U2V_Interference[nan_index])
+            print(U2V_Signal[nan_index])
 
         I2U_Interference = cp.repeat(X2U_Interference[cp.newaxis, :, :], self.n_RSU, axis = 0)
         I2V_Interference = cp.repeat(X2V_Interference[cp.newaxis, :, :], self.n_RSU, axis = 0)

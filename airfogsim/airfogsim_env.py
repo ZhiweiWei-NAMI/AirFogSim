@@ -96,6 +96,20 @@ class AirFogSimEnv():
         self.V2I_channel = {'time': 0, 'data_size': 0}
         self.U2I_channel = {'time': 0, 'data_size': 0}
 
+    def reset(self):
+        """Reset the environment.
+        """
+        self.traffic_manager.reset()
+        self.task_manager.reset()
+        self.channel_manager.reset()
+        self.mission_manager.reset()
+        self.sensor_manager.reset()
+        self.blockchain_manager.reset()
+        self.energy_manager.reset(self.traffic_manager.getUAVTrafficInfos().keys())
+        self.node_state_manager.reset()
+        self.simulation_time = 0
+        self.force_quit = False
+
     def _configManagersModels(self):
         config = self.config
         # 1. Config the traffic manager

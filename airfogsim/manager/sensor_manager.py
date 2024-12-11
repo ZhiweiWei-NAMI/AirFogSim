@@ -22,6 +22,13 @@ class SensorManager:
         self._sensor_type_num = config_sensing['sensor_type_num']
         self._initializeSensors(traffic_manager)
 
+    def reset(self):
+        self._busy_sensors = {}  # key: node_id, value: list of busy sensors
+        self._idle_sensors = {}  # key: node_id, value: list of idle sensors
+        self._unavailable_sensors = {}  # key: node_id, value: list of unavailable sensors
+        self._sensor_id_counter = 0
+
+
     def __getNewSensorId(self):
         new_id=self._sensor_id_counter
         self._sensor_id_counter += 1

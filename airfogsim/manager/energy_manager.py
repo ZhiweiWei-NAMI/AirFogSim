@@ -20,7 +20,11 @@ class EnergyManager:
         self._removed_UAVs_energy_info={} # node_id -> { energy,is_flying,is_hovering,is_sensing,is_receiving,is_sending}
         self._initUAVsEnergy(UAVs_keys)
 
-
+    def reset(self, UAVs_keys):
+        self._UAVs_energy_info={} # node_id -> { energy,is_flying,is_hovering,is_sensing,is_receiving,is_sending}
+        self._removed_UAVs_energy_info={} # node_id -> { energy,is_flying,is_hovering,is_sensing,is_receiving,is_sending}
+        self._initUAVsEnergy(UAVs_keys)
+        
     def _initUAVsEnergy(self,UAVs_keys):
         for UAV_id in UAVs_keys :
             self._UAVs_energy_info[UAV_id]={}

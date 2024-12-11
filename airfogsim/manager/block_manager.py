@@ -8,6 +8,12 @@ class BlockchainManager:
         self.blockchain = Blockchain(0)
         self.RSUs = RSUs
 
+    def reset(self):
+        self.blockchain = Blockchain(0)
+        for rsu in self.RSUs.values():
+            rsu.setStake(0)
+            rsu.setTotalRevenues(0)
+
     def getBlockchain(self):
         """Get the blockchain.
 

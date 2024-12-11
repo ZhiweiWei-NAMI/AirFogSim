@@ -35,6 +35,7 @@ class TaskManager:
         self._out_of_ddl_tasks = {}
         self._removed_tasks = {}
         self._recently_done_100_tasks = deque(maxlen=100)
+        self._recently_failed_100_tasks = deque(maxlen=100)
         self._task_id = 0
         self._predictable_seconds = predictable_seconds # the seconds that the task generation can be predicted
         self.setTaskGenerationModel(task_generation_model, **task_generation_kwargs)
@@ -43,6 +44,21 @@ class TaskManager:
         self.setTaskAttributeModel('Deadline', deadline_model, **deadline_kwargs)
         self.setTaskAttributeModel('Priority', priority_model, **priority_kwargs)
         self.setTaskAttributeModel('ReturnSize', required_returned_size_model, **required_returned_size_kwargs)
+
+    def reset(self):
+        self._to_generate_task_infos = {} # use Node Id as the key, and the value is the task info list
+        self._waiting_to_offload_tasks = {} # after generating, waiting to offload
+        self._offloading_tasks = {}
+        self._computing_tasks = {}
+        self._waiting_to_return_tasks = {} # after computing, waiting to set return route
+        self._returning_tasks = {}
+        self._done_tasks = {}
+        self._out_of_ddl_tasks = {}
+        self._removed_tasks = {}
+        self._recently_done_100_tasks = deque(maxlen=100)
+        self._recently_failed_100_tasks = deque(maxlen=100)
+        self._task_id = 0
+
 
     def getDoneTasks(self):
         """Get the done task info list.
@@ -68,7 +84,7 @@ class TaskManager:
                 out_of_ddl_tasks.append(task_info)
         return out_of_ddl_tasks
 
-    def getDoneTaskByTaskNodeAndTaskId(self, task_node_id, task_id):
+    def getTaskByTaskNodeAndTaskId(self, task_node_id, task_id):
         """Get the done task by the task node id and the task id.
 
         Args:
@@ -83,6 +99,10 @@ class TaskManager:
         """
         if task_node_id in self._done_tasks:
             for task_info in self._done_tasks[task_node_id]:
+                if task_info.getTaskId() == task_id:
+                    return task_info
+        if task_node_id in self._out_of_ddl_tasks:
+            for task_info in self._out_of_ddl_tasks[task_node_id]:
                 if task_info.getTaskId() == task_id:
                     return task_info
         return None
@@ -141,10 +161,14 @@ class TaskManager:
             for task_info in self._returning_tasks[node_id]:
                 if task_info.getTaskId() == task_id:
                     self._returning_tasks[node_id].remove(task_info)
-                    self._done_tasks[task_node_id] = self._done_tasks.get(task_node_id, [])
-                    self._done_tasks[task_node_id].append(task_info)
-                    task_info.transmit_to_Node(task_info.getToReturnNodeId(), 1, current_time, fast_return=True)
-                    self._recently_done_100_tasks.append(task_info)
+                    if task_info.task_delay <= task_info.task_deadline:
+                        self._done_tasks[task_node_id] = self._done_tasks.get(task_node_id, [])
+                        self._done_tasks[task_node_id].append(task_info)
+                        self._recently_done_100_tasks.append(task_info)
+                    else:
+                        self._out_of_ddl_tasks[task_node_id] = self._out_of_ddl_tasks.get(task_node_id, [])
+                        self._out_of_ddl_tasks[task_node_id].append(task_info)
+                        self._recently_failed_100_tasks.append(task_info)
                     return True
         return False
     
@@ -207,6 +231,14 @@ class TaskManager:
         """
         return self._recently_done_100_tasks
     
+    def getRecentlyFailedTasks(self):
+        """Get the recently failed tasks (the maximum number is 100).
+
+        Returns:
+            list: The list of the recently failed tasks.
+        """
+        return self._recently_failed_100_tasks
+    
     def getWaitingToOffloadTasks(self):
         """Get the tasks to offload.
 
@@ -249,11 +281,11 @@ class TaskManager:
         offloading_tasks = {} # key: transmitter node id, value: list of tasks
         total_num = 0
         for task_node_id, task_infos in self._offloading_tasks.items():
-            offloading_tasks[task_node_id] = [task_info for task_info in task_infos if task_info.isTransmitting()]
+            offloading_tasks[task_node_id] = task_infos
             total_num += len(offloading_tasks[task_node_id])
         for node_id, task_infos in self._returning_tasks.items():
             to_offload_task = offloading_tasks.get(node_id, [])
-            to_offload_task.extend([task_info for task_info in task_infos if task_info.isTransmitting()])
+            to_offload_task.extend(task_infos)
             offloading_tasks[node_id] = to_offload_task
             total_num += len(offloading_tasks[node_id])
         return offloading_tasks, total_num
@@ -526,7 +558,7 @@ class TaskManager:
         for task_node_id, task_infos in self._to_generate_task_infos.items():
             for task_info in task_infos.copy():
                 if task_info.getTaskArrivalTime() <= cur_time: # if the task is arrived, i.e., the task arrival time is less than the current time
-                    todo_task_list = self._offloading_tasks.get(task_node_id, [])
+                    todo_task_list = self._waiting_to_offload_tasks.get(task_node_id, [])
                     todo_task_list.append(task_info)
                     self._waiting_to_offload_tasks[task_node_id] = todo_task_list
                     self._to_generate_task_infos[task_node_id].remove(task_info)
@@ -605,46 +637,33 @@ class TaskManager:
         return todo_task_number
 
     def checkTasks(self, cur_time):
-        # 仅当任务在队列的时候，才查看是否超时：
-        # 1）在task node的to_offload状态下，即任务生成队列；
-        # 2）在compute node的to_return状态和waiting_to_return下，即任务返回队列；
-        # 3）在compute node的to_compute状态下，即任务计算队列；
+        # DO NOT remove the task even if the task is out of deadline.
         # 1. Check the todo tasks
         to_offload_items = itertools.chain(self._waiting_to_offload_tasks.items(), self._offloading_tasks.items())
         for task_node_id, task_infos in to_offload_items:
             for task_info in task_infos.copy():
-                if task_info.getTaskDeadline() + task_info.getTaskArrivalTime() <= cur_time:
-                    task_info.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_DDL)
-                    failed_task_list = self._out_of_ddl_tasks.get(task_node_id, [])
-                    failed_task_list.append(task_info)
-                    self._out_of_ddl_tasks[task_node_id] = failed_task_list
+                if task_info.isExecutedLocally():
+                    # 直接进入到下一个阶段, compute
+                    if task_info.getCurrentNodeId() != task_info.getTaskNodeId():
+                        task_info.transmit_to_Node(task_info.getTaskNodeId(), 1, task_info.getLastOperationTime(), fast_return=True)
+                    self.addToComputeTask(task_info, task_info.getTaskNodeId(), cur_time)
                     task_infos.remove(task_info)
         # 2. Check the return tasks
         to_return_items = itertools.chain(self._returning_tasks.items(), self._waiting_to_return_tasks.items())
         for node_id, task_infos in to_return_items:
             for task_info in task_infos.copy():
-                if task_info.getTaskDeadline() + task_info.getTaskArrivalTime() <= cur_time:
-                    task_info.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_DDL)
-                    failed_task_list = self._out_of_ddl_tasks.get(node_id, [])
-                    failed_task_list.append(task_info)
-                    self._out_of_ddl_tasks[node_id] = failed_task_list
-                    task_infos.remove(task_info)
-                elif not task_info.requireReturn():
+                if not task_info.requireReturn():
                     # 直接跳到下一个阶段
                     task_node_id = task_info.getTaskNodeId()
-                    self._done_tasks[task_node_id] = self._done_tasks.get(task_node_id, [])
-                    self._done_tasks[task_node_id].append(task_info)
                     task_info.transmit_to_Node(task_info.getToReturnNodeId(), 1, task_info.getLastComputeTime(), fast_return=True)
-                    self._recently_done_100_tasks.append(task_info)
-                    task_infos.remove(task_info)
-        # 3. Check the computing tasks
-        for node_id, task_infos in self._computing_tasks.items():
-            for task_info in task_infos.copy():
-                if task_info.getTaskDeadline() + task_info.getTaskArrivalTime() <= cur_time:
-                    task_info.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_DDL)
-                    failed_task_list = self._out_of_ddl_tasks.get(node_id, [])
-                    failed_task_list.append(task_info)
-                    self._out_of_ddl_tasks[node_id] = failed_task_list
+                    if task_info.task_delay <= task_info.task_deadline:
+                        self._done_tasks[task_node_id] = self._done_tasks.get(task_node_id, [])
+                        self._done_tasks[task_node_id].append(task_info)
+                        self._recently_done_100_tasks.append(task_info)
+                    else:
+                        self._out_of_ddl_tasks[task_node_id] = self._out_of_ddl_tasks.get(task_node_id, [])
+                        self._out_of_ddl_tasks[task_node_id].append(task_info)
+                        self._recently_failed_100_tasks.append(task_info)
                     task_infos.remove(task_info)
 
     def offloadTask(self, task_node_id, task_id, target_node_id, current_time, route = None):
