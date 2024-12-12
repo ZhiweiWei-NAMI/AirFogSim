@@ -33,15 +33,15 @@ traffic:
 
 
 ## Setup:
-1. Install [SUMO](https://sourceforge.net/projects/sumo/files/sumo/) (tested version is 1.8.0), and set the Environment variable. Once suceed, enter `sumo` in command line as:
+1. Install [SUMO](https://sourceforge.net/projects/sumo/files/sumo/) (tested version is 1.15.0), and set the Environment variable. Once suceed, enter `sumo` in command line as:
 ```
 (airfogsim) (base) weizhiwei:~/data/airfogsim_code/$ sumo
 ```
 there should be:
 ```
-Eclipse SUMO sumo Version 1.8.0
- Build features: Windows-6.3.9600 AMD64 MSVC 18.0.40629.0 Release Proj GUI SWIG
- Copyright (C) 2001-2020 German Aerospace Center (DLR) and others; https://sumo.dlr.de
+Eclipse SUMO sumo Version 1.15.0
+ Build features: Linux-5.4.0-131-generic x86_64 GNU 9.4.0 Release FMI Proj GUI Intl SWIG GDAL GL2PS Eigen
+ Copyright (C) 2001-2022 German Aerospace Center (DLR) and others; https://sumo.dlr.de
  License EPL-2.0: Eclipse Public License Version 2 <https://eclipse.org/legal/epl-v20.html>
  Use --help to get the list of options.
 ```
