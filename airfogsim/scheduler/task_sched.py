@@ -20,7 +20,6 @@ class TaskScheduler(BaseScheduler):
         env.task_manager.setTaskGenerationModel(model, **kwargs)
         env.task_manager.setPredictableSeconds(predictable_seconds)
 
-
     @staticmethod
     def getAllToOffloadTaskInfos(env):
         """Get the task infos for the environment to offload.
@@ -34,11 +33,30 @@ class TaskScheduler(BaseScheduler):
         Examples:
             taskSched.getAllToOffloadTaskInfos(env)
         """
-        task_dict = env.task_manager.getToOffloadTasks()
+        task_dict = env.task_manager.getWaitingToOffloadTasks()
         task_info_list = []
         for task_node_id, tasks in task_dict.items():
             for task in tasks:
                 task_info_list.append(task.to_dict())
+        return task_info_list
+
+    @staticmethod
+    def getAllToOffloadTasks(env):
+        """Get the tasks for the environment to offload.
+
+        Args:
+            env (AirFogSimEnv): The AirFogSim environment.
+
+        Returns:
+            list: The list of task infos.
+
+        Examples:
+            taskSched.getAllToOffloadTaskInfos(env)
+        """
+        task_dict = env.task_manager.getWaitingToOffloadTasks()
+        task_info_list = []
+        for task_node_id, tasks in task_dict.items():
+            task_info_list.extend(tasks)
         return task_info_list
 
     @staticmethod
@@ -115,6 +133,27 @@ class TaskScheduler(BaseScheduler):
         last_step = env.simulation_time - env.traffic_interval
         task_info_list = []
         for task in recently_done_100_tasks:
+            if task.isFinished() and task.getLastOperationTime() >= last_step:
+                task_info_list.append(task.to_dict())
+        return task_info_list
+    
+    @staticmethod
+    def getLastStepFailTaskInfos(env):
+        """Get the failed task infos for last timeslot.
+
+        Args:
+            env (AirFogSimEnv): The AirFogSim environment.
+
+        Returns:
+            list: The list of task infos.
+
+        Examples:
+            taskSched.getLastStepFailTaskInfos(env)
+        """
+        recently_fail_100_tasks = env.task_manager.getRecentlyFailedTasks()
+        last_step = env.simulation_time - env.traffic_interval
+        task_info_list = []
+        for task in recently_fail_100_tasks:
             if task.isFinished() and task.getLastOperationTime() >= last_step:
                 task_info_list.append(task.to_dict())
         return task_info_list

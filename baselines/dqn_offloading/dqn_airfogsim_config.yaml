@@ -1,7 +1,7 @@
 
 simulation:
   vehicle_count: 200
-  max_simulation_time: 200
+  max_simulation_time: 100
   simulation_interval: 0.1 # in seconds, for transmission, computation, task generation and assignment, etc.
   traffic_interval: 0.5 # in seconds, for traffic simulation. Remember to set the same value in the SUMO configuration file; otherwise, the simulation will not work properly
   
@@ -37,13 +37,13 @@ task: # default task profile for all nodes
   task_generation_kwargs:
     lambda: 1 # Poission -> lambda; Uniform -> low, high; Normal -> mean, std; Exponential -> beta
   task_min_cpu: 0.5
-  task_max_cpu: 1
+  task_max_cpu: 0.8
   task_min_size: 0.5
-  task_max_size: 1
+  task_max_size: 0.8
   task_min_required_returned_size: 0
   task_max_required_returned_size: 0
-  task_min_deadline: 0.5
-  task_max_deadline: 1
+  task_min_deadline: 0.2
+  task_max_deadline: 2
   task_min_priority: 0.5
   task_max_priority: 1
   cpu_model: "Uniform" # supported model:['Uniform', 'Normal']

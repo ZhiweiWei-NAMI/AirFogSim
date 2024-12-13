@@ -84,7 +84,7 @@ class AirFogSimEnv():
         # ----------------decisions, managed by schedulers----------------
         self.vehicle_mobility_patterns = {}  # dict, key是vehicle_id, value是mobility pattern={speed}
         self.uav_mobility_patterns = {}  # dict, key是uav_id, value是mobility pattern={angle, phi, speed}
-        self.uav_routes={} # dict, key是uav_id,value是route -> [{position -> [x,y,z]},{to_stay_time -> time}],...]
+        self.uav_routes={} # dict, key是uav_id,value是route -> [{position: [x,y,z]},{to_stay_time: time}],...]
         self.new_missions = []  # missions list
         self.activated_offloading_tasks_with_RB_Nos = {}  # dict, key是task_id, value 是RB的list
         self.compute_tasks_with_cpu = {}  # dict, key是task_id, value是对应assigned node分配的cpu
@@ -111,10 +111,24 @@ class AirFogSimEnv():
         # ----------------temporary records in each traffic simulation step----------------
         self.new_vehicle_id_list=[]
 
+    def reset(self):
+        """Reset the environment.
+        """
+        self.traffic_manager.reset()
+        self.task_manager.reset()
+        self.channel_manager.reset()
+        self.mission_manager.reset()
+        self.sensor_manager.reset()
+        self.blockchain_manager.reset()
+        self.energy_manager.reset(self.traffic_manager.getUAVTrafficInfos().keys())
+        self.node_state_manager.reset()
+        self.simulation_time = 0
+        self.force_quit = False
+
     def _configManagersModels(self):
         config = self.config
         # 1. Config the traffic manager
-        self.traffic_manager = TrafficManager(config['traffic'], self.traci_connection) 
+        self.traffic_manager = TrafficManager(config['traffic'], self.traci_connection, config['sumo']['sumo_net'])
         self._initRSUsAndCloudServers()
         # 2. Config the task manager
         self.task_manager = TaskManager(config['task'], predictable_seconds=self.traffic_interval)  # suppose tasks are generated every traffic interval
@@ -223,12 +237,43 @@ class AirFogSimEnv():
             self._updateEnergy()
             # 11. Update the blockchain
             self._updateBlockchain()
-
             # Update the simulation time
             self.simulation_time += self.simulation_interval
+        if self.config['state_attribute'].get('log_state', False):
+            # 12. Update State Info
+            self._updateStateInfo()
         # ensure the simulation time is the same as the traffic time
         self.simulation_time = self.traffic_manager.getCurrentTime()
         return self.isDone()
+    
+    def _updateStateInfo(self):
+        """Update the state information for the entities.
+        """
+        # 1. 获取当前时刻的fog node和task node的ids
+        all_vehicle_ids_set = set(self.vehicles.keys())
+        all_uav_ids_set = set(self.UAVs.keys())
+        all_rsus_ids_set = set(self.RSUs.keys())
+        all_cloud_servers_ids_set = set(self.cloudServers.keys())
+        all_node_ids_set = all_vehicle_ids_set.union(all_uav_ids_set).union(all_rsus_ids_set).union(all_cloud_servers_ids_set)
+        task_node_ids = set(self.task_node_ids)
+        fog_node_ids = all_node_ids_set - task_node_ids
+        task_node_ids = task_node_ids.intersection(all_node_ids_set) # 交集，保证都在场景中
+        task_node_ids = list(task_node_ids)
+        fog_node_ids = list(fog_node_ids)
+        # 2. 从self.vehicles, self.UAVs, self.RSUs, self.cloudServers中获取fog node和task node的状态信息
+        fog_nodes = [self._getNodeById(node_id) for node_id in fog_node_ids]
+        task_nodes = [self._getNodeById(node_id) for node_id in task_node_ids]
+        # 3. 把None删
+        fog_nodes = [node for node in fog_nodes if node is not None]
+        task_nodes = [node for node in task_nodes if node is not None]
+        # 4. 存储状态信息
+        self.node_state_manager.logNodeState(fog_nodes, task_nodes, self.simulation_time)
+
+        # 5. 存储task的状态信息
+        recently_done_100_tasks = self.task_manager.getRecentlyDoneTasks()
+        # 只选取task.getLastOperationTime()在当前时刻的集合
+        recently_done_tasks = [task for task in recently_done_100_tasks if task.getLastOperationTime() == self.simulation_time]
+        self.node_state_manager.logTaskState(recently_done_tasks, self.simulation_time)
 
     def _updateSensor(self):
         """

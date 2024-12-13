@@ -212,8 +212,9 @@ class BaseAlgorithmModule:
             float: The reward value.
         """
         last_step_succ_task_infos = self.taskScheduler.getLastStepSuccTaskInfos(env)
+        last_step_fail_task_infos = self.taskScheduler.getLastStepFailTaskInfos(env)
         reward = 0
-        for task_info in last_step_succ_task_infos:
+        for task_info in last_step_succ_task_infos+last_step_fail_task_infos:
             reward += self.rewardScheduler.getRewardByTask(env, task_info)
         return reward
 

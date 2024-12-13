@@ -11,7 +11,7 @@ class RewardScheduler(BaseScheduler):
     ACCEPTED_MODEL=['REWARD','PUNISH']
     REWARD_SYMOBOLS = None
     PUNISH_SYMOBOLS=None
-    ACCEPTED_SYMBOLS = ['energy', 'task_deadline', 'task_delay',
+    ACCEPTED_SYMBOLS = ['energy', 'task_deadline', 'task_delay', 'task_priority',
                         '_mission_duration_sum','_mission_arrival_time','_mission_start_time','_mission_deadline','_mission_finish_time'] # mission_duration is an array
 
     @staticmethod
@@ -69,7 +69,7 @@ class RewardScheduler(BaseScheduler):
             raise ValueError("Symbols are not set, please set the reward model first.")
         if env not in RewardScheduler.REWARD_MODEL or env not in RewardScheduler.REWARD_SYMOBOLS:
             raise ValueError(f"Reward model is not set for {env}, please set the reward model first.")
-        task = env.task_manager.getDoneTaskByTaskNodeAndTaskId(task_info['task_node_id'], task_info['task_id'])
+        task = env.task_manager.getTaskByTaskNodeAndTaskId(task_info['task_node_id'], task_info['task_id'])
         if task is None:
             raise ValueError(f"Task not found: {task_info}")
         # 调用task.getXXX()获取任务信息

@@ -22,7 +22,7 @@ class RSU(TaskNode, FogNode, NetworkNode):
         NetworkNode.__init__(self, id, position_x, position_y, position_z, 0,0,0, network_profile)
         self._stake = 0
         self._total_revenues = 0.1
-        self._node_type = 'rsu'
+        self._node_type = 'I'
 
     def getStake(self):
         """Get the stake of the RSU.

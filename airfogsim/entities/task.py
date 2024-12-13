@@ -44,15 +44,15 @@ class Task:
         self._routes = [task_node_id]  # arrived node list
         self._to_offload_route = []  # the route to offload the task.
         self._to_return_route = []  # If task is computed, i.e., _compute_size >= _task_cpu, the list denotes the route the returned data should be transmitted.
-        self._decided_offload_time = []  # the decided offload time
+        self._decided_offload_time = -1  # the decided offload time
         self._routed_time = [task_arrival_time]  # the time that the task is routed to the node
         self._start_to_transmit_time = -1
         self._last_transmission_time = -1
-        self._transmitted_size = -1
+        self._transmitted_size = 0
         self._start_to_compute_time = -1
         self._start_to_return_time = -1
         self._last_return_time = -1
-        self._computed_size = -1
+        self._computed_size = 0
         self._last_compute_time = -1
         self._failure_reason_code = -1
         self._farther_mission = farther_mission
@@ -71,18 +71,24 @@ class Task:
         return self.getLastOperationTime() - self._task_arrival_time
     
     @property
-    def task_lifecycle(self):
-        # lifecycle includes generated, offloading, computing, returning, and finished
+    def task_priority(self):
+        return self._task_priority
+    
+    @property
+    def task_lifecycle_state(self):
+        # lifecycle includes to_generate, to_offload, to_return, computing, computed, returning, finished
         if self.isFinished():
             return 'finished'
         if self.isReturning():
             return 'returning'
         if self.isComputed():
             return 'computed'
+        if self.isComputing():
+            return 'computing'
         if self.isTransmitting():
             return 'offloading'
         if self._start_to_transmit_time >= 0:
-            return 'generated'
+            return 'to_offload'
         return 'to_generate'
 
     def to_dict(self):
@@ -144,7 +150,6 @@ class Task:
         if (self._to_return_node_id is None and self._return_lazy_set):
             return True
         if (self._assigned_to != self._to_return_node_id and self._required_returned_size > 0):
-            assert len(self._to_offload_route) > 0, "The route to offload the task should be set."
             return True
         return False
 
@@ -178,6 +183,14 @@ class Task:
             bool: True if the task is computed, False otherwise.
         """
         return self._computed_size >= self._task_cpu
+    
+    def isComputing(self):
+        """Check if the task is computing.
+
+        Returns:
+            bool: True if the task is computing, False otherwise.
+        """
+        return self._computed_size < self._task_cpu and self._start_to_compute_time > 0
 
     def setFartherMission(self, farther_mission: Mission):
         """Set the farther mission.
