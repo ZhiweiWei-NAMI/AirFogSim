@@ -35,10 +35,10 @@ env = AirFogSimEnv(config, interactive_mode=None)
 # 3. Get algorithm module
 algorithm_module = DQNOffloadingAlgorithm()
 algorithm_module.initialize(env, config)
-RewardScheduler.setModel(env, 'REWARD', 'max((1+task_priority)*log(1+max(0, task_deadline-task_delay)), 0.2*exp(task_deadline-task_delay))')
+RewardScheduler.setModel(env, 'REWARD', 'max((1+task_priority)*log(1+max(-0.9, task_deadline-task_delay))+0.2, 0.2*exp(task_deadline-task_delay))')
 np.random.seed(0)
 random.seed(0)
-EPOCH_NUM = 50
+EPOCH_NUM = 500
 for epoch in range(EPOCH_NUM):
     accumulated_reward = 0
     while not env.isDone():
