@@ -2,6 +2,7 @@ from airfogsim.airfogsim_env import AirFogSimEnv
 from airfogsim.airfogsim_algorithm import BaseAlgorithmModule
 from airfogsim.algorithm.TransDQN.dqn import DQN_Agent
 import numpy as np
+from torch.utils.tensorboard import SummaryWriter
 import argparse
 def parseDQNArgs():
     parser = argparse.ArgumentParser(description='DQN arguments')
@@ -109,6 +110,7 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
         }
         self.args = parseDQNArgs()
         self.DQN_Agent = DQN_Agent(self.args)
+        self.tensorboard_writer = SummaryWriter(log_dir=self.args.model_dir)
             
     def _encode_node_state(self, node_state, node_type):
         # id, time, position_x, position_y, position_z, speed, fog_profile, node_type
@@ -154,7 +156,7 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
         self.scheduleCommunication(env)
         self.scheduleComputing(env)
         self.scheduleTraffic(env)
-        self.DQN_Agent.update()
+        self.DQN_Agent.update(self.tensorboard_writer)
 
     def scheduleMission(self, env: AirFogSimEnv):
         return
