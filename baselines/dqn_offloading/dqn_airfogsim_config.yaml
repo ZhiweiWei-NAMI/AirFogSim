@@ -34,6 +34,7 @@ traffic:
 
 task: # default task profile for all nodes
   tti_threshold: 0.5 # The threshold of TTI for task offloading
+  hard_ddl: 2 # The hard deadline for tasks
   task_generation_model: "Poisson" # supported model:['Poisson', 'Uniform', 'Normal', 'Exponential']
   task_generation_kwargs:
     lambda: 0.5 # Poission -> lambda; Uniform -> low, high; Normal -> mean, std; Exponential -> beta
