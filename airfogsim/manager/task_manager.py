@@ -667,6 +667,16 @@ class TaskManager:
                         self._out_of_ddl_tasks[task_node_id].append(task_info)
                         self._recently_failed_100_tasks.append(task_info)
                     task_infos.remove(task_info)
+        # 3. Check the offloading or returning tasks, if the transmission time is out of TTI, then move the task to the failed tasks
+            # task.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_TTI)
+        transmitting_tasks = itertools.chain(self._offloading_tasks.items(), self._returning_tasks.items())
+        for node_id, task_infos in transmitting_tasks:
+            for task_info in task_infos.copy():
+                last_transmission_time = task_info.getLastTransmissionTime()
+                if task_info.isTransmitting() and cur_time - last_transmission_time > self._config_task.get('tti_threshold', 0.5):
+                    task_info.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_TTI)
+                    self.failOffloadingTask(task_info)
+
 
     def offloadTask(self, task_node_id, task_id, target_node_id, current_time, route = None):
         """Offload the task by the task id and the target node id.
@@ -727,3 +737,32 @@ class TaskManager:
             for task_info in task_infos:
                 self._waiting_to_return_tasks[node_id].remove(task_info)
 
+    def getAllTasks(self):
+        """Get all tasks.
+
+        Args:
+
+        Returns:
+            list: The list of all tasks.
+
+        Examples:
+            task_manager.getAllTasks()
+        """
+        all_tasks = []
+        for task_node_id, task_infos in self._waiting_to_offload_tasks.items():
+            all_tasks.extend(task_infos)
+        for task_node_id, task_infos in self._offloading_tasks.items():
+            all_tasks.extend(task_infos)
+        for task_node_id, task_infos in self._computing_tasks.items():
+            all_tasks.extend(task_infos)
+        for task_node_id, task_infos in self._waiting_to_return_tasks.items():
+            all_tasks.extend(task_infos)
+        for task_node_id, task_infos in self._returning_tasks.items():
+            all_tasks.extend(task_infos)
+        for task_node_id, task_infos in self._done_tasks.items():
+            all_tasks.extend(task_infos)
+        for task_node_id, task_infos in self._out_of_ddl_tasks.items():
+            all_tasks.extend(task_infos)
+        return all_tasks
+    
+    

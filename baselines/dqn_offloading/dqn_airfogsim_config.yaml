@@ -33,6 +33,7 @@ traffic:
   nonfly_zone_coordinates: [[[1000, 1200], [1200, 1200], [1200, 1000], [1000, 1000]],[[1500, 1700], [1700, 1700], [1700, 1500], [1500, 1500]]] # The non-fly zones in the simulation area, each zone is represented by a list of x1, y1, x2, y2, x3, y3 coordinates
 
 task: # default task profile for all nodes
+  tti_threshold: 0.5 # The threshold of TTI for task offloading
   task_generation_model: "Poisson" # supported model:['Poisson', 'Uniform', 'Normal', 'Exponential']
   task_generation_kwargs:
     lambda: 0.5 # Poission -> lambda; Uniform -> low, high; Normal -> mean, std; Exponential -> beta

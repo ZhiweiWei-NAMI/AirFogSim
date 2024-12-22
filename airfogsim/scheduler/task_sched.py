@@ -213,6 +213,20 @@ class TaskScheduler(BaseScheduler):
         """
         return len(env.task_manager.getDoneTasks())
     
+    def getTotalTaskNum(env):
+        """Get the number of the total tasks.
+
+        Args:
+            env (AirFogSimEnv): The AirFogSim environment.
+
+        Returns:
+            int: The number of the total tasks.
+
+        Examples:
+            taskSched.getTotalTaskNum(env)
+        """
+        return len(env.task_manager.getAllTasks())
+    
     @staticmethod
     def getOutOfDDLTasks(env):
         """Get the number of the failed tasks.

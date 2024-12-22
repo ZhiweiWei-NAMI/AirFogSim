@@ -347,10 +347,6 @@ class AirFogSimEnv():
             last_transmission_time = task.getLastTransmissionTime()
             if task.isReturning():
                 last_transmission_time = task.getLastReturnTime()
-            if self.channel_manager.transmissionTimeOut(last_transmission_time, self.simulation_time):
-                task.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_TTI)
-                tmp_failed_tasks.append(task_profile)
-                continue
             trans_data = np.sum(
                 self.channel_manager.getRateByChannelType(tx_idx, rx_idx, channel_type)) * self.simulation_interval
 
