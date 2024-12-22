@@ -110,7 +110,7 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
         }
         self.args = parseDQNArgs()
         self.DQN_Agent = DQN_Agent(self.args)
-        self.tensorboard_writer = SummaryWriter(log_dir=self.args.model_dir)
+        self.tensorboard_writer = SummaryWriter()
             
     def _encode_node_state(self, node_state, node_type):
         # id, time, position_x, position_y, position_z, speed, fog_profile, node_type
@@ -195,7 +195,7 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
         task_id_as_idx = [-1] * self.args.m1 * self.args.max_tasks
         task_node_task_cnt = [0] * self.args.m1
         surplus_task_data = {} # task_node_id -> task_data
-        task_node_dict = {task_node[0]: task_node for task_node in task_nodes}
+        task_node_dict = {task_node[0]: task_node for task_node in task_nodes} # task_node_id -> task_data
         for i, task in enumerate(task_data):
             task_node_id = task[2]
             if task_node_id not in task_node_id_as_idx:
@@ -237,6 +237,8 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
         compute_node_np = np.zeros((self.args.m2, self.args.d_node))
         compute_node_mask = np.zeros((self.args.m2))
         compute_node_id_as_idx = []
+        # compute_nodes按照cpu降序排列
+        # compute_nodes = sorted(compute_nodes, key=lambda x: x[6].get('cpu', 0), reverse=True)
         for i, compute_node in enumerate(compute_nodes):
             if i >= self.args.m2:
                 break
@@ -329,7 +331,14 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
             self.compScheduler.setComputingWithNodeCPU(env, task_id, alloc_cpu) 
 
     def getRewardByTask(self, env: AirFogSimEnv):
-        return super().getRewardByTask(env)
+        last_step_succ_task_infos = self.taskScheduler.getLastStepSuccTaskInfos(env)
+        last_step_fail_task_infos = self.taskScheduler.getLastStepFailTaskInfos(env)
+        reward = 0
+        for task_info in last_step_succ_task_infos+last_step_fail_task_infos:
+            # reward += self.rewardScheduler.getRewardByTask(env, task_info)
+            if task_info['task_delay'] <= task_info['task_deadline']:
+                reward += 1
+        return reward
 
     def getRewardByMission(self, env: AirFogSimEnv):
         return super().getRewardByMission(env)

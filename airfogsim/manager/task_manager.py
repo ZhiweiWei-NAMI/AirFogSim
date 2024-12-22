@@ -248,14 +248,6 @@ class TaskManager:
             dict: The tasks to offload. The key is the node id, and the value is the task list.
         """
         return self._waiting_to_offload_tasks
-
-    def getOffloadingTasks(self):
-        """Get the tasks to offload.
-
-        Returns:
-            dict: The tasks to offload. The key is the node id, and the value is the task list.
-        """
-        return self._offloading_tasks
     
     def getOffloadingTasks(self):
         offloading_tasks, num = self.getOffloadingTasksWithNumber()
@@ -712,6 +704,10 @@ class TaskManager:
                     self._offloading_tasks[task_node_id].append(task_info)
                     self._waiting_to_offload_tasks[task_node_id].remove(task_info)
                     assert len(task_info.getToOffloadRoute())>0
+                    # if execute locally
+                    if target_node_id == task_node_id:
+                        self.addToComputeTask(task_info, task_node_id, current_time)
+                        self._offloading_tasks[task_node_id].remove(task_info)
                     return True
         return False
 
