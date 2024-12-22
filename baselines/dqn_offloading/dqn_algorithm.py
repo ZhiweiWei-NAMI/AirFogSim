@@ -295,6 +295,7 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
     def scheduleCommunication(self, env: AirFogSimEnv):
         n_RB = self.commScheduler.getNumberOfRB(env)
         all_offloading_task_infos = self.taskScheduler.getAllOffloadingTaskInfos(env)
+        all_offloading_task_infos = all_offloading_task_infos[:self.args.m1 * self.args.max_tasks]
         avg_RB_nos = max(1, n_RB // max(1, len(all_offloading_task_infos)))
         RB_ctr = 0
         for task_dict in all_offloading_task_infos:
