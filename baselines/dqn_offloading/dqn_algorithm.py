@@ -13,7 +13,7 @@ def parseDQNArgs():
     parser.add_argument('--d_model', type=int, default=512)
     parser.add_argument('--nhead', type=int, default=4)
     parser.add_argument('--num_layers', type=int, default=3)
-    parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--device', type=str, default='cpu')
     parser.add_argument('--gamma', type=float, default=0.8)
     parser.add_argument('--tau', type=float, default=0.01)
@@ -23,7 +23,7 @@ def parseDQNArgs():
     # args.model_dir
     parser.add_argument('--model_dir', type=str, default='models/trans_dqn/')
     # args.model_path
-    parser.add_argument('--model_path', type=str, default='models/trans_dqn/model_900.pth')
+    parser.add_argument('--model_path', type=str, default='models/trans_dqn/model_500.pth')
     # save_model_freq
     parser.add_argument('--save_model_freq', type=int, default=500)
     # mode: train or test
@@ -137,7 +137,7 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
         required_returned_size = (task_state[5] - self.task_min_size) / (self.task_max_size - self.task_min_size)
         task_deadline = (task_state[6] - self.task_min_deadline) / (self.task_max_deadline - self.task_min_deadline)
         task_priority = (task_state[7] - self.task_min_priority) / (self.task_max_priority - self.task_min_priority)
-        task_arrival_time = (task_state[1] - task_state[8]) / task_deadline # time - task_arrival_time, 即任务已经等待的时间
+        task_arrival_time = (task_state[1] - task_state[8]) / (self.task_max_deadline - self.task_min_deadline) # time - task_arrival_time, 即任务已经等待的时间
         task_lifecycle_state = self.task_lifecycle_state_dict.get(task_state[9], -1)
         state = [task_size, task_cpu, required_returned_size, task_deadline, task_priority, task_arrival_time, task_lifecycle_state]
         return np.asarray(state)
@@ -307,17 +307,23 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
         all_computing_task_infos = self.taskScheduler.getAllComputingTaskInfos(env)
         # all_computing_task_infos按照task_arrival_time排序
         all_computing_task_infos = sorted(all_computing_task_infos, key=lambda x: x['task_arrival_time'])
-        appointed_fog_node_set = set()
+        appointed_fog_node_dict = {}
+        task_list = []
         for task_dict in all_computing_task_infos:
             task_id = task_dict['task_id']
-            task_node_id = task_dict['task_node_id']
             assigned_node_id = task_dict['assigned_to']
             assigned_node_info = self.entityScheduler.getNodeInfoById(env, assigned_node_id)
-            if assigned_node_info is None or assigned_node_id in appointed_fog_node_set:
+            task_num = appointed_fog_node_dict.get(assigned_node_id, 0)
+            if assigned_node_info is None or task_num>=3:
                 continue
-            appointed_fog_node_set.add(assigned_node_id)
-            # 所有cpu分配给task
-            self.compScheduler.setComputingWithNodeCPU(env, task_id, assigned_node_info.get('fog_profile', {}).get('cpu', 0)) 
+            appointed_fog_node_dict[assigned_node_id] = task_num + 1
+            task_list.append(task_dict)
+        # 所有cpu分配给task
+        for task_dict in task_list:
+            task_id = task_dict['task_id']
+            assigned_node_id = task_dict['assigned_to']
+            alloc_cpu = assigned_node_info.get('fog_profile', {}).get('cpu', 0) / max(1, appointed_fog_node_dict[assigned_node_id])
+            self.compScheduler.setComputingWithNodeCPU(env, task_id, alloc_cpu) 
 
     def getRewardByTask(self, env: AirFogSimEnv):
         return super().getRewardByTask(env)

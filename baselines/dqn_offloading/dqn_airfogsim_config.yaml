@@ -36,13 +36,13 @@ task: # default task profile for all nodes
   task_generation_model: "Poisson" # supported model:['Poisson', 'Uniform', 'Normal', 'Exponential']
   task_generation_kwargs:
     lambda: 1 # Poission -> lambda; Uniform -> low, high; Normal -> mean, std; Exponential -> beta
-  task_min_cpu: 0.5
-  task_max_cpu: 0.8
+  task_min_cpu: 0.2
+  task_max_cpu: 0.7
   task_min_size: 0.5
   task_max_size: 0.8
   task_min_required_returned_size: 0
   task_max_required_returned_size: 0
-  task_min_deadline: 0.2
+  task_min_deadline: 1
   task_max_deadline: 2
   task_min_priority: 0.5
   task_max_priority: 1
@@ -69,7 +69,7 @@ task: # default task profile for all nodes
 
 task_profile: # task profile for each node type
   task_node_gen_poss: 0.5 # The possibility of generating a task node when inializing the node
-  task_node_profiles: [{'type':'UAV', 'max_node_num': 15}, {'type':'vehicle', 'max_node_num': 10}] # The types of task nodes and the maximum number of nodes of each type
+  task_node_profiles: [{'type':'UAV', 'max_node_num': 10}, {'type':'vehicle', 'max_node_num': 10}] # The types of task nodes and the maximum number of nodes of each type
   vehicle: # The profile of vehicles
     lambda: 1
   uav: # The profile of UAVs

@@ -271,5 +271,5 @@ class EntityScheduler(BaseScheduler):
         elif type in ['rsu', 'r']:
             fog_nodes = [rsu for rsu in env.RSUs.values()]
         # 判断fog_nodes.getId()是否在env.task_node_ids中
-        fog_nodes = [fog_node for fog_node in fog_nodes if fog_node.getId() in env.task_node_ids]
+        fog_nodes = [fog_node for fog_node in fog_nodes if fog_node.getId() not in env.task_node_ids]
         return fog_nodes
