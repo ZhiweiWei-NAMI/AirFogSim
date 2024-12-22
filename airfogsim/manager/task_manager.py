@@ -214,6 +214,8 @@ class TaskManager:
             for task_info in task_infos.copy(): # task_info is Task
                 task_id = task_info.getTaskId()
                 allocated_cpu = allocated_cpu_by_taskId.get(task_id, 0)
+                if allocated_cpu == 0:
+                    continue
                 task_info.compute(allocated_cpu, simulation_interval, current_time)
                 if task_info.isComputed():
                     task_infos.remove(task_info)

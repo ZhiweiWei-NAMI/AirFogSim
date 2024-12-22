@@ -10,7 +10,7 @@ def parseDQNArgs():
     parser.add_argument('--max_tasks', type=int, default=3)
     parser.add_argument('--m1', type=int, default=50)
     parser.add_argument('--m2', type=int, default=50)
-    parser.add_argument('--d_model', type=int, default=128)
+    parser.add_argument('--d_model', type=int, default=512)
     parser.add_argument('--nhead', type=int, default=4)
     parser.add_argument('--num_layers', type=int, default=3)
     parser.add_argument('--lr', type=float, default=1e-3)
