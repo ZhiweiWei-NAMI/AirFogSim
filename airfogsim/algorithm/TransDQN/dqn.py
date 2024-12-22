@@ -67,20 +67,20 @@ class DQN_Agent:
             self.saveModel()
         experiences = self.replay_buffer.sample(batch_size)
         task_node, task_data, compute_node, task_mask, compute_node_mask, action, reward, next_task_node, next_task_data, next_compute_node, next_task_mask, next_compute_node_mask, done = zip(*experiences)
-        task_node = torch.FloatTensor(task_node).to(self.device)
-        task_data = torch.FloatTensor(task_data).to(self.device)
-        compute_node = torch.FloatTensor(compute_node).to(self.device)
-        task_mask = torch.FloatTensor(task_mask).to(self.device)
-        compute_node_mask = torch.FloatTensor(compute_node_mask).to(self.device)
-        action = torch.LongTensor(action).to(self.device) # [batch_size, m1, max_tasks]
+        task_node = torch.FloatTensor(np.asarray(task_node)).to(self.device)
+        task_data = torch.FloatTensor(np.asarray(task_data)).to(self.device)
+        compute_node = torch.FloatTensor(np.asarray(compute_node)).to(self.device)
+        task_mask = torch.FloatTensor(np.asarray(task_mask)).to(self.device)
+        compute_node_mask = torch.FloatTensor(np.asarray(compute_node_mask)).to(self.device)
+        action = torch.LongTensor(np.asarray(action)).to(self.device) # [batch_size, m1, max_tasks]
         action = action.view(batch_size, -1) # [batch_size, m1 * max_tasks]
-        reward = torch.FloatTensor(reward).to(self.device)
-        next_task_node = torch.FloatTensor(next_task_node).to(self.device)
-        next_task_data = torch.FloatTensor(next_task_data).to(self.device)
-        next_compute_node = torch.FloatTensor(next_compute_node).to(self.device)
-        next_task_mask = torch.FloatTensor(next_task_mask).to(self.device)
-        next_compute_node_mask = torch.FloatTensor(next_compute_node_mask).to(self.device)
-        done = torch.FloatTensor(done).to(self.device)
+        reward = torch.FloatTensor(np.asarray(reward, dtype=np.float32)).to(self.device)
+        next_task_node = torch.FloatTensor(np.asarray(next_task_node)).to(self.device)
+        next_task_data = torch.FloatTensor(np.asarray(next_task_data)).to(self.device)
+        next_compute_node = torch.FloatTensor(np.asarray(next_compute_node)).to(self.device)
+        next_task_mask = torch.FloatTensor(np.asarray(next_task_mask)).to(self.device)
+        next_compute_node_mask = torch.FloatTensor(np.asarray(next_compute_node_mask)).to(self.device)
+        done = torch.FloatTensor(np.asarray(done, dtype=np.float32)).to(self.device)
 
         # 2. 计算目标 Q 值
         with torch.no_grad():
