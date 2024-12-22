@@ -20,6 +20,14 @@ def parseDQNArgs():
     parser.add_argument('--replay_buffer_capacity', type=int, default=10000)
     parser.add_argument('--replay_buffer_update_freq', type=int, default=10)
     parser.add_argument('--batch_size', type=int, default=32)
+    # args.model_dir
+    parser.add_argument('--model_dir', type=str, default='models/trans_dqn/')
+    # args.model_path
+    parser.add_argument('--model_path', type=str, default='models/trans_dqn/model_900.pth')
+    # save_model_freq
+    parser.add_argument('--save_model_freq', type=int, default=500)
+    # mode: train or test
+    parser.add_argument('--mode', type=str, default='train')
     args = parser.parse_args()
     return args
 
@@ -42,6 +50,9 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
 
     def __init__(self):
         super().__init__()
+    
+    def saveModel(self):
+        self.DQN_Agent.saveModel()
 
     def reset(self):
         self.state_dict = {
@@ -179,7 +190,7 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
         task_data_np = np.zeros((self.args.m1, self.args.max_tasks, self.args.d_task))
         task_mask = np.zeros((self.args.m1, self.args.max_tasks))
         task_node_id_as_idx = task_node_id_as_idx[:self.args.m1] # 只取前m1个task node
-        task_id_as_idx = []
+        task_id_as_idx = [-1] * self.args.m1 * self.args.max_tasks
         task_node_task_cnt = [0] * self.args.m1
         surplus_task_data = {} # task_node_id -> task_data
         task_node_dict = {task_node[0]: task_node for task_node in task_nodes}
@@ -191,8 +202,8 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
             if task_node_task_cnt[task_node_index] < self.args.max_tasks:
                 task_data_np[task_node_index][task_node_task_cnt[task_node_index]] = self._encode_task_state(task)
                 task_mask[task_node_index][task_node_task_cnt[task_node_index]] = 1
+                task_id_as_idx[task_node_index * self.args.max_tasks + task_node_task_cnt[task_node_index]] = task[0]
                 task_node_task_cnt[task_node_index] += 1
-                task_id_as_idx.append(task[0])
             else:
                 surplus_task_data[task_node_id] = surplus_task_data.get(task_node_id, [])
                 surplus_task_data[task_node_id].append(task)
@@ -209,7 +220,7 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
                 for i in range(en_num):
                     task_data_np[task_node_ptr][i] = self._encode_task_state(tasks[i])
                     task_mask[task_node_ptr][i] = 1
-                    task_id_as_idx.append(tasks[i][0])
+                    task_id_as_idx[task_node_ptr * self.args.max_tasks + i] = tasks[i][0]
                 task_node_ptr += 1
                 tasks = tasks[en_num:]
         # 处理完task data后，按照task_node_id_as_idx，对应生成task_node_np
@@ -245,19 +256,19 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
         action = self.DQN_Agent.select_action(task_node_np, task_data_np, compute_node_np, task_mask, compute_node_mask)
         action = action.reshape((self.args.m1, self.args.max_tasks))
         # 遍历task_mask，仅当其为1，才进行offloading
-        task_cnt = 0
         for i in range(self.args.m1):
             if i >= len(task_node_id_as_idx):
                 break
             task_node_id = task_node_id_as_idx[i]
             for j in range(self.args.max_tasks):
                 if task_mask[i][j] == 1:
-                    task_id = task_id_as_idx[task_cnt]
-                    task_cnt += 1
+                    task_id = task_id_as_idx[i * self.args.max_tasks + j]
                     if action[i][j] == 0: # locally executed
                         target_node_id = task_node_id
-                    else:
+                    elif action[i][j]-1 < len(compute_node_id_as_idx): # offloaded to fog node
                         target_node_id = compute_node_id_as_idx[action[i][j]-1]
+                    else: # offloaded to self, as the unaccessible node
+                        target_node_id = task_node_id
                     if task_id != -1:   
                         self.taskScheduler.setTaskOffloading(env, task_node_id, task_id, target_node_id)
         

@@ -229,8 +229,18 @@ class AirFogSimEnv():
             self._updateStateInfo()
         # ensure the simulation time is the same as the traffic time
         self.simulation_time = self.traffic_manager.getCurrentTime()
+        self.clearDecisions()
         return self.isDone()
     
+    def clearDecisions(self):
+        """Clear the decisions for the next time step.
+        """
+        self.activated_offloading_tasks_with_RB_Nos = {}
+        self.compute_tasks_with_cpu = {}
+        self.revenue_and_punishment_for_tasks = {}
+        self.update_AI_models = {}
+        self.task_return_routes = {}
+
     def _updateStateInfo(self):
         """Update the state information for the entities.
         """

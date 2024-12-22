@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from ..replay_buffer import ReplayBuffer
+import os
 
 class DQN_Agent:
     def __init__(self, args):
@@ -17,9 +18,14 @@ class DQN_Agent:
         self.num_layers = args.num_layers
         self.device = args.device
         self.tau = args.tau
+        if args.mode == 'train':
+            self.q_network = TransformerDQN(self.d_node, self.d_task, self.max_tasks, self.m1, self.m2, self.d_model, self.nhead, self.num_layers)
+            self.q_network.to(self.device)
+        elif args.mode == 'test':
+            self.q_network = TransformerDQN(self.d_node, self.d_task, self.max_tasks, self.m1, self.m2, self.d_model, self.nhead, self.num_layers)
+            self.q_network.to(self.device)
+            self.q_network.load_state_dict(torch.load(args.model_path))
 
-        self.q_network = TransformerDQN(self.d_node, self.d_task, self.max_tasks, self.m1, self.m2, self.d_model, self.nhead, self.num_layers)
-        self.q_network.to(self.device)
         self.target_network = TransformerDQN(self.d_node, self.d_task, self.max_tasks, self.m1, self.m2, self.d_model, self.nhead, self.num_layers)
         self.target_network.to(self.device)
         self.target_network.load_state_dict(self.q_network.state_dict())
@@ -28,6 +34,9 @@ class DQN_Agent:
         self.criterion = nn.MSELoss()
         self.replay_buffer = ReplayBuffer(args.replay_buffer_capacity)
         self.update_cnt = 0
+
+    def saveModel(self):
+        torch.save(self.q_network.state_dict(), os.path.join(self.args.model_dir, f'model_{self.update_cnt}.pth'))
 
     def select_action(self, task_node, task_data, compute_node, task_mask, compute_node_mask):
         task_node = torch.FloatTensor(task_node).to(self.device).unsqueeze(0)
@@ -45,12 +54,17 @@ class DQN_Agent:
         self.replay_buffer.add((task_node, task_data, compute_node, task_mask, compute_node_mask, action, reward, next_task_node, next_task_data, next_compute_node, next_task_mask, next_compute_node_mask, done))
     
     def update(self):
+        # if test, return
+        if self.args.mode == 'test':
+            return
         batch_size = self.args.batch_size
         if self.replay_buffer.size() < batch_size:
             return
         self.update_cnt += 1
         if self.update_cnt % self.args.replay_buffer_update_freq != 0:
             return
+        if self.update_cnt % self.args.save_model_freq == 0:
+            self.saveModel()
         experiences = self.replay_buffer.sample(batch_size)
         task_node, task_data, compute_node, task_mask, compute_node_mask, action, reward, next_task_node, next_task_data, next_compute_node, next_task_mask, next_compute_node_mask, done = zip(*experiences)
         task_node = torch.FloatTensor(task_node).to(self.device)
