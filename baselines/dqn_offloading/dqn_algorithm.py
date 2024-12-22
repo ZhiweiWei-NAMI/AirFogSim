@@ -14,10 +14,12 @@ def parseDQNArgs():
     parser.add_argument('--d_model', type=int, default=512)
     parser.add_argument('--nhead', type=int, default=4)
     parser.add_argument('--num_layers', type=int, default=3)
-    parser.add_argument('--lr', type=float, default=1e-3)
+    parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--device', type=str, default='cpu')
+    # epsilon
+    parser.add_argument('--epsilon', type=float, default=0.1)
     parser.add_argument('--gamma', type=float, default=0.8)
-    parser.add_argument('--tau', type=float, default=0.01)
+    parser.add_argument('--tau', type=float, default=0.001)
     parser.add_argument('--replay_buffer_capacity', type=int, default=10000)
     parser.add_argument('--replay_buffer_update_freq', type=int, default=10)
     parser.add_argument('--batch_size', type=int, default=32)
@@ -300,7 +302,7 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
         n_RB = self.commScheduler.getNumberOfRB(env)
         all_offloading_task_infos = self.taskScheduler.getAllOffloadingTaskInfos(env)
         all_offloading_task_infos = all_offloading_task_infos[:50]
-        avg_RB_nos = max(1, n_RB // max(1, len(all_offloading_task_infos)))
+        avg_RB_nos = max(3, n_RB // max(1, len(all_offloading_task_infos)))
         RB_ctr = 0
         for task_dict in all_offloading_task_infos:
             # 从RB_ctr到RB_ctr+avg_RB_nos-1分配给task；多出的部分mod n_RB，allocated_RB_nos是RB编号的列表
@@ -335,9 +337,9 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
         last_step_fail_task_infos = self.taskScheduler.getLastStepFailTaskInfos(env)
         reward = 0
         for task_info in last_step_succ_task_infos+last_step_fail_task_infos:
-            # reward += self.rewardScheduler.getRewardByTask(env, task_info)
-            if task_info['task_delay'] <= task_info['task_deadline']:
-                reward += 1
+            reward += self.rewardScheduler.getRewardByTask(env, task_info)
+            # if task_info['task_delay'] <= task_info['task_deadline']:
+            #     reward += 1
         return reward
 
     def getRewardByMission(self, env: AirFogSimEnv):

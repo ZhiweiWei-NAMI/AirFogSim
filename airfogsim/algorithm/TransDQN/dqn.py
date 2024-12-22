@@ -5,6 +5,8 @@ import numpy as np
 from ..replay_buffer import ReplayBuffer
 import os
 
+# 线程数量=4
+torch.set_num_threads(4)
 class DQN_Agent:
     def __init__(self, args):
         self.args = args
@@ -30,8 +32,8 @@ class DQN_Agent:
         self.target_network.to(self.device)
         self.target_network.load_state_dict(self.q_network.state_dict())
         self.gamma = args.gamma
-        self.optimizer = torch.optim.Adam(self.q_network.parameters(), lr=args.lr)
-        self.criterion = nn.MSELoss()
+        self.optimizer = torch.optim.Adam(self.q_network.parameters(), lr=args.lr, eps=1e-5)
+        self.criterion = nn.HuberLoss()
         self.replay_buffer = ReplayBuffer(args.replay_buffer_capacity)
         self.update_cnt = 0
 
@@ -48,6 +50,8 @@ class DQN_Agent:
         with torch.no_grad():
             q_values = self.q_network(task_node, task_data, compute_node, task_mask, compute_node_mask).squeeze(0) # [m1 * max_tasks, m2+1]
             q_values = q_values.cpu().data.numpy() # [m1 * max_tasks, m2+1]
+        # add noise
+        # q_values += np.random.randn(*q_values.shape) * self.args.epsilon
         return np.argmax(q_values, axis=1) # [m1 * max_tasks]
     
     def add_experience(self, task_node, task_data, compute_node, task_mask, compute_node_mask, action, reward, next_task_node, next_task_data, next_compute_node, next_task_mask, next_compute_node_mask, done):

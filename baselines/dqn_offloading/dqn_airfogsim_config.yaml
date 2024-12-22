@@ -71,7 +71,7 @@ task: # default task profile for all nodes
 
 task_profile: # task profile for each node type
   task_node_gen_poss: 0.5 # The possibility of generating a task node when inializing the node
-  task_node_profiles: [{'type':'UAV', 'max_node_num': 10}, {'type':'vehicle', 'max_node_num': 10}] # The types of task nodes and the maximum number of nodes of each type
+  task_node_profiles: [{'type':'UAV', 'max_node_num': 30}, {'type':'vehicle', 'max_node_num': 20}] # The types of task nodes and the maximum number of nodes of each type
   vehicle: # The profile of vehicles
     lambda: 0.5
   uav: # The profile of UAVs
