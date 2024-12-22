@@ -564,6 +564,7 @@ class TaskManager:
                     todo_task_list.append(task_info)
                     self._waiting_to_offload_tasks[task_node_id] = todo_task_list
                     self._to_generate_task_infos[task_node_id].remove(task_info)
+                    task_info.setGenerated()
 
         # 2. Generate new to_generate_task_infos, oblige to the task generation model, simulation_interval, and predictable_seconds
         todo_task_num = 0

@@ -53,7 +53,7 @@ class DQN_Agent:
     def add_experience(self, task_node, task_data, compute_node, task_mask, compute_node_mask, action, reward, next_task_node, next_task_data, next_compute_node, next_task_mask, next_compute_node_mask, done):
         self.replay_buffer.add((task_node, task_data, compute_node, task_mask, compute_node_mask, action, reward, next_task_node, next_task_data, next_compute_node, next_task_mask, next_compute_node_mask, done))
     
-    def update(self):
+    def update(self, writer):
         # if test, return
         if self.args.mode == 'test':
             return
@@ -103,6 +103,7 @@ class DQN_Agent:
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+        writer.add_scalar('Loss', loss.item(), self.update_cnt)
 
         # 6. 软更新目标网络
         self.soft_update(self.q_network, self.target_network)
