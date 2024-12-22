@@ -673,7 +673,7 @@ class TaskManager:
         for node_id, task_infos in transmitting_tasks:
             for task_info in task_infos.copy():
                 last_transmission_time = task_info.getLastTransmissionTime()
-                if task_info.isTransmitting() and cur_time - last_transmission_time > self._config_task.get('tti_threshold', 0.5):
+                if cur_time - last_transmission_time > self._config_task.get('tti_threshold', 0.5):
                     task_info.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_TTI)
                     self.failOffloadingTask(task_info)
 
