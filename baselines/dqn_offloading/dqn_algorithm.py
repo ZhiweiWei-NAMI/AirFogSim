@@ -305,6 +305,8 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
 
     def scheduleComputing(self, env: AirFogSimEnv):
         all_computing_task_infos = self.taskScheduler.getAllComputingTaskInfos(env)
+        # all_computing_task_infos按照task_arrival_time排序
+        all_computing_task_infos = sorted(all_computing_task_infos, key=lambda x: x['task_arrival_time'])
         appointed_fog_node_set = set()
         for task_dict in all_computing_task_infos:
             task_id = task_dict['task_id']

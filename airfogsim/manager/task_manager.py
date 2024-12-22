@@ -217,7 +217,7 @@ class TaskManager:
                 task_info.compute(allocated_cpu, simulation_interval, current_time)
                 if task_info.isComputed():
                     task_infos.remove(task_info)
-                    self._waiting_to_return_tasks[node_id]=self._waiting_to_return_tasks.get(node_id, [])
+                    self._waiting_to_return_tasks[node_id] = self._waiting_to_return_tasks.get(node_id, [])
                     self._waiting_to_return_tasks[node_id].append(task_info)
                     # task_info.startToReturn(current_time)
                     # self._returning_tasks[node_id] = self._returning_tasks.get(node_id, [])
