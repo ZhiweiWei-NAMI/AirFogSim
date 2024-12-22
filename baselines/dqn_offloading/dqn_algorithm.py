@@ -10,7 +10,7 @@ def parseDQNArgs():
     parser.add_argument('--max_tasks', type=int, default=3)
     parser.add_argument('--m1', type=int, default=50)
     parser.add_argument('--m2', type=int, default=50)
-    parser.add_argument('--d_model', type=int, default=512)
+    parser.add_argument('--d_model', type=int, default=128)
     parser.add_argument('--nhead', type=int, default=4)
     parser.add_argument('--num_layers', type=int, default=3)
     parser.add_argument('--lr', type=float, default=1e-3)
@@ -306,7 +306,7 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
     def scheduleComputing(self, env: AirFogSimEnv):
         all_computing_task_infos = self.taskScheduler.getAllComputingTaskInfos(env)
         # all_computing_task_infos按照task_arrival_time排序
-        all_computing_task_infos = sorted(all_computing_task_infos, key=lambda x: x['task_arrival_time'])
+        # all_computing_task_infos = sorted(all_computing_task_infos, key=lambda x: x['task_arrival_time'])
         appointed_fog_node_dict = {}
         task_list = []
         for task_dict in all_computing_task_infos:
