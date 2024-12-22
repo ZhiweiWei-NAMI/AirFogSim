@@ -7,7 +7,8 @@ This is a baseline implementation of the DQN algorithm for task offloading in a 
 Run the following command to train and test the DQN model:
 
 ```bash
-python main_dqn_offloading.py
+cd airfogsim_code
+python baselines/dqn_offloading/main_dqn_offloading.py
 ```
 
 Further implementation will be added in the future.

@@ -16,7 +16,7 @@ from airfogsim import AirFogSimEnv, BaseAlgorithmModule
 import numpy as np
 import random
 import yaml
-from airfogsim.scheduler import RewardScheduler, TaskScheduler
+from airfogsim.scheduler import RewardScheduler, TaskScheduler, EntityScheduler
 from baselines.dqn_offloading.dqn_algorithm import DQNOffloadingAlgorithm
 
 def load_config(path):
@@ -32,14 +32,13 @@ config = load_config(config_path)
 # 2. Create the environment
 # env = AirFogSimEnv(config, interactive_mode='graphic')
 env = AirFogSimEnv(config, interactive_mode=None)
-
 # 3. Get algorithm module
 algorithm_module = DQNOffloadingAlgorithm()
 algorithm_module.initialize(env, config)
 RewardScheduler.setModel(env, 'REWARD', 'max((1+task_priority)*log(1+max(0, task_deadline-task_delay)), 0.2*exp(task_deadline-task_delay))')
 np.random.seed(0)
 random.seed(0)
-EPOCH_NUM = 1000
+EPOCH_NUM = 50
 for epoch in range(EPOCH_NUM):
     accumulated_reward = 0
     while not env.isDone():
@@ -49,8 +48,12 @@ for epoch in range(EPOCH_NUM):
         task_num = TaskScheduler.getDoneTaskNum(env)
         out_of_ddl_task_num = TaskScheduler.getOutOfDDLTasks(env)
         succ_ratio = task_num / max(1,task_num + out_of_ddl_task_num)
+        veh_num = EntityScheduler.getNodeNumByType(env, 'vehicle')
+        uav_num = EntityScheduler.getNodeNumByType(env, 'uav')
         env.render()
-        print(f'Simulation time: {env.simulation_time}, Ratio: {succ_ratio}, Task Num: {task_num}, Avg. Reward: {accumulated_reward/max(1,task_num+out_of_ddl_task_num)}', end='\r')
+        print(f'Epoch: {epoch}, Simulation time: {env.simulation_time}, Ratio: {succ_ratio}, Task Num: {task_num}, Vehicle Num: {veh_num}, UAV Num: {uav_num}, Avg. Reward: {accumulated_reward/max(1,task_num+out_of_ddl_task_num)}', end='\r')
+    print()
     env.reset()
     algorithm_module.reset()
+algorithm_module.saveModel()
 env.close()
