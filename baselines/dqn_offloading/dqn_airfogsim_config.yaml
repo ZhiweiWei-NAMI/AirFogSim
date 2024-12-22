@@ -38,22 +38,22 @@ task: # default task profile for all nodes
     lambda: 0.5 # Poission -> lambda; Uniform -> low, high; Normal -> mean, std; Exponential -> beta
   task_min_cpu: 0.2
   task_max_cpu: 0.7
-  task_min_size: 0.5
-  task_max_size: 0.8
+  task_min_size: 0.2
+  task_max_size: 0.7
   task_min_required_returned_size: 0
   task_max_required_returned_size: 0
-  task_min_deadline: 0.2
+  task_min_deadline: 1
   task_max_deadline: 2
   task_min_priority: 0.5
   task_max_priority: 1
   cpu_model: "Uniform" # supported model:['Uniform', 'Normal']
   cpu_kwargs:
-    low: 0.5
-    high: 1
+    low: 0.2
+    high: 0.7
   size_model: "Uniform" # supported model:['Uniform', 'Normal']
   size_kwargs:
-    low: 0.5
-    high: 1
+    low: 0.2
+    high: 0.7
   deadline_model: "Uniform" # supported model:['Uniform', 'Normal']
   deadline_kwargs:
     low: 0.5
