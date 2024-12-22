@@ -295,7 +295,7 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
     def scheduleCommunication(self, env: AirFogSimEnv):
         n_RB = self.commScheduler.getNumberOfRB(env)
         all_offloading_task_infos = self.taskScheduler.getAllOffloadingTaskInfos(env)
-        all_offloading_task_infos = all_offloading_task_infos[:self.args.m1 * self.args.max_tasks]
+        all_offloading_task_infos = all_offloading_task_infos[:50]
         avg_RB_nos = max(1, n_RB // max(1, len(all_offloading_task_infos)))
         RB_ctr = 0
         for task_dict in all_offloading_task_infos:
@@ -307,7 +307,7 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
     def scheduleComputing(self, env: AirFogSimEnv):
         all_computing_task_infos = self.taskScheduler.getAllComputingTaskInfos(env)
         # all_computing_task_infos按照task_arrival_time排序
-        # all_computing_task_infos = sorted(all_computing_task_infos, key=lambda x: x['task_arrival_time'])
+        all_computing_task_infos = sorted(all_computing_task_infos, key=lambda x: x['task_arrival_time'])
         appointed_fog_node_dict = {}
         task_list = []
         for task_dict in all_computing_task_infos:
