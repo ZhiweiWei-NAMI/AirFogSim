@@ -320,7 +320,11 @@ class TrafficManager():
         else:
             # 把self._tripinfo中current_time之前的数据删除
             # self._tripinfo = self._tripinfo[self._tripinfo['data_timestep']>=self._current_time]
-            return self._current_time + self._traffic_interval
+            tmp_time = self._current_time + self._traffic_interval
+            # 保证tmp_time mod self._traffic_interval == 0
+            tmp_time = round(tmp_time / self._traffic_interval) 
+            tmp_time = tmp_time * self._traffic_interval
+            return tmp_time
 
     def getVehicleIDsList(self):
         """Get the vehicle ids list.
@@ -333,8 +337,8 @@ class TrafficManager():
         else:
             # 根据当前的时隙，从tripinfo中获取当前时隙的车辆信息
             current_time = self._current_time
-            # tripinfo是pd.DataFrame，可以直接使用pandas的查询功能,'data_timestep'==current_time
-            vehicle_ids = self._tripinfo[self._tripinfo['data_timestep']==current_time]['vehicle_id'].tolist()
+            # tripinfo是pd.DataFrame，可以直接使用pandas的查询功能,date_timestep在current_time-traffic_interval到current_time之间的车辆
+            vehicle_ids = self._tripinfo[(self._tripinfo['data_timestep']>current_time-self._traffic_interval) & (self._tripinfo['data_timestep']<=current_time)]['vehicle_id'].tolist()
             return vehicle_ids
         
     def getVehicleInfoByIds(self, vehicle_ids):
@@ -352,7 +356,7 @@ class TrafficManager():
             return vehicle_infos
         else:
             # 从pd中批量获取车辆信息
-            cur_time_trip_info = self._tripinfo[self._tripinfo['data_timestep']==self._current_time]
+            cur_time_trip_info = self._tripinfo[(self._tripinfo['data_timestep']>self._current_time-self._traffic_interval) & (self._tripinfo['data_timestep']<=self._current_time)]
             pd_vehicle_infos = cur_time_trip_info[cur_time_trip_info['vehicle_id'].isin(vehicle_ids)]
             vehicle_infos = {}
             for idx, vehicle_info in pd_vehicle_infos.iterrows():

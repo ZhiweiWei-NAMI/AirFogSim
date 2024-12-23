@@ -52,7 +52,7 @@ for epoch in range(EPOCH_NUM):
         # veh_num = EntityScheduler.getNodeNumByType(env, 'vehicle')
         # uav_num = EntityScheduler.getNodeNumByType(env, 'uav')
         env.render()
-        print(f'Epoch: {epoch}, Simulation time: {env.simulation_time}, Ratio: {succ_ratio} = {task_num}/{total_task_num}, Reward: {accumulated_reward}', end='\r')
+        print(f'Epoch: {epoch}, Simulation time: {env.simulation_time:.2f}, Ratio: {succ_ratio} = {task_num}/{total_task_num}, Reward: {accumulated_reward}', end='\r')
     algorithm_module.tensorboard_writer.add_scalar('Reward', accumulated_reward, env.simulation_time + epoch * env.max_simulation_time)
     algorithm_module.tensorboard_writer.add_scalar('Success ratio', succ_ratio, env.simulation_time + epoch * env.max_simulation_time)
     print()

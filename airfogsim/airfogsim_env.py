@@ -733,8 +733,8 @@ class AirFogSimEnv():
                 # check if the vehicle_id should be in the task_node_ids
                 if 'vehicle' in self.task_node_types and np.random.rand() < self.task_node_gen_poss and self.getTaskNodeNumByType('vehicle') < self.max_task_node_num['vehicle'] and vehicle_id not in self.task_node_ids:
                     self.task_node_ids.append(vehicle_id)
-            self.vehicles[vehicle_id].update(vehicle_traffic_info, self.simulation_time)
 
+            self.vehicles[vehicle_id].update(vehicle_traffic_info, self.simulation_time)
         # print(self.simulation_time)
         for uav_id, uav_traffic_info in uav_traffic_infos.items():
             # print(uav_id, uav_traffic_info['position'])

@@ -544,9 +544,12 @@ class TaskManager:
             Task: The task.
         """
         self._task_id += 1
-        return Task(task_id=f'Task_{self._task_id}', task_node_id=task_node_id, task_cpu=0, to_return_node_id=to_return_node_id,
-                    task_size=0, task_deadline=task_deadline,task_priority=self._generatePriority(), return_lazy_set=True ,
-                    task_arrival_time=arrival_time,required_returned_size= return_size)
+        task = Task(task_id=f'Task_{self._task_id}', task_node_id=task_node_id, task_cpu=0, to_return_node_id=to_return_node_id,
+                    task_size=0, task_deadline=task_deadline,task_priority=self._generatePriority(), return_lazy_set=True,
+                    task_arrival_time=arrival_time,required_returned_size = return_size)
+        task.setGenerated()
+        task.setStartToTransmitTime(arrival_time)
+        return task
 
     def _generateTasks(self, task_node_ids_kwardsDict, cur_time, simulation_interval):
         # 1. Move the tasks from the to_generate_task_infos to the todo_tasks according to the current time
@@ -650,7 +653,7 @@ class TaskManager:
                 if not task_info.requireReturn():
                     # 直接跳到下一个阶段
                     task_node_id = task_info.getTaskNodeId()
-                    task_info.transmit_to_Node(task_info.getToReturnNodeId(), 1, task_info.getLastComputeTime(), fast_return=True)
+                    task_info.transmit_to_Node(task_info.getToReturnNodeId(), 1, cur_time, fast_return=True)
                     if task_info.task_delay <= task_info.task_deadline:
                         self._done_tasks[task_node_id] = self._done_tasks.get(task_node_id, [])
                         self._done_tasks[task_node_id].append(task_info)

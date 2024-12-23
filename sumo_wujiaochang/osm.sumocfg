@@ -10,7 +10,7 @@
     </input>
     <time>
 		<begin value="0"/>
-		<step-length value="0.5"/> 
+		<step-length value="0.1"/> 
     </time>
     <processing>
         <ignore-route-errors value="true"/>

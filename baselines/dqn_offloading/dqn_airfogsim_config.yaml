@@ -3,7 +3,7 @@ simulation:
   vehicle_count: 200
   max_simulation_time: 100
   simulation_interval: 0.1 # in seconds, for transmission, computation, task generation and assignment, etc.
-  traffic_interval: 0.5 # in seconds, for traffic simulation. Remember to set the same value in the SUMO configuration file; otherwise, the simulation will not work properly
+  traffic_interval: 0.1 # in seconds, for traffic simulation. Remember to set the same value in the SUMO configuration file; otherwise, the simulation will not work properly
   
 
 sumo:
@@ -20,7 +20,7 @@ visualization:
 traffic:
   traffic_mode: "real" # "real" or "SUMO"
   tripinfo: "./sumo_wujiaochang/tripinfo.csv" # The path to the SUMO tripinfo file
-  traffic_interval: 0.5 # in seconds, for traffic simulation. Remember to set the same value in the SUMO configuration file; otherwise, the simulation will not work properly
+  traffic_interval: 0.1 # in seconds, for traffic simulation. Remember to set the same value in the SUMO configuration file; otherwise, the simulation will not work properly
   UAV_z_range: [100, 200] # The range of z coordinates for UAVs
   UAV_speed_range: [10,30] # The speed of UAV (distance unit per timeslot)
   uav_traffic_file: "path/to/uav_traffic_file.csv" # UAV traffic file
@@ -37,7 +37,7 @@ task: # default task profile for all nodes
   hard_ddl: 2 # The hard deadline for tasks
   task_generation_model: "Poisson" # supported model:['Poisson', 'Uniform', 'Normal', 'Exponential']
   task_generation_kwargs:
-    lambda: 0.5 # Poission -> lambda; Uniform -> low, high; Normal -> mean, std; Exponential -> beta
+    lambda: 1 # Poission -> lambda; Uniform -> low, high; Normal -> mean, std; Exponential -> beta
   task_min_cpu: 0.2
   task_max_cpu: 0.7
   task_min_size: 0.2
@@ -73,9 +73,9 @@ task_profile: # task profile for each node type
   task_node_gen_poss: 0.5 # The possibility of generating a task node when inializing the node
   task_node_profiles: [{'type':'UAV', 'max_node_num': 30}, {'type':'vehicle', 'max_node_num': 20}] # The types of task nodes and the maximum number of nodes of each type
   vehicle: # The profile of vehicles
-    lambda: 0.5
+    lambda: 1
   uav: # The profile of UAVs
-    lambda: 0.5
+    lambda: 1
 
 fog_profile:
   vehicle:
