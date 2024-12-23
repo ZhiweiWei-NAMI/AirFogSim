@@ -210,7 +210,7 @@ class TaskManager:
             simulation_interval (float): The simulation interval.
             current_time (float): The current time.
         """
-        allocated_cpus = alloc_cpu_callback(self._computing_tasks, simulation_interval, current_time)
+        allocated_cpus = alloc_cpu_callback(self._computing_tasks)
         for node_id, task_infos in self._computing_tasks.items():
             for task_info in task_infos.copy(): # task_info is Task
                 task_id = task_info.getTaskId()
