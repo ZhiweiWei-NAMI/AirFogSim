@@ -6,48 +6,44 @@ from torch.nn import functional as F
 import numpy as np
 import collections  # 队列
 import random
-from .DDQN_relay_buffer import ReplayBuffer
-from .DDQN_network import Net
+from .TransDDQN_relay_buffer import ReplayBuffer
+from .TransDDQN_network import Net
 
 # ----------------------------------- #
 # 模型构建
 # ----------------------------------- #
-class Double_DQN:
+class TransDDQN:
     # （1）初始化
-    def __init__(self, dim_states, dim_hiddens, dim_actions,
-                 learning_rate, gamma, epsilon, eps_end, eps_dec,
-                 target_update, buffer_size,batch_size, train_min_size, tau, device):
-        # 属性分配
-        self.dim_states = dim_states
-        self.dim_hiddens = dim_hiddens
-        self.dim_actions = dim_actions
-        self.learning_rate = learning_rate
-        self.gamma = gamma
-        self.epsilon = epsilon
-        self.eps_min = eps_end
-        self.eps_dec = eps_dec
-        self.target_update = target_update
-        self.buffer_size = buffer_size
-        self.batch_size=batch_size
-        self.train_min_size = train_min_size
-        self.tau = tau
-        self.device = device
+    def __init__(self, dim_args, train_args):
+        # 训练超参数
+        self.learning_rate = train_args.learning_rate
+        self.gamma = train_args.gamma
+        self.epsilon = train_args.epsilon
+        self.eps_min = train_args.eps_end
+        self.eps_dec = train_args.eps_dec
+        self.target_update = train_args.target_update
+        self.buffer_size = train_args.buffer_size
+        self.batch_size=train_args.batch_size
+        self.train_min_size = train_args.train_min_size
+        self.tau = train_args.tau
+        self.device = torch.device(train_args.device)
         # 记录迭代次数
-        self.count = 0
+        self.steps_done = 0
 
         # 实例化训练网络
-        self.q_net = Net(dim_states=self.dim_states, dim_hiddens=self.dim_hiddens, dim_actions=self.dim_actions)
+        self.q_net = Net(dim_args)
+        self.q_net.to(self.device)
         # 实例化目标网络
-        self.target_q_net = Net(dim_states=self.dim_states, dim_hiddens=self.dim_hiddens, dim_actions=self.dim_actions)
+        self.target_q_net = Net(dim_args)
+        self.target_q_net.to(self.device)
 
         # 优化器，更新训练网络的参数
         self.optimizer = torch.optim.Adam(params=self.q_net.parameters(), lr=self.learning_rate)
+        # 损失函数
+        self.criterion = torch.nn.MSELoss()
 
         # 经验池
         self.memory = ReplayBuffer(buffer_size=self.buffer_size, train_min_size=self.train_min_size)
-
-        # 更新目标网络
-        self.update_network_parameters(tau=self.tau)
 
     # 目标网络更新
     def update_network_parameters(self, tau=None):
@@ -57,19 +53,32 @@ class Double_DQN:
         for q_target_params, q_params in zip(self.target_q_net.parameters(), self.q_net.parameters()):
             q_target_params.data.copy_(tau * q_params + (1 - tau) * q_target_params)
 
-    def remember(self, state, action, mask, reward, next_state, next_mask, done):
-        self.memory.add(state, action, mask, reward, next_state, next_mask, done)
+    def remember(self, node_state, mission_state, sensor_state, sensor_mask, action, mask, reward, next_state, next_mask, done):
+        self.memory.add(node_state, mission_state, sensor_state, sensor_mask, action, mask, reward, next_state, next_mask, done)
 
     # 动作选择
-    def take_action(self, state, mask):
-        # numpy[n_states]-->[1, n_states]-->Tensor
-        state = torch.Tensor(state[np.newaxis, :])
-        # numpy[n_actions]-->[1, n_actions]-->Tensor
-        mask = torch.Tensor(mask[np.newaxis, :]).bool()
+    def take_action(self,node_state, mission_state, sensor_state, sensor_mask):
+        """
+        Args:
+            node_state: [m1, dim_node]
+            mission_state: [dim_mission]
+            sensor_state: [m_uv, max_sensors, dim_sensor]
+            sensor_mask: [m_uv, max_sensors], 1 for valid sensors, 0 for others
+        """
+        # numpy[m1, dim_node]-->[1, m1, dim_node]-->Tensor
+        node_state = torch.Tensor(node_state[np.newaxis, :])
+        # numpy[dim_mission]-->[1, dim_mission]-->Tensor
+        mission_state = torch.Tensor(mission_state[np.newaxis, :])
+        # numpy[m_uv, max_sensors, dim_sensor]-->[1, m_uv, max_sensors, dim_sensor]-->Tensor
+        sensor_state = torch.Tensor(sensor_state[np.newaxis, :])
+        # numpy[m_uv, max_sensors]-->[1, m_uv, max_sensors]-->Tensor
+        sensor_mask = torch.Tensor(sensor_mask[np.newaxis, :])
         # 获取当前状态下采取各动作的q值
-        q_values = self.q_net(state)
+        q_values = self.q_net(node_state, mission_state, sensor_state, sensor_mask)
         # 非法动作置为最小值
-        masked_q_values = torch.where(mask, q_values, torch.tensor(float('-inf')))
+        flatten_mask=sensor_mask.flatten()
+        flatten_q_values=q_values.flatten()
+        masked_q_values = torch.where(flatten_mask, flatten_q_values, torch.tensor(float('-inf')))
         # 对每个样本找到最大 Q 值对应的动作的索引
         max_q_value, max_action_index = torch.max(masked_q_values, dim=-1)
         # 如果小于贪婪系数就取最大值reward最大的动作
@@ -80,8 +89,6 @@ class Double_DQN:
         # 如果大于贪婪系数就随即探索
         else:
             is_random = True
-            # 选出可行动作的index并随机选择一个动作
-            flatten_mask = mask.flatten()
             valid_action_indices = torch.nonzero(flatten_mask, as_tuple=False).squeeze(1)
             action = valid_action_indices[torch.randint(0, len(valid_action_indices), (1,))].item()
 
@@ -140,25 +147,25 @@ class Double_DQN:
         self.optimizer.step()
 
         # 更新目标网络参数
-        if self.count % self.target_update == 0:
+        if self.steps_done % self.target_update == 0 and self.steps_done>0:
             self.update_network_parameters(self.tau)
         self.decrement_epsilon()
         # 迭代计数+1
-        self.count += 1
+        self.steps_done += 1
 
     def save_models(self, episode,base_dir):
         file_dir=f"{base_dir}/episode_{episode}/"
         if not os.path.exists(file_dir):
             os.makedirs(file_dir)
 
-        self.q_net.save_model(file_dir + f'DDQN_Q_net_{episode}.pth')
-        print('Saving Q_net network successfully!')
-        self.target_q_net.save_model(file_dir + f'DDQN_Q_target_{episode}.pth')
-        print('Saving Q_target network successfully!')
+        self.q_net.save_model(file_dir + f'TransDDQN_Q_net.pth')
+        print('Saving TransDDQN_Q_net network successfully!')
+        self.target_q_net.save_model(file_dir + f'TransDDQN_Q_target.pth')
+        print('Saving TransDDQN_Q_target network successfully!')
 
     def load_models(self, episode,base_dir):
         file_dir = f"{base_dir}/episode_{episode}/"
-        self.q_net.load_model(file_dir + f'DDQN_Q_net_{episode}.pth')
-        print('Loading Q_net network successfully!')
-        self.target_q_net.load_model(file_dir + f'DDQN_Q_target_{episode}.pth')
-        print('Loading Q_target network successfully!')
+        self.q_net.load_model(file_dir + f'TransDDQN_Q_net.pth')
+        print('Loading TransDDQN_Q_net network successfully!')
+        self.target_q_net.load_model(file_dir + f'TransDDQN_Q_target.pth')
+        print('Loading TransDDQN_Q_target network successfully!')

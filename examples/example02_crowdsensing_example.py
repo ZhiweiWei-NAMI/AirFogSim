@@ -7,7 +7,8 @@ os.environ['useCUPY'] = 'False'
 print('useCUPY:', os.environ['useCUPY'])
 # When n_RB < 50, numpy is better than cupy; When n_RB >= 50, cupy is better than numpy.
 
-from airfogsim import AirFogSimEnv, BaseAlgorithmModule, NVHAUAlgorithmModule, DDQNAlgorithmModule, AirFogSimEvaluation
+from airfogsim import AirFogSimEnv, AirFogSimEvaluation
+from baselines.crowdsensing.greedy.greedy_algorithm import GreedyAlgorithmModule
 import numpy as np
 import yaml
 from pyinstrument import Profiler
@@ -35,19 +36,21 @@ config = load_config(config_path)
 
 # 2. Get algorithm module
 # algorithm_module = DDQNAlgorithmModule(last_episode)
-algorithm_module = NVHAUAlgorithmModule()
+algorithm_module = GreedyAlgorithmModule()
 
 
 # 3. Create the new environment
 env = AirFogSimEnv(config, interactive_mode='graphic')
 
-# 4. Create the evaluation module
+# 4. Initialize the algorithm module (initialize in every episode)
+algorithm_module.initialize(env)
+
+# 5. Create the evaluation module
 evaluation_module = AirFogSimEvaluation()
 
 for episode in range(last_episode + 1, max_episode+1):
     env.reset(config)
-    # 5. Initialize the algorithm module (initialize in every episode)
-    algorithm_module.initialize(env)
+    algorithm_module.reset(env)
 
     while not env.isDone():
         algorithm_module.scheduleStep(env)

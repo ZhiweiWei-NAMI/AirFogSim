@@ -8,17 +8,22 @@ from torch import nn
 class Net(nn.Module):
     def __init__(self, dim_states, dim_hiddens, dim_actions):
         super(Net, self).__init__()
+        self.dim_states=dim_states
+        self.dim_hiddens=dim_hiddens
+        self.dim_actions=dim_actions
         # 有两个隐含层
-        self.fc1 = nn.Linear(dim_states, dim_hiddens)
-        self.fc2 = nn.Linear(dim_hiddens, dim_hiddens)
-        self.fc3 = nn.Linear(dim_hiddens, dim_actions)
+        self.action_selector = nn.Sequential(
+            nn.Linear(dim_states, dim_hiddens),
+            nn.GELU(),
+            nn.Linear(dim_hiddens, dim_hiddens),
+            nn.GELU(),
+            nn.Linear(dim_hiddens, dim_actions),
+        )
 
     # 前向传播
     def forward(self, x):
-        x = self.fc1(x)  # [b,dim_states]-->[b,dim_hiddens]
-        x = self.fc2(x)  # [b,dim_hiddens]-->[b,dim_hiddens]
-        x = self.fc3(x)  # [b,dim_hiddens]-->[b,dim_actions]
-        return x
+        result=self.action_selector(x)
+        return result
 
     def save_model(self, file_dir):
         torch.save(self.state_dict(), file_dir, _use_new_zipfile_serialization=False)
