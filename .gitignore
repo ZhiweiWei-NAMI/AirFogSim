@@ -3,4 +3,4 @@
 *.run
 **/__pycache__/
 **.pth
-run/
+**/runs/**

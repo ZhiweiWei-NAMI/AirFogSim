@@ -202,18 +202,19 @@ class TaskManager:
                     return True
         return False
 
-    def computeTasks(self, allocated_cpu_by_taskId, simulation_interval, current_time):
+    def computeTasks(self, alloc_cpu_callback, simulation_interval, current_time):
         """Compute the tasks by the allocated CPU.
 
         Args:
-            allocated_cpu_by_taskId (dict): The allocated CPU by the task id.
+            alloc_cpu_callback (function): The callback function to allocate the CPU.
             simulation_interval (float): The simulation interval.
             current_time (float): The current time.
         """
+        allocated_cpus = alloc_cpu_callback(self._computing_tasks, simulation_interval, current_time)
         for node_id, task_infos in self._computing_tasks.items():
             for task_info in task_infos.copy(): # task_info is Task
                 task_id = task_info.getTaskId()
-                allocated_cpu = allocated_cpu_by_taskId.get(task_id, 0)
+                allocated_cpu = allocated_cpus.get(task_id, 0)
                 if allocated_cpu == 0:
                     continue
                 task_info.compute(allocated_cpu, simulation_interval, current_time)

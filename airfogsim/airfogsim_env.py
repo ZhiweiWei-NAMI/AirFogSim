@@ -84,7 +84,7 @@ class AirFogSimEnv():
         self.uav_routes={} # dict, key是uav_id,value是route -> [{position: [x,y,z]},{to_stay_time: time}],...]
         self.new_missions = []  # missions list
         self.activated_offloading_tasks_with_RB_Nos = {}  # dict, key是task_id, value 是RB的list
-        self.compute_tasks_with_cpu = {}  # dict, key是task_id, value是对应assigned node分配的cpu
+        self.alloc_cpu_callback = None # function, 用于分配CPU资源的回调函数,输入为_computing_tasks (dict), simulation_interval (float), current_time (float)
         self.task_node_ids = []  # list, 存储所有的task node id。可以在每个决策时隙更新，即每个车辆在不同的时候可能是fog node或task node。注意，每次生成的任务数量是按照"predictable_seconds"来预先存储的，所以可能t=0.1s时，车辆是task node，t=0.2s时，车辆是fog node，但是此时还有该车辆的任务需要进行卸载或计算。
         self.revenue_and_punishment_for_tasks = {}  # dict, key是task_id, value是{node_id, amount}
         self.update_AI_models = {}  # dict, key是node_id, value是{"model_name": AI model}
@@ -236,7 +236,7 @@ class AirFogSimEnv():
         """Clear the decisions for the next time step.
         """
         self.activated_offloading_tasks_with_RB_Nos = {}
-        self.compute_tasks_with_cpu = {}
+        self.alloc_cpu_callback = None
         self.revenue_and_punishment_for_tasks = {}
         self.update_AI_models = {}
         self.task_return_routes = {}
@@ -503,7 +503,8 @@ class AirFogSimEnv():
     def _updateComputation(self):
         """Update the computation for the entities.
         """
-        self.task_manager.computeTasks(self.compute_tasks_with_cpu, self.simulation_interval, self.simulation_time)
+        assert self.alloc_cpu_callback is not None, 'The CPU allocation callback function is not set!'
+        self.task_manager.computeTasks(self.alloc_cpu_callback, self.simulation_interval, self.simulation_time)
 
     def _updateStorage(self):
         """Update the storage for the entities.
