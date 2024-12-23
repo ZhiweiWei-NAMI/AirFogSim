@@ -191,18 +191,38 @@ class BaseAlgorithmModule:
             self.commScheduler.setCommunicationWithRB(env, task_dict['task_id'], allocated_RB_nos)
 
     def scheduleComputing(self, env: AirFogSimEnv):
-        """The computing scheduling logic. Should be implemented by the subclass. Default is FIFS.
+        """The computing scheduling logic. Should be implemented by the subclass. Default is evenly distributing the computing resources to the tasks.
         
         Args:
             env (AirFogSimEnv): The environment object.
         """
-        all_computing_task_infos = self.taskScheduler.getAllComputingTaskInfos(env)
-        for task_dict in all_computing_task_infos:
-            task_id = task_dict['task_id']
-            task_node_id = task_dict['task_node_id']
-            assigned_node_id = task_dict['assigned_to']
-            assigned_node_info = self.entityScheduler.getNodeInfoById(env, assigned_node_id)
-            self.compScheduler.setComputingWithNodeCPU(env, task_id, 0.3)  # allocate cpu 0.3
+        def alloc_cpu_callback(computing_tasks, **kwargs):
+            # _computing_tasks: {task_id: task_dict}
+            # simulation_interval: float
+            # current_time: float
+            # 返回值是一个字典，key是task_id，value是分配的cpu
+            # 本函数的目的是将所有的cpu分配给task
+            appointed_fog_node_dict = {}
+            task_list = []
+            for tasks in computing_tasks.values():
+                for task in tasks:
+                    task_dict = task.to_dict()
+                    assigned_node_id = task_dict['assigned_to']
+                    assigned_node_info = self.entityScheduler.getNodeInfoById(env, assigned_node_id)
+                    task_num = appointed_fog_node_dict.get(assigned_node_id, 0)
+                    if assigned_node_info is None or task_num>=3:
+                        continue
+                    appointed_fog_node_dict[assigned_node_id] = task_num + 1
+                    task_list.append(task_dict)
+            # 所有cpu分配给task
+            alloc_cpu_dict = {}
+            for task_dict in task_list:
+                task_id = task_dict['task_id']
+                assigned_node_id = task_dict['assigned_to']
+                alloc_cpu = assigned_node_info.get('fog_profile', {}).get('cpu', 0) / max(1, appointed_fog_node_dict[assigned_node_id])
+                alloc_cpu_dict[task_id] = alloc_cpu
+            return alloc_cpu_dict
+        self.compScheduler.setComputingCallBack(env, alloc_cpu_callback) 
 
     def getRewardByTask(self, env: AirFogSimEnv):
         """The reward calculation logic. Should be implemented by the subclass. Default is calculating reward of done tasks in last time.

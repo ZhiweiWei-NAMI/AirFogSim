@@ -347,7 +347,7 @@ class TrafficManager():
             return self._traci_connection.simulation.getTime()
         else:
             # 把self._tripinfo中current_time之前的数据删除
-            self._tripinfo = self._tripinfo[self._tripinfo['data_timestep']>=self._current_time]
+            # self._tripinfo = self._tripinfo[self._tripinfo['data_timestep']>=self._current_time]
             return self._current_time + self._traffic_interval
 
     def getVehicleIDsList(self):

@@ -56,6 +56,12 @@ class Task:
         self._last_compute_time = -1
         self._failure_reason_code = -1
         self._farther_mission = farther_mission
+        self._is_generated = False
+
+    def setGenerated(self):
+        """Set the task as generated.
+        """
+        self._is_generated = True
 
     # get task_ratio
     @property
@@ -87,7 +93,7 @@ class Task:
             return 'computing'
         if self.isTransmitting():
             return 'offloading'
-        if self._start_to_transmit_time >= 0:
+        if self._is_generated:
             return 'to_offload'
         return 'to_generate'
 
@@ -329,7 +335,7 @@ class Task:
             bool: True if the task is transmitting, False otherwise.
         """
         require_transmit_size = self._task_size if not self.isComputed() else self._required_returned_size
-        return self._transmitted_size < require_transmit_size and not self._executed_locally
+        return self._transmitted_size < require_transmit_size and not self._executed_locally and self._start_to_transmit_time >= 0
 
     def isTransmittedToAssignedNode(self):
         """Check if the task is transmitted to the assigned node.
@@ -345,7 +351,7 @@ class Task:
         Returns:
             bool: True if the task is transmitted, False otherwise.
         """
-        return self._to_return_node_id is not None and self.getCurrentNodeId() == self._to_return_node_id
+        return self._to_return_node_id is not None and self.getCurrentNodeId() == self._to_return_node_id and self.isComputed()
 
     def setTaskFailueCode(self, code):
         """Set the task failure code

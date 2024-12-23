@@ -185,7 +185,7 @@ class TaskManager:
         task_node_id = task.getTaskNodeId()
         task_id = task.getTaskId()
         if not task.isReturning():
-            for task_info in self._offloading_tasks[task_node_id]:
+            for task_info in self._offloading_tasks.get(task_node_id, []):
                 if task_info.getTaskId() == task_id:
                     self._offloading_tasks[task_node_id].remove(task_info)
                     failed_task_list = self._out_of_ddl_tasks.get(task_node_id, [])
@@ -193,7 +193,7 @@ class TaskManager:
                     self._out_of_ddl_tasks[task_node_id] = failed_task_list
                     return True
         elif task.isReturning():
-            for task_info in self._returning_tasks[node_id]:
+            for task_info in self._returning_tasks.get(node_id, []):
                 if task_info.getTaskId() == task_id:
                     self._returning_tasks[node_id].remove(task_info)
                     failed_task_list = self._out_of_ddl_tasks.get(task_node_id, [])
@@ -202,22 +202,25 @@ class TaskManager:
                     return True
         return False
 
-    def computeTasks(self, allocated_cpu_by_taskId, simulation_interval, current_time):
+    def computeTasks(self, alloc_cpu_callback, simulation_interval, current_time):
         """Compute the tasks by the allocated CPU.
 
         Args:
-            allocated_cpu_by_taskId (dict): The allocated CPU by the task id.
+            alloc_cpu_callback (function): The callback function to allocate the CPU.
             simulation_interval (float): The simulation interval.
             current_time (float): The current time.
         """
+        allocated_cpus = alloc_cpu_callback(self._computing_tasks)
         for node_id, task_infos in self._computing_tasks.items():
             for task_info in task_infos.copy(): # task_info is Task
                 task_id = task_info.getTaskId()
-                allocated_cpu = allocated_cpu_by_taskId.get(task_id, 0)
+                allocated_cpu = allocated_cpus.get(task_id, 0)
+                if allocated_cpu == 0:
+                    continue
                 task_info.compute(allocated_cpu, simulation_interval, current_time)
                 if task_info.isComputed():
                     task_infos.remove(task_info)
-                    self._waiting_to_return_tasks[node_id]=self._waiting_to_return_tasks.get(node_id, [])
+                    self._waiting_to_return_tasks[node_id] = self._waiting_to_return_tasks.get(node_id, [])
                     self._waiting_to_return_tasks[node_id].append(task_info)
                     # task_info.startToReturn(current_time)
                     # self._returning_tasks[node_id] = self._returning_tasks.get(node_id, [])
@@ -246,14 +249,6 @@ class TaskManager:
             dict: The tasks to offload. The key is the node id, and the value is the task list.
         """
         return self._waiting_to_offload_tasks
-
-    def getOffloadingTasks(self):
-        """Get the tasks to offload.
-
-        Returns:
-            dict: The tasks to offload. The key is the node id, and the value is the task list.
-        """
-        return self._offloading_tasks
     
     def getOffloadingTasks(self):
         offloading_tasks, num = self.getOffloadingTasksWithNumber()
@@ -562,6 +557,7 @@ class TaskManager:
                     todo_task_list.append(task_info)
                     self._waiting_to_offload_tasks[task_node_id] = todo_task_list
                     self._to_generate_task_infos[task_node_id].remove(task_info)
+                    task_info.setGenerated()
 
         # 2. Generate new to_generate_task_infos, oblige to the task generation model, simulation_interval, and predictable_seconds
         todo_task_num = 0
@@ -637,7 +633,6 @@ class TaskManager:
         return todo_task_number
 
     def checkTasks(self, cur_time):
-        # DO NOT remove the task even if the task is out of deadline.
         # 1. Check the todo tasks
         to_offload_items = itertools.chain(self._waiting_to_offload_tasks.items(), self._offloading_tasks.items())
         for task_node_id, task_infos in to_offload_items:
@@ -665,6 +660,23 @@ class TaskManager:
                         self._out_of_ddl_tasks[task_node_id].append(task_info)
                         self._recently_failed_100_tasks.append(task_info)
                     task_infos.remove(task_info)
+        # 3. Check the offloading or returning tasks, if the transmission time is out of TTI, then move the task to the failed tasks
+        transmitting_tasks = itertools.chain(self._offloading_tasks.items(), self._returning_tasks.items())
+        for node_id, task_infos in transmitting_tasks:
+            for task_info in task_infos.copy():
+                last_transmission_time = task_info.getLastTransmissionTime()
+                if cur_time - last_transmission_time > self._config_task.get('tti_threshold', 0.5):
+                    task_info.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_TTI)
+                    self.failOffloadingTask(task_info)
+
+        # 4. Out of Hard DDL (self._config_task.get('hard_ddl', 2))
+        all_tasks = itertools.chain(self._waiting_to_offload_tasks.items(), self._offloading_tasks.items(), self._computing_tasks.items(), self._waiting_to_return_tasks.items(), self._returning_tasks.items())
+        for node_id, task_infos in all_tasks:
+            for task_info in task_infos.copy():
+                if cur_time - task_info.getTaskArrivalTime() > task_info.getTaskDeadline():
+                    task_info.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_DDL)
+                    self.failOffloadingTask(task_info)
+
 
     def offloadTask(self, task_node_id, task_id, target_node_id, current_time, route = None):
         """Offload the task by the task id and the target node id.
@@ -693,6 +705,10 @@ class TaskManager:
                     self._offloading_tasks[task_node_id].append(task_info)
                     self._waiting_to_offload_tasks[task_node_id].remove(task_info)
                     assert len(task_info.getToOffloadRoute())>0
+                    # if execute locally
+                    if target_node_id == task_node_id:
+                        self.addToComputeTask(task_info, task_node_id, current_time)
+                        self._offloading_tasks[task_node_id].remove(task_info)
                     return True
         return False
 
@@ -725,3 +741,32 @@ class TaskManager:
             for task_info in task_infos:
                 self._waiting_to_return_tasks[node_id].remove(task_info)
 
+    def getAllTasks(self):
+        """Get all tasks.
+
+        Args:
+
+        Returns:
+            list: The list of all tasks.
+
+        Examples:
+            task_manager.getAllTasks()
+        """
+        all_tasks = []
+        for task_node_id, task_infos in self._waiting_to_offload_tasks.items():
+            all_tasks.extend(task_infos)
+        for task_node_id, task_infos in self._offloading_tasks.items():
+            all_tasks.extend(task_infos)
+        for task_node_id, task_infos in self._computing_tasks.items():
+            all_tasks.extend(task_infos)
+        for task_node_id, task_infos in self._waiting_to_return_tasks.items():
+            all_tasks.extend(task_infos)
+        for task_node_id, task_infos in self._returning_tasks.items():
+            all_tasks.extend(task_infos)
+        for task_node_id, task_infos in self._done_tasks.items():
+            all_tasks.extend(task_infos)
+        for task_node_id, task_infos in self._out_of_ddl_tasks.items():
+            all_tasks.extend(task_infos)
+        return all_tasks
+    
+    

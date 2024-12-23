@@ -16,7 +16,7 @@ from airfogsim import AirFogSimEnv, BaseAlgorithmModule
 import numpy as np
 import random
 import yaml
-from airfogsim.scheduler import RewardScheduler, TaskScheduler
+from airfogsim.scheduler import RewardScheduler, TaskScheduler, EntityScheduler
 from baselines.dqn_offloading.dqn_algorithm import DQNOffloadingAlgorithm
 
 def load_config(path):
@@ -32,14 +32,14 @@ config = load_config(config_path)
 # 2. Create the environment
 # env = AirFogSimEnv(config, interactive_mode='graphic')
 env = AirFogSimEnv(config, interactive_mode=None)
-
 # 3. Get algorithm module
 algorithm_module = DQNOffloadingAlgorithm()
 algorithm_module.initialize(env, config)
-RewardScheduler.setModel(env, 'REWARD', 'max((1+task_priority)*log(1+max(0, task_deadline-task_delay)), 0.2*exp(task_deadline-task_delay))')
+# if task_delay < task_deadline, reward = task_priority * log(1 + task_deadline - task_delay) + 1, else reward = exp(task_priority * (task_deadline - task_delay))
+RewardScheduler.setModel(env, 'REWARD', 'Piecewise((task_priority * log(1 + task_deadline - task_delay) + 1, task_delay < task_deadline), (exp(task_priority * (task_deadline - task_delay)), True))')
 np.random.seed(0)
 random.seed(0)
-EPOCH_NUM = 1000
+EPOCH_NUM = 500
 for epoch in range(EPOCH_NUM):
     accumulated_reward = 0
     while not env.isDone():
@@ -47,10 +47,16 @@ for epoch in range(EPOCH_NUM):
         env.step()
         accumulated_reward += algorithm_module.getRewardByTask(env)
         task_num = TaskScheduler.getDoneTaskNum(env)
-        out_of_ddl_task_num = TaskScheduler.getOutOfDDLTasks(env)
-        succ_ratio = task_num / max(1,task_num + out_of_ddl_task_num)
+        total_task_num = TaskScheduler.getTotalTaskNum(env)
+        succ_ratio = task_num / max(1,total_task_num)
+        # veh_num = EntityScheduler.getNodeNumByType(env, 'vehicle')
+        # uav_num = EntityScheduler.getNodeNumByType(env, 'uav')
         env.render()
-        print(f'Simulation time: {env.simulation_time}, Ratio: {succ_ratio}, Task Num: {task_num}, Avg. Reward: {accumulated_reward/max(1,task_num+out_of_ddl_task_num)}', end='\r')
+        print(f'Epoch: {epoch}, Simulation time: {env.simulation_time}, Ratio: {succ_ratio} = {task_num}/{total_task_num}, Reward: {accumulated_reward}', end='\r')
+    algorithm_module.tensorboard_writer.add_scalar('Reward', accumulated_reward, env.simulation_time + epoch * env.max_simulation_time)
+    algorithm_module.tensorboard_writer.add_scalar('Success ratio', succ_ratio, env.simulation_time + epoch * env.max_simulation_time)
+    print()
     env.reset()
     algorithm_module.reset()
+algorithm_module.saveModel()
 env.close()

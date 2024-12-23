@@ -2,6 +2,7 @@ from airfogsim.airfogsim_env import AirFogSimEnv
 from airfogsim.airfogsim_algorithm import BaseAlgorithmModule
 from airfogsim.algorithm.TransDQN.dqn import DQN_Agent
 import numpy as np
+from torch.utils.tensorboard import SummaryWriter
 import argparse
 def parseDQNArgs():
     parser = argparse.ArgumentParser(description='DQN arguments')
@@ -15,11 +16,21 @@ def parseDQNArgs():
     parser.add_argument('--num_layers', type=int, default=3)
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--device', type=str, default='cpu')
+    # epsilon
+    parser.add_argument('--epsilon', type=float, default=0.1)
     parser.add_argument('--gamma', type=float, default=0.8)
-    parser.add_argument('--tau', type=float, default=0.01)
+    parser.add_argument('--tau', type=float, default=0.001)
     parser.add_argument('--replay_buffer_capacity', type=int, default=10000)
     parser.add_argument('--replay_buffer_update_freq', type=int, default=10)
     parser.add_argument('--batch_size', type=int, default=32)
+    # args.model_dir
+    parser.add_argument('--model_dir', type=str, default='models/trans_dqn/')
+    # args.model_path
+    parser.add_argument('--model_path', type=str, default='models/trans_dqn/model_500.pth')
+    # save_model_freq
+    parser.add_argument('--save_model_freq', type=int, default=500)
+    # mode: train or test
+    parser.add_argument('--mode', type=str, default='train')
     args = parser.parse_args()
     return args
 
@@ -42,6 +53,9 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
 
     def __init__(self):
         super().__init__()
+    
+    def saveModel(self):
+        self.DQN_Agent.saveModel()
 
     def reset(self):
         self.state_dict = {
@@ -98,6 +112,7 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
         }
         self.args = parseDQNArgs()
         self.DQN_Agent = DQN_Agent(self.args)
+        self.tensorboard_writer = SummaryWriter()
             
     def _encode_node_state(self, node_state, node_type):
         # id, time, position_x, position_y, position_z, speed, fog_profile, node_type
@@ -126,7 +141,7 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
         required_returned_size = (task_state[5] - self.task_min_size) / (self.task_max_size - self.task_min_size)
         task_deadline = (task_state[6] - self.task_min_deadline) / (self.task_max_deadline - self.task_min_deadline)
         task_priority = (task_state[7] - self.task_min_priority) / (self.task_max_priority - self.task_min_priority)
-        task_arrival_time = (task_state[1] - task_state[8]) / task_deadline # time - task_arrival_time, 即任务已经等待的时间
+        task_arrival_time = (task_state[1] - task_state[8]) / (self.task_max_deadline - self.task_min_deadline) # time - task_arrival_time, 即任务已经等待的时间
         task_lifecycle_state = self.task_lifecycle_state_dict.get(task_state[9], -1)
         state = [task_size, task_cpu, required_returned_size, task_deadline, task_priority, task_arrival_time, task_lifecycle_state]
         return np.asarray(state)
@@ -143,7 +158,7 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
         self.scheduleCommunication(env)
         self.scheduleComputing(env)
         self.scheduleTraffic(env)
-        self.DQN_Agent.update()
+        self.DQN_Agent.update(self.tensorboard_writer)
 
     def scheduleMission(self, env: AirFogSimEnv):
         return
@@ -179,10 +194,10 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
         task_data_np = np.zeros((self.args.m1, self.args.max_tasks, self.args.d_task))
         task_mask = np.zeros((self.args.m1, self.args.max_tasks))
         task_node_id_as_idx = task_node_id_as_idx[:self.args.m1] # 只取前m1个task node
-        task_id_as_idx = []
+        task_id_as_idx = [-1] * self.args.m1 * self.args.max_tasks
         task_node_task_cnt = [0] * self.args.m1
         surplus_task_data = {} # task_node_id -> task_data
-        task_node_dict = {task_node[0]: task_node for task_node in task_nodes}
+        task_node_dict = {task_node[0]: task_node for task_node in task_nodes} # task_node_id -> task_data
         for i, task in enumerate(task_data):
             task_node_id = task[2]
             if task_node_id not in task_node_id_as_idx:
@@ -191,8 +206,8 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
             if task_node_task_cnt[task_node_index] < self.args.max_tasks:
                 task_data_np[task_node_index][task_node_task_cnt[task_node_index]] = self._encode_task_state(task)
                 task_mask[task_node_index][task_node_task_cnt[task_node_index]] = 1
+                task_id_as_idx[task_node_index * self.args.max_tasks + task_node_task_cnt[task_node_index]] = task[0]
                 task_node_task_cnt[task_node_index] += 1
-                task_id_as_idx.append(task[0])
             else:
                 surplus_task_data[task_node_id] = surplus_task_data.get(task_node_id, [])
                 surplus_task_data[task_node_id].append(task)
@@ -209,7 +224,7 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
                 for i in range(en_num):
                     task_data_np[task_node_ptr][i] = self._encode_task_state(tasks[i])
                     task_mask[task_node_ptr][i] = 1
-                    task_id_as_idx.append(tasks[i][0])
+                    task_id_as_idx[task_node_ptr * self.args.max_tasks + i] = tasks[i][0]
                 task_node_ptr += 1
                 tasks = tasks[en_num:]
         # 处理完task data后，按照task_node_id_as_idx，对应生成task_node_np
@@ -224,6 +239,8 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
         compute_node_np = np.zeros((self.args.m2, self.args.d_node))
         compute_node_mask = np.zeros((self.args.m2))
         compute_node_id_as_idx = []
+        # compute_nodes按照cpu降序排列
+        # compute_nodes = sorted(compute_nodes, key=lambda x: x[6].get('cpu', 0), reverse=True)
         for i, compute_node in enumerate(compute_nodes):
             if i >= self.args.m2:
                 break
@@ -245,19 +262,19 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
         action = self.DQN_Agent.select_action(task_node_np, task_data_np, compute_node_np, task_mask, compute_node_mask)
         action = action.reshape((self.args.m1, self.args.max_tasks))
         # 遍历task_mask，仅当其为1，才进行offloading
-        task_cnt = 0
         for i in range(self.args.m1):
             if i >= len(task_node_id_as_idx):
                 break
             task_node_id = task_node_id_as_idx[i]
             for j in range(self.args.max_tasks):
                 if task_mask[i][j] == 1:
-                    task_id = task_id_as_idx[task_cnt]
-                    task_cnt += 1
+                    task_id = task_id_as_idx[i * self.args.max_tasks + j]
                     if action[i][j] == 0: # locally executed
                         target_node_id = task_node_id
-                    else:
+                    elif action[i][j]-1 < len(compute_node_id_as_idx): # offloaded to fog node
                         target_node_id = compute_node_id_as_idx[action[i][j]-1]
+                    else: # offloaded to self, as the unaccessible node
+                        target_node_id = task_node_id
                     if task_id != -1:   
                         self.taskScheduler.setTaskOffloading(env, task_node_id, task_id, target_node_id)
         
@@ -284,7 +301,8 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
     def scheduleCommunication(self, env: AirFogSimEnv):
         n_RB = self.commScheduler.getNumberOfRB(env)
         all_offloading_task_infos = self.taskScheduler.getAllOffloadingTaskInfos(env)
-        avg_RB_nos = max(1, n_RB // max(1, len(all_offloading_task_infos)))
+        all_offloading_task_infos = all_offloading_task_infos[:50]
+        avg_RB_nos = max(3, n_RB // max(1, len(all_offloading_task_infos)))
         RB_ctr = 0
         for task_dict in all_offloading_task_infos:
             # 从RB_ctr到RB_ctr+avg_RB_nos-1分配给task；多出的部分mod n_RB，allocated_RB_nos是RB编号的列表
@@ -293,21 +311,44 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
             self.commScheduler.setCommunicationWithRB(env, task_dict['task_id'], allocated_RB_nos)
 
     def scheduleComputing(self, env: AirFogSimEnv):
-        all_computing_task_infos = self.taskScheduler.getAllComputingTaskInfos(env)
-        appointed_fog_node_set = set()
-        for task_dict in all_computing_task_infos:
-            task_id = task_dict['task_id']
-            task_node_id = task_dict['task_node_id']
-            assigned_node_id = task_dict['assigned_to']
-            assigned_node_info = self.entityScheduler.getNodeInfoById(env, assigned_node_id)
-            if assigned_node_info is None or assigned_node_id in appointed_fog_node_set:
-                continue
-            appointed_fog_node_set.add(assigned_node_id)
+        # alloc_cpu_callback function, 用于分配CPU资源的回调函数,输入为_computing_tasks (dict), simulation_interval (float), current_time (float)
+        def alloc_cpu_callback(computing_tasks, **kwargs):
+            # _computing_tasks: {task_id: task_dict}
+            # simulation_interval: float
+            # current_time: float
+            # 返回值是一个字典，key是task_id，value是分配的cpu
+            # 本函数的目的是将所有的cpu分配给task
+            appointed_fog_node_dict = {}
+            task_list = []
+            for tasks in computing_tasks.values():
+                for task in tasks:
+                    task_dict = task.to_dict()
+                    assigned_node_id = task_dict['assigned_to']
+                    assigned_node_info = self.entityScheduler.getNodeInfoById(env, assigned_node_id)
+                    task_num = appointed_fog_node_dict.get(assigned_node_id, 0)
+                    if assigned_node_info is None or task_num>=3:
+                        continue
+                    appointed_fog_node_dict[assigned_node_id] = task_num + 1
+                    task_list.append(task_dict)
             # 所有cpu分配给task
-            self.compScheduler.setComputingWithNodeCPU(env, task_id, assigned_node_info.get('fog_profile', {}).get('cpu', 0)) 
+            alloc_cpu_dict = {}
+            for task_dict in task_list:
+                task_id = task_dict['task_id']
+                assigned_node_id = task_dict['assigned_to']
+                alloc_cpu = assigned_node_info.get('fog_profile', {}).get('cpu', 0) / max(1, appointed_fog_node_dict[assigned_node_id])
+                alloc_cpu_dict[task_id] = alloc_cpu
+            return alloc_cpu_dict
+        self.compScheduler.setComputingCallBack(env, alloc_cpu_callback) 
 
     def getRewardByTask(self, env: AirFogSimEnv):
-        return super().getRewardByTask(env)
+        last_step_succ_task_infos = self.taskScheduler.getLastStepSuccTaskInfos(env)
+        last_step_fail_task_infos = self.taskScheduler.getLastStepFailTaskInfos(env)
+        reward = 0
+        for task_info in last_step_succ_task_infos+last_step_fail_task_infos:
+            reward += self.rewardScheduler.getRewardByTask(env, task_info)
+            # if task_info['task_delay'] <= task_info['task_deadline']:
+            #     reward += 1
+        return reward
 
     def getRewardByMission(self, env: AirFogSimEnv):
         return super().getRewardByMission(env)
