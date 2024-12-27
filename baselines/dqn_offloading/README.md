@@ -14,7 +14,7 @@ python baselines/dqn_offloading/main_dqn_offloading.py
 For testing the DQN model, modify `parseDQNArgs()` in `dqn_algorithm.py` to load the trained model:
 
 ```python
-    parser.add_argument('--model_path', type=str, default='models/trans_dqn/model_34000.final_pth')
+    parser.add_argument('--model_path', type=str, default='models/trans_dqn/final_model.final_pth')
     parser.add_argument('--mode', type=str, default='test')
 ```
 
@@ -26,3 +26,5 @@ Simulation results are shown in the following figure:
 The loss curve of the DQN algorithm for task offloading in a multi-agent system.
 ![Ratio](./Ratio.svg)
 The ratio of successful task offloading in a multi-agent system.
+
+Different reward functions or hyperparameters can be set in `dqn_airfogsim_config.yaml`.
