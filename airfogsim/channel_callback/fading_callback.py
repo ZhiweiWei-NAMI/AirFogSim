@@ -44,7 +44,10 @@ def Rayleigh_fastfading(n_tx, n_rx, n_rb, **kwargs):
     gaussian2 = cp.random.normal(0, std, size=(n_tx, n_rx))
     # 计算瑞利分布的信道增益
     r = cp.sqrt(gaussian1 ** 2 + gaussian2 ** 2)
-    # 计算信道增益的平均值
+    # 计算信道增益的平均值；如果是empty，则返回None
+    if r.size == 0:
+        h = cp.empty((n_tx, n_rx, n_rb))
+        return h
     omega = cp.mean(r ** 2)
     # 计算瑞利分布的概率密度函数
     p_r = (2 * r / omega) * cp.exp(-r ** 2 / omega)

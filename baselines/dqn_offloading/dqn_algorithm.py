@@ -15,7 +15,7 @@ def parseDQNArgs():
     parser.add_argument('--nhead', type=int, default=4)
     parser.add_argument('--num_layers', type=int, default=3)
     parser.add_argument('--lr', type=float, default=1e-4)
-    parser.add_argument('--device', type=str, default='cpu')
+    parser.add_argument('--device', type=str, default='cuda:2')
     # epsilon
     parser.add_argument('--epsilon', type=float, default=0.1)
     parser.add_argument('--gamma', type=float, default=0.8)
@@ -26,11 +26,11 @@ def parseDQNArgs():
     # args.model_dir
     parser.add_argument('--model_dir', type=str, default='models/trans_dqn/')
     # args.model_path
-    parser.add_argument('--model_path', type=str, default='models/trans_dqn/model_500.pth')
+    parser.add_argument('--model_path', type=str, default='models/trans_dqn/model_34000.final_pth')
+    parser.add_argument('--mode', type=str, default='test')
     # save_model_freq
     parser.add_argument('--save_model_freq', type=int, default=500)
     # mode: train or test
-    parser.add_argument('--mode', type=str, default='train')
     args = parser.parse_args()
     return args
 
@@ -318,25 +318,20 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
             # current_time: float
             # 返回值是一个字典，key是task_id，value是分配的cpu
             # 本函数的目的是将所有的cpu分配给task
-            appointed_fog_node_dict = {}
-            task_list = []
+            appointed_fog_node = set()
+            alloc_cpu_dict = {}
             for tasks in computing_tasks.values():
                 for task in tasks:
                     task_dict = task.to_dict()
                     assigned_node_id = task_dict['assigned_to']
-                    assigned_node_info = self.entityScheduler.getNodeInfoById(env, assigned_node_id)
-                    task_num = appointed_fog_node_dict.get(assigned_node_id, 0)
-                    if assigned_node_info is None or task_num>=3:
+                    if assigned_node_id in appointed_fog_node:
                         continue
-                    appointed_fog_node_dict[assigned_node_id] = task_num + 1
-                    task_list.append(task_dict)
-            # 所有cpu分配给task
-            alloc_cpu_dict = {}
-            for task_dict in task_list:
-                task_id = task_dict['task_id']
-                assigned_node_id = task_dict['assigned_to']
-                alloc_cpu = assigned_node_info.get('fog_profile', {}).get('cpu', 0) / max(1, appointed_fog_node_dict[assigned_node_id])
-                alloc_cpu_dict[task_id] = alloc_cpu
+                    appointed_fog_node.add(assigned_node_id)
+                    assigned_node_info = self.entityScheduler.getNodeInfoById(env, assigned_node_id)
+                    if assigned_node_info is None:
+                        continue
+                    alloc_cpu = assigned_node_info.get('fog_profile', {}).get('cpu', 0)
+                    alloc_cpu_dict[task_dict['task_id']] = alloc_cpu
             return alloc_cpu_dict
         self.compScheduler.setComputingCallBack(env, alloc_cpu_callback) 
 

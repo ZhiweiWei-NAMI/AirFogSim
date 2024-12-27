@@ -44,7 +44,7 @@ while not env.isDone():
     v2u_rate.append(env.getChannelAvgRate('V2U'))
     v2i_rate.append(env.getChannelAvgRate('V2I'))
     u2i_rate.append(env.getChannelAvgRate('U2I'))
-    print(f'Simulation time: {env.simulation_time}, ACC_Reward: {succ_ratio*accumulated_reward/max(1,task_num)} V2U: {v2u_rate[-1]}, V2I: {v2i_rate[-1]}, U2I: {u2i_rate[-1]}', end='\r')
+    print(f'Simulation time: {env.simulation_time:.2f}, Ratio: {succ_ratio:.2f}, ACC_Reward: {succ_ratio*accumulated_reward/max(1,task_num):.2f} V2U: {v2u_rate[-1]:.2f}, V2I: {v2i_rate[-1]:.2f}, U2I: {u2i_rate[-1]:.2f}', end='\r')
 env.close()
 # plt绘制
 import matplotlib.pyplot as plt

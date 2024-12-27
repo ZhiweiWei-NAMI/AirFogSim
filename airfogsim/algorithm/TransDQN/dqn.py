@@ -32,7 +32,7 @@ class DQN_Agent:
         self.target_network.to(self.device)
         self.target_network.load_state_dict(self.q_network.state_dict())
         self.gamma = args.gamma
-        self.optimizer = torch.optim.Adam(self.q_network.parameters(), lr=args.lr, eps=1e-5)
+        self.optimizer = torch.optim.SGD(self.q_network.parameters(), lr=args.lr, momentum=0.9)
         self.criterion = nn.HuberLoss()
         self.replay_buffer = ReplayBuffer(args.replay_buffer_capacity)
         self.update_cnt = 0
