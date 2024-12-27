@@ -19,3 +19,10 @@ For testing the DQN model, modify `parseDQNArgs()` in `dqn_algorithm.py` to load
 ```
 
 Then run the `main_dqn_offloading.py` script. This script will load the trained model and test it in the simulation environment.
+
+Simulation results are shown in the following figure:
+<!-- ./baselines/Loss.svg -->
+![Loss](./Loss.svg)
+The loss curve of the DQN algorithm for task offloading in a multi-agent system.
+![Ratio](./Ratio.svg)
+The ratio of successful task offloading in a multi-agent system.
