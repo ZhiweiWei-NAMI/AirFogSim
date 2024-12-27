@@ -93,4 +93,4 @@ This is a baseline implementation of the DQN algorithm for task offloading in a 
 ![Loss](./baselines/dqn_offloading/Loss.svg)
 The loss curve of the DQN algorithm for task offloading in a multi-agent system.
 ![Ratio](./baselines/dqn_offloading/Ratio.svg)
-The ratio of successful task offloading in a multi-agent system. In comparison, the ratio of `Executed locally` is about 0.8.
+The ratio of successful task offloading in a multi-agent system. For comparison, the ratio of `Executed locally` is about 0.8.
