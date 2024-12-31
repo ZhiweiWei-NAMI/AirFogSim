@@ -24,7 +24,7 @@ Simulation results are shown in the following figure:
 <!-- ./baselines/Loss.svg -->
 ![Loss](./Reward.svg)
 The reward of the DQN algorithm for task offloading in a multi-agent system.
-![Ratio](./Success_Ratio.svg)
+![Ratio](./Success_ratio.svg)
 The ratio of successful task offloading in a multi-agent system.
 
 Different reward functions or hyperparameters can be set in `dqn_airfogsim_config.yaml`.
