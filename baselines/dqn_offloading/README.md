@@ -22,9 +22,9 @@ Then run the `main_dqn_offloading.py` script. This script will load the trained 
 
 Simulation results are shown in the following figure:
 <!-- ./baselines/Loss.svg -->
-![Loss](./Loss.svg)
-The loss curve of the DQN algorithm for task offloading in a multi-agent system.
-![Ratio](./Ratio.svg)
+![Loss](./Reward.svg)
+The reward of the DQN algorithm for task offloading in a multi-agent system.
+![Ratio](./Success_Ratio.svg)
 The ratio of successful task offloading in a multi-agent system.
 
 Different reward functions or hyperparameters can be set in `dqn_airfogsim_config.yaml`.
