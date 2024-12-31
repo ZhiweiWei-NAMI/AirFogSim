@@ -41,7 +41,7 @@ RewardScheduler.setModel(env, 'REWARD', '1/max(1e-3, task_delay)')
 np.random.seed(0)
 random.seed(0)
 torch.manual_seed(0)
-EPOCH_NUM = 500
+EPOCH_NUM = 2000
 for epoch in range(EPOCH_NUM):
     accumulated_reward = 0
     while not env.isDone():

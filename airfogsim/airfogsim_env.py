@@ -228,6 +228,7 @@ class AirFogSimEnv():
             # 12. Update State Info
             self._updateStateInfo()
         # ensure the simulation time is the same as the traffic time
+        self.task_manager.checkTasks(self.simulation_time)
         self.simulation_time = self.traffic_manager.getCurrentTime()
         self.clearDecisions()
         return self.isDone()

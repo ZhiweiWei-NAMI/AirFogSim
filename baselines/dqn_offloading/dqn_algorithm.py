@@ -12,8 +12,8 @@ def parseDQNArgs():
     parser.add_argument('--m1', type=int, default=50)
     parser.add_argument('--m2', type=int, default=50)
     parser.add_argument('--d_model', type=int, default=512)
-    parser.add_argument('--nhead', type=int, default=4)
-    parser.add_argument('--num_layers', type=int, default=3)
+    parser.add_argument('--nhead', type=int, default=2)
+    parser.add_argument('--num_layers', type=int, default=2)
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--device', type=str, default='cuda:2')
     # epsilon
@@ -26,10 +26,10 @@ def parseDQNArgs():
     # args.model_dir
     parser.add_argument('--model_dir', type=str, default='models/trans_dqn/')
     # args.model_path
-    parser.add_argument('--model_path', type=str, default='models/trans_dqn/model_75000.pth')
+    parser.add_argument('--model_path', type=str, default='models/trans_dqn/model_499968.pth')
     parser.add_argument('--mode', type=str, default='train')
     # save_model_freq
-    parser.add_argument('--save_model_freq', type=int, default=5000)
+    parser.add_argument('--save_model_freq', type=int, default=100000)
     # mode: train or test
     args = parser.parse_args()
     return args
@@ -74,6 +74,7 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
         Args:
             env (AirFogSimEnv): The environment object.
         """
+        self.env = env
         self.min_position_x, self.max_position_x = 0, 2000
         self.min_position_y, self.max_position_y = 0, 2000
         self.min_position_z, self.max_position_z = 0, 200
@@ -120,8 +121,10 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
         # 选取 position_x, position_y, position_z, speed, fog_profile, node_type, 6维
         # 注意，fog_profile要转为数字；node_type要转为encoding；position_x, position_y, position_z, speed要normalize
         # fog_profile: {'lambda': 1} -> 1
-        if node_type == 'FN':
-            profile = node_state[6].get('cpu', 0)
+        if node_type == 'FN' or True:
+            cpu = node_state[6].get('cpu', 0)
+            require_cpu = self.compScheduler.getRequiredComputingResourceByNodeId(self.env, node_state[0])
+            profile = cpu - require_cpu
         elif node_type == 'TN':
             profile = node_state[6].get('lambda', 0)
         fog_type = self.fog_type_dict.get(node_state[7], -1)
@@ -191,6 +194,7 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
         # 可以根据规则对于task node进行排序或筛选，对应的task信息也就删掉了（只要修改task_node_id_as_idx即可）
         # 要按照task_node对应找task_data；如果超过max_tasks，就要新生成一个task_node存储多出来的task
         task_node_id_as_idx = task_node_ids.copy()
+        task_node_id_as_idx = sorted(task_node_id_as_idx, key=lambda x: self.taskScheduler.getToOffloadTaskNumberByTaskNode(self.env, x), reverse=True) # reverse=True表示降序
         task_data_np = np.zeros((self.args.m1, self.args.max_tasks, self.args.d_task))
         task_mask = np.zeros((self.args.m1, self.args.max_tasks))
         task_node_id_as_idx = task_node_id_as_idx[:self.args.m1] # 只取前m1个task node
