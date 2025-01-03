@@ -24,7 +24,7 @@ def load_config(path):
 
 
 last_episode = 0
-max_episode = 1
+max_episode = 50
 
 # 启动性能监控
 profiler = Profiler()

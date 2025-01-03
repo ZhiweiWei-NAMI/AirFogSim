@@ -145,7 +145,7 @@ mission:
   mission_generation_model: "Poisson" # supported model:['Poisson', 'Uniform', 'Normal', 'Exponential']
   generation_model_args:
     Poisson:
-      lambda: 0.5
+      lambda: 0.1
     Uniform:
       low: 0
       high: 1

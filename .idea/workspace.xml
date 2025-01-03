@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="e602f890-1e94-45d2-a6d5-c612b9de4d18" name="变更" comment="">
+<<<<<<< Updated upstream
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/airfogsim/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/airfogsim/airfogsim_env.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/airfogsim_env.py" afterDir="false" />
@@ -14,6 +15,13 @@
       <change beforePath="$PROJECT_DIR$/airfogsim/scheduler/algorithm_sched.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/scheduler/algorithm_sched.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/airfogsim/scheduler/traffic_sched.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/scheduler/traffic_sched.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/baselines/crowdsensing/RL/TDDQN_MADDPG_algorithm.py" beforeDir="false" afterPath="$PROJECT_DIR$/baselines/crowdsensing/RL/TDDQN_MADDPG_algorithm.py" afterDir="false" />
+=======
+      <change beforePath="$PROJECT_DIR$/.idea/AirFogSim.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/AirFogSim.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/airfogsim/airfogsim_env.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/airfogsim_env.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/airfogsim/airfogsim_evaluation.py" beforeDir="false" afterPath="$PROJECT_DIR$/airfogsim/airfogsim_evaluation.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/examples/config.yaml" afterDir="false" />
+>>>>>>> Stashed changes
       <change beforePath="$PROJECT_DIR$/examples/example02_crowdsensing_example.py" beforeDir="false" afterPath="$PROJECT_DIR$/examples/example02_crowdsensing_example.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

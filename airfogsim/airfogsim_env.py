@@ -416,7 +416,6 @@ class AirFogSimEnv():
                 last_transmission_time = task.getLastReturnTime()
             trans_data = np.sum(
                 self.channel_manager.getRateByChannelType(tx_idx, rx_idx, channel_type)) * self.simulation_interval
-            print(trans_data)
 
             tx_size = tx_size_dict.get(tx_id, 0)
             tx_size += trans_data

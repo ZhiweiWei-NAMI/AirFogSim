@@ -185,7 +185,7 @@ class AirFogSimEvaluation:
         self.finish_mission_num = sum_over_missions
 
 
-        self.traffic_step_generate_num,self.slot_allocate_num = env.getMissionEvaluationIndicators()
+        self.traffic_step_generate_num,self.traffic_step_allocate_num = env.getMissionEvaluationIndicators()
         self.traffic_step_success_num = len(last_step_succ_mission_infos)
         self.traffic_step_fail_num = len(last_step_fail_mission_infos)
         self.traffic_step_early_fail_num = len(last_step_early_fail_mission_infos)
@@ -231,7 +231,7 @@ class AirFogSimEvaluation:
         # 5.2 completion ratio (Classified by type, not consider early fail)
         for mission_info in last_step_succ_mission_infos:
             appointed_node_id=mission_info['appointed_node_id']
-            node_type=env._getNodeTypeById(appointed_node_id)
+            node_type=self.__getNodeTypeById(appointed_node_id)
             if node_type=='V':
                 self.finish_mission_num_on_vehicle+=1
                 self.success_mission_num_on_vehicle+=1
@@ -243,7 +243,7 @@ class AirFogSimEvaluation:
 
         for mission_info in last_step_fail_mission_infos:
             appointed_node_id=mission_info['appointed_node_id']
-            node_type=env._getNodeTypeById(appointed_node_id)
+            node_type=self.__getNodeTypeById(appointed_node_id)
             if node_type=='V':
                 self.finish_mission_num_on_vehicle+=1
             elif node_type=='U':
@@ -423,6 +423,7 @@ class AirFogSimEvaluation:
             os.makedirs(path_to_save)
 
         # 过程监控
+        # 累计任务
         x_indices = list(range(1, self.step_num + 1))
         plt.figure()
         plt.plot(x_indices, self.step_to_generate_missions_num,label='To generate', color='gray')
@@ -436,20 +437,50 @@ class AirFogSimEvaluation:
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()
         plt.savefig(path_to_save+'AccumulateProcessMonitoring.png')
+        plt.close()
 
+        # 时隙任务
         x_indices = list(range(1, self.step_num + 1))
         plt.figure()
-        plt.plot(x_indices, self.step_generate_num,label='Generate', color='gray')
-        plt.plot(x_indices, self.step_allocate_num,label='Allocate', color='blueviolet')
-        plt.plot(x_indices, self.step_success_num,label='Success', color='limegreen')
-        plt.plot(x_indices, self.step_fail_num, label='Fail', color='red')
-        plt.plot(x_indices, self.step_early_fail_num,label='Not Allocate', color='orange')
-        plt.title('Timeslot Process Monitoring')
-        plt.xlabel('Step')
-        plt.ylabel('The Number of Missions')
-        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
-        plt.legend()
-        plt.savefig(path_to_save+'TimeslotProcessMonitoring.png')
+        fig, axes = plt.subplots(2, 3, figsize=(12, 8))  # 两行三列
+        # 子图1: Generate
+        axes[0, 0].plot(x_indices, self.step_generate_num, label='Generate', color='gray')
+        axes[0, 0].set_title('Generate')
+        axes[0, 0].set_ylabel('The Number')
+        axes[0, 0].grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        axes[0, 0].legend()
+        # 子图2: Allocate
+        axes[0, 1].plot(x_indices, self.step_allocate_num, label='Allocate', color='blueviolet')
+        axes[0, 1].set_title('Allocate')
+        axes[0, 1].grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        axes[0, 1].legend()
+        # 子图3: Success
+        axes[0, 2].plot(x_indices, self.step_success_num, label='Success', color='limegreen')
+        axes[0, 2].set_title('Success')
+        axes[0, 2].grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        axes[0, 2].legend()
+        # 子图4: Fail
+        axes[1, 0].plot(x_indices, self.step_fail_num, label='Fail', color='red')
+        axes[1, 0].set_title('Fail')
+        axes[1, 0].set_ylabel('The Number')
+        axes[1, 0].set_xlabel('Step')
+        axes[1, 0].grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        axes[1, 0].legend()
+        # 子图5: Not Allocate
+        axes[1, 1].plot(x_indices, self.step_early_fail_num, label='Not Allocate', color='orange')
+        axes[1, 1].set_title('Not Allocate')
+        axes[1, 1].set_xlabel('Step')
+        axes[1, 1].grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        axes[1, 1].legend()
+        # 子图6: 留空或补充说明
+        axes[1, 2].axis('off')  # 禁用第六个子图
+        # axes[1, 2].text(0.5, 0.5, "Additional Info", ha='center', va='center', fontsize=12, color='gray')
+        # 设置全局标题
+        fig.suptitle('Timeslot Process Monitoring', fontsize=16)
+        # 保存图像
+        plt.savefig(path_to_save + 'TimeslotProcessMonitoring.png')
+        plt.close()
+
 
         # 信道速率指标
         x_indices = list(range(1, self.step_num + 1))
@@ -464,6 +495,7 @@ class AirFogSimEvaluation:
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()
         plt.savefig(path_to_save + 'ChannelRate.png')
+        plt.close()
 
         # 信道使用情况
         x_indices = list(range(1, len(self.V2U_link_using) + 1))
@@ -474,9 +506,10 @@ class AirFogSimEvaluation:
         plt.title('Link Using')
         plt.xlabel('SimulationStep')
         plt.ylabel('Link Num in Use')
-        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
         plt.legend()
         plt.savefig(path_to_save + 'LinkUsing.png')
+        plt.close()
 
         # data trans
         # V2U
@@ -486,8 +519,9 @@ class AirFogSimEvaluation:
         plt.title('V2U Data Trans')
         plt.xlabel('Trans Step')
         plt.ylabel('Data Size')
-        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
         plt.savefig(path_to_save + 'V2U_data_trans.png')
+        plt.close()
         # V2I
         x_indices = list(range(1, len(self.V2I_data_trans_list) + 1))
         plt.figure()
@@ -495,8 +529,9 @@ class AirFogSimEvaluation:
         plt.title('V2I Data Trans')
         plt.xlabel('Trans Step')
         plt.ylabel('Data Size')
-        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
         plt.savefig(path_to_save + 'V2I_data_trans.png')
+        plt.close()
         # U2I
         x_indices = list(range(1, len(self.U2I_data_trans_list) + 1))
         plt.figure()
@@ -504,8 +539,9 @@ class AirFogSimEvaluation:
         plt.title('U2I Data Trans')
         plt.xlabel('Trans Step')
         plt.ylabel('Data Size')
-        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
         plt.savefig(path_to_save + 'U2I_data_trans.png')
+        plt.close()
 
         # reward
         x_indices = list(range(1, self.step_num + 1))
@@ -518,6 +554,7 @@ class AirFogSimEvaluation:
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()
         plt.savefig(path_to_save + 'Reward.png')
+        plt.close()
 
         # completion ratio
         x_indices = list(range(1, self.step_num + 1))
@@ -531,6 +568,7 @@ class AirFogSimEvaluation:
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()
         plt.savefig(path_to_save + 'CompletionRatio.png')
+        plt.close()
 
         # acceleration ratio
         x_indices = list(range(1, self.step_num + 1))
@@ -543,7 +581,7 @@ class AirFogSimEvaluation:
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()
         plt.savefig(path_to_save + 'AccelerationRatio.png')
-
+        plt.close()
 
         # optimization objectives
         x_indices = list(range(1, self.step_num + 1))
@@ -556,6 +594,7 @@ class AirFogSimEvaluation:
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()
         plt.savefig(path_to_save + 'Time.png')
+        plt.close()
 
 
         self.initOrResetStepIndicators()
@@ -613,6 +652,7 @@ class AirFogSimEvaluation:
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()
         plt.savefig(path_to_save + 'ProcessMonitoring.png')
+        plt.close()
 
         # 信道速率指标
         plt.figure()
@@ -626,6 +666,7 @@ class AirFogSimEvaluation:
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()
         plt.savefig(path_to_save + 'ChannelRate.png')
+        plt.close()
 
         # reward
         plt.figure()
@@ -637,6 +678,7 @@ class AirFogSimEvaluation:
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()
         plt.savefig(path_to_save + 'Reward.png')
+        plt.close()
 
         # completion ratio
         plt.figure()
@@ -649,6 +691,7 @@ class AirFogSimEvaluation:
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()
         plt.savefig(path_to_save + 'CompletionRatio.png')
+        plt.close()
 
         # acceleration ratio
         plt.figure()
@@ -660,6 +703,7 @@ class AirFogSimEvaluation:
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()
         plt.savefig(path_to_save + 'AccelerationRatio.png')
+        plt.close()
 
         # optimization objectives
         plt.figure()
@@ -671,8 +715,23 @@ class AirFogSimEvaluation:
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()
         plt.savefig(path_to_save + 'Time.png')
+        plt.close()
 
         self.initOrResetStepIndicators()
         self.initOrResetStepRecords()
         self.initOrResetEpisodeRecords()
+
+    def __getNodeTypeById(self,node_id):
+        node_id=node_id.capitalize()
+        assert node_id[0] in ['V','R','U','C'],f'Invalid node type of {node_id}'
+        if node_id[0] == 'V':
+            return 'V'
+        elif node_id[0] == 'R':
+            return 'R'
+        elif node_id[0] == 'U':
+            return 'U'
+        elif node_id[0] == 'C':
+            return 'C'
+        else:
+            return None
 
