@@ -225,7 +225,7 @@ class MissionManager:
         Returns:
             list: The list of the recently done missions.
         """
-        return self._recently_done_100_missions
+        return self._recently_done_100_missions.copy()
 
     def getRecentlyFailMissions(self):
         """Get the recently failed missions (the maximum number is 100).
@@ -233,7 +233,7 @@ class MissionManager:
         Returns:
             list: The list of the recently done missions.
         """
-        return self._recently_fail_100_missions
+        return self._recently_fail_100_missions.copy()
 
     def getRecentlyEarlyFailMissions(self):
         """Get the recently failed missions (the maximum number is 100).
@@ -241,7 +241,7 @@ class MissionManager:
         Returns:
             list: The list of the recently done missions.
         """
-        return self._recently_early_fail_100_missions
+        return self._recently_early_fail_100_missions.copy()
 
     def getDoneMissionByMissionNodeAndMissionId(self, appointed_node_id, mission_id):
         """Get the done missions by the appointed node id and the mission id.
@@ -439,7 +439,12 @@ class MissionManager:
         Examples:
             mission_manager.getExecutingMissions()
         """
-        return self._executing_missions
+        return self._executing_missions.copy()
+
+    def getCurrentNodeId(self,mission_id):
+        for node_id,mission in self._executing_missions:
+            if mission.getMissionId() == mission_id:
+                return mission.getCurrentNodeId()
 
     def getConfig(self,name):
         return self._config_mission.get(name,None)

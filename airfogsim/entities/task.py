@@ -174,13 +174,24 @@ class Task:
         if self._computed_size >= self._task_cpu:
             self._computed_size = self._task_cpu
 
-    def getReturnedSize(self):
-        """Get the returned size.
+    def getRequiredReturnSize(self):
+        """Get the required returned size.
 
         Returns:
             float: The required returned size.
         """
         return self._required_returned_size
+
+    def getAlreadyReturnedSize(self):
+        """Get the already returned size.
+
+        Returns:
+            float: The required returned size.
+        """
+        if self.isReturning():
+            return self._transmitted_size
+        else:
+            return 0
 
     def isComputed(self):
         """Check if the task is computed.

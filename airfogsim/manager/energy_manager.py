@@ -59,6 +59,9 @@ class EnergyManager:
     def getAvailableUAVsId(self):
         return self._UAVs_energy_info.keys()
 
+    def getEnergyById(self,id):
+        return self._UAVs_energy_info[id]['energy']
+
     def getConfig(self,name):
         return self._config_energy.get(name,None)
 

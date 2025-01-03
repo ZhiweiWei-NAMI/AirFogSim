@@ -30,13 +30,39 @@ class AirFogSimEnv():
             config (dict): The configuration of the environment. Please follow standard YAML format.
             interactive_mode (str, optional): The interactive mode. 'graphic' or 'text'. Defaults to None.
         """
-        self.reset(config)
+        self.config = config
+        self.max_simulation_time = config['simulation']['max_simulation_time']
+        self.simulation_interval = config['simulation']['simulation_interval']  # TTI
+        self.traffic_interval = config['simulation']['traffic_interval']
+        assert self.traffic_interval >= self.simulation_interval, "The traffic interval should be greater than or equal to the simulation interval!"
+
+        self.traci_connection = self._connectToSUMO(config['sumo'], config['traffic']['traffic_mode'] == 'SUMO')
+        conv_boundary, _, _, _ = parse_location_info(config['sumo']['sumo_net'])
+        conv_boundary = tuple(map(float, conv_boundary.split(',')))
+        config['traffic']['x_range'] = [conv_boundary[0], conv_boundary[2]]
+        config['traffic']['y_range'] = [conv_boundary[1], conv_boundary[3]]
+        config['mission']['x_range'] = [conv_boundary[0], conv_boundary[2]]
+        config['mission']['y_range'] = [conv_boundary[1], conv_boundary[3]]
+
+        self.task_node_profiles = self.config['task_profile']['task_node_profiles'] # list of dict
+        # [{'type':'UAV', 'max_node_num': 15}, {'type':'vehicle', 'max_node_num': 10}]
+        self.task_node_types = [profile['type'] for profile in self.task_node_profiles]
+        self.task_node_gen_poss = self.config['task_profile']['task_node_gen_poss']
+        self.max_task_node_num = {}
+        for profile in self.task_node_profiles:
+            self.max_task_node_num[profile['type']] = profile['max_node_num']
+
+        self._configManagersModels()
+
+        self.reset()
+
         self._visualizer = None
         if interactive_mode is not None:
             self.mountVisualizer(interactive_mode)
 
-    def reset(self,config):
+    def reset(self):
         self.force_quit = False
+        self.simulation_time = 0
 
         self.vehicles = {}
         self.vehicle_ids_as_index = []  # vehicle ids as a list, used for indexing
@@ -52,34 +78,14 @@ class AirFogSimEnv():
         self.cloudServers = {}
         self.cloud_server_ids_as_index = []  # cloud server ids as a list, used for indexing
 
-        self.config = config
-
-        self.simulation_time = 0
-        self.max_simulation_time = config['simulation']['max_simulation_time']
-
-        self.simulation_interval = config['simulation']['simulation_interval']  # TTI
-        self.traffic_interval = config['simulation']['traffic_interval']
-
-        assert self.traffic_interval >= self.simulation_interval, "The traffic interval should be greater than or equal to the simulation interval!"
-
-        self.traci_connection = self._connectToSUMO(config['sumo'], config['traffic']['traffic_mode'] == 'SUMO')
-        conv_boundary, _, _, _ = parse_location_info(config['sumo']['sumo_net'])
-        conv_boundary = tuple(map(float, conv_boundary.split(',')))
-        config['traffic']['x_range'] = [conv_boundary[0], conv_boundary[2]]
-        config['traffic']['y_range'] = [conv_boundary[1], conv_boundary[3]]
-        config['mission']['x_range'] = [conv_boundary[0], conv_boundary[2]]
-        config['mission']['y_range'] = [conv_boundary[1], conv_boundary[3]]
-
-        self._configManagersModels()
-
-        self.task_node_profiles = self.config['task_profile']['task_node_profiles'] # list of dict
-        # [{'type':'UAV', 'max_node_num': 15}, {'type':'vehicle', 'max_node_num': 10}]
-        self.task_node_types = [profile['type'] for profile in self.task_node_profiles]
-        self.task_node_gen_poss = self.config['task_profile']['task_node_gen_poss']
-        self.max_task_node_num = {}
-        for profile in self.task_node_profiles:
-            self.max_task_node_num[profile['type']] = profile['max_node_num']
-
+        self.traffic_manager.reset()
+        self.task_manager.reset()
+        self.channel_manager.reset()
+        self.mission_manager.reset()
+        self.sensor_manager.reset()
+        self.blockchain_manager.reset()
+        self.energy_manager.reset(self.traffic_manager.getUAVTrafficInfos().keys())
+        self.node_state_manager.reset()
 
         # ----------------decisions, managed by schedulers----------------
         self.vehicle_mobility_patterns = {}  # dict, key是vehicle_id, value是mobility pattern={speed}
@@ -111,19 +117,6 @@ class AirFogSimEnv():
         # ----------------temporary records in each traffic simulation step----------------
         self.new_vehicle_id_list=[]
 
-    def reset(self):
-        """Reset the environment.
-        """
-        self.traffic_manager.reset()
-        self.task_manager.reset()
-        self.channel_manager.reset()
-        self.mission_manager.reset()
-        self.sensor_manager.reset()
-        self.blockchain_manager.reset()
-        self.energy_manager.reset(self.traffic_manager.getUAVTrafficInfos().keys())
-        self.node_state_manager.reset()
-        self.simulation_time = 0
-        self.force_quit = False
 
     def _configManagersModels(self):
         config = self.config
@@ -556,7 +549,6 @@ class AirFogSimEnv():
         self.task_manager.generateAndCheckTasks(task_node_ids_kwardsDict, self.simulation_time, self.simulation_interval)
         for task_id, route in self.task_return_routes.items():
             self.task_manager.setTaskReturnRouteAndStartReturn(task_id, route, self.simulation_time)
-        self.task_return_routes = {}
 
     def _updateEnergy(self):
         """Update the energy for the entities. For example, the battery consumption, the battery charging, etc.

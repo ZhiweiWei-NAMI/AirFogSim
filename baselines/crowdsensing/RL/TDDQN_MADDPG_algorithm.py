@@ -9,8 +9,8 @@ from airfogsim.algorithm.crowdsensing.MADDPG.MADDPG_env import MADDPG_Env
 from airfogsim.airfogsim_algorithm import BaseAlgorithmModule
 import numpy as np
 
-
 device = "cuda" if torch.cuda.is_available() else "cpu"
+
 
 def parseTransDDQNTrainArgs():
     parser = argparse.ArgumentParser(description='TransDDQN train arguments')
@@ -29,6 +29,7 @@ def parseTransDDQNTrainArgs():
     parser.add_argument('--device', type=str, default=device)  # 训练设备(GPU/CPU)
     args = parser.parse_args()
     return args
+
 
 def parseTransDDQNDimArgs():
     parser = argparse.ArgumentParser(description='TransDDQN dimension arguments')
@@ -49,6 +50,7 @@ def parseTransDDQNDimArgs():
     args = parser.parse_args()
     return args
 
+
 def parseMADDPGTrainArgs():
     parser = argparse.ArgumentParser(description='MADDPG train arguments')
     parser.add_argument('--buffer_size', type=int, default=1000)  # 经验池容量
@@ -66,19 +68,20 @@ def parseMADDPGTrainArgs():
     args = parser.parse_args()
     return args
 
+
 def parseMADDPGDimArgs():
     # [x, y, z]
-    dim_neighbor_UAV=3
-    m_neighbor_UAVs=5
+    dim_neighbor_UAV = 3
+    m_neighbor_UAVs = 5
     # [left_sensing_time, left_return_size, x, y, z]
-    dim_trans_mission=5
-    m_trans_missions=50
+    dim_trans_mission = 5
+    m_trans_missions = 50
     # [sensor_type, accuracy, return_size, arrival_time, TTL, duration, x, y, z, distance_threshold]
-    dim_todo_mission=10
-    m_todo_missions=4
+    dim_todo_mission = 10
+    m_todo_missions = 4
     # [x, y, z, energy]
-    dim_self_UAV=4
-    dim_observation=dim_neighbor_UAV*m_neighbor_UAVs+dim_trans_mission*m_trans_missions+dim_todo_mission*m_todo_missions+dim_self_UAV
+    dim_self_UAV = 4
+    dim_observation = dim_neighbor_UAV * m_neighbor_UAVs + dim_trans_mission * m_trans_missions + dim_todo_mission * m_todo_missions + dim_self_UAV
 
     parser = argparse.ArgumentParser(description='MADDPG dimension arguments')
     parser.add_argument('--dim_observation', type=int, default=dim_observation)  # Dimension of observation
@@ -87,6 +90,7 @@ def parseMADDPGDimArgs():
     parser.add_argument('--dim_hiddens', type=float, default=512)  # Dimension of hidden layer
     args = parser.parse_args()
     return args
+
 
 class TransDDQN_MADDPG_AlgorithmModule(BaseAlgorithmModule):
     """
@@ -158,18 +162,37 @@ class TransDDQN_MADDPG_AlgorithmModule(BaseAlgorithmModule):
         self.rewardScheduler.setModel(env, 'REWARD',
                                       '5 * log(10, 1 + (_mission_deadline-_mission_duration_sum)) * (1 / (1 + exp(-(_mission_deadline-_mission_duration_sum) / (_mission_finish_time - _mission_arrival_time-_mission_duration_sum))) - 1 / (1 + exp(-1)))')
         self.rewardScheduler.setModel(env, 'PUNISH', '-1')
-        self.max_n_vehicles = env.traffic_manager.getConfig('max_n_vehicles')
-        self.max_n_UAVs = env.traffic_manager.getConfig('max_n_UAVs')
-        self.max_n_RSUs = env.traffic_manager.getConfig('max_n_RSUs')
 
-        TransDDQN_dim_args=parseTransDDQNDimArgs()
-        TransDDQN_train_args=parseTransDDQNTrainArgs()
+        self.max_simulation_time = env.max_simulation_time
+        self.min_position_x, self.max_position_x = self.trafficScheduler.getMapRange(env, 'X')
+        self.min_position_y, self.max_position_y = self.trafficScheduler.getMapRange(env, 'Y')
+        self.min_position_z, self.max_position_z = self.trafficScheduler.getMapRange(env, 'Z')
+        self.min_UAV_speed, self.max_UAV_speed = self.trafficScheduler.getConfig('UAV_speed_range')
+        self.max_n_vehicles = self.trafficScheduler.getConfig('max_n_vehicles')
+        self.max_n_UAVs = self.trafficScheduler.getConfig('max_n_UAVs')
+        self.max_n_RSUs = self.trafficScheduler.getConfig('max_n_RSUs')
+        self.max_mission_size = self.missionScheduler.getConfig('mission_size_range')[1]
+        self.max_energy = env.energy_manager.getConfig('initial_energy_range')[0]
+        self.node_type_dict = {
+            'V': 1,
+            'U': 2,
+            'I': 3,
+            'C': 4,
+        }
+        self.node_priority = {
+            'U': 1,
+            'V': 2,
+            'I': 3,
+        }
+
+        TransDDQN_dim_args = parseTransDDQNDimArgs()
+        TransDDQN_train_args = parseTransDDQNTrainArgs()
         self.TransDDQN_env = TransDDQN_Env(TransDDQN_dim_args, TransDDQN_train_args)
         if last_episode is not None:
             self.TransDDQN_env.loadModel(last_episode)
 
-        MADDPG_dim_args=parseMADDPGDimArgs()
-        MADDPG_train_args=parseMADDPGTrainArgs()
+        MADDPG_dim_args = parseMADDPGDimArgs()
+        MADDPG_train_args = parseMADDPGTrainArgs()
         self.MADDPG_env = MADDPG_Env(MADDPG_dim_args, MADDPG_train_args)
         if last_episode is not None:
             self.MADDPG_env.loadModel(last_episode)
@@ -180,6 +203,117 @@ class TransDDQN_MADDPG_AlgorithmModule(BaseAlgorithmModule):
     def reset(self, env: AirFogSimEnv):
         self.last_mission_id = None  # Last allocated mission id,used in next state update
         self.replay_buffer.clear()
+
+    def _encode_node_states(self, node_states, max_num):
+        # UAVs,Vehicles,RSUs
+        # [id, type, is_mission_node, is_schedulable, x, y, z]
+        # [1, 'U', True, True, 105.23, 568.15. 225.65]
+        # 选取[type, is_mission_node, is_schedulable, x, y, z]
+
+        encode_states = []
+        # 按type,id排序
+        sorted_node_states = sorted(node_states, key=lambda x: (self.node_priority[x[1]], x[0]))
+
+        for node_state in sorted_node_states:
+            node_type = self.node_type_dict.get(node_state[0], -1)
+            is_mission_node = int(node_state[1])
+            is_schedulable = int(node_state[2])
+            position_x = (node_state[3] - self.min_position_x) / (self.max_position_x - self.min_position_x)
+            position_y = (node_state[4] - self.min_position_y) / (self.max_position_y - self.min_position_y)
+            position_z = (node_state[5] - self.min_position_z) / (self.max_position_z - self.min_position_z)
+
+            state = [node_type, is_mission_node, is_schedulable, position_x, position_y, position_z]
+            encode_states.append(state)
+        return encode_states
+
+    def _encode_mission_states(self, mission_states, max_num):
+        # [sensor_type, accuracy, return_size, arrival_time, TTL, duration, x, y, z, distance_threshold]
+        # ['U',0.8,50,20,120,5,120.25,262.05,553.25,100]
+        # 选取[sensor_type, accuracy, return_size, arrival_time, TTL, duration, x, y, z, distance_threshold]
+
+        encode_states = []
+        for mission_state in mission_states:
+            sensor_type = self.node_type_dict.get(mission_state[0], -1)
+            accuracy = mission_state[1]
+            return_size = mission_state[2] / self.max_mission_size
+            arrival_time = mission_state[3] / self.max_simulation_time
+            TTL = mission_state[4] / self.max_simulation_time
+            duration = mission_state[5] / self.max_simulation_time
+            position_x = (mission_state[6] - self.min_position_x) / (self.max_position_x - self.min_position_x)
+            position_y = (mission_state[7] - self.min_position_y) / (self.max_position_y - self.min_position_y)
+            position_z = (mission_state[8] - self.min_position_z) / (self.max_position_z - self.min_position_z)
+            distance_threshold = mission_state[9] / (self.max_position_x - self.min_position_x)
+
+            state = [sensor_type, accuracy, return_size, arrival_time, TTL, duration, position_x, position_y,
+                     position_z, distance_threshold]
+            encode_states.append(state)
+        return encode_states
+
+    def _encode_sensor_states(self, sensor_states, max_num):
+        # [node_id,node_type,id,type, accuracy,candidate]
+        # [1, 'U', 3, 0.8, True]
+        # 选取[type, accuracy]
+
+        encode_states = []
+        # 1. 按 node_type,node_id 排序
+        sorted_sensor_states = sorted(sensor_states, key=lambda x: (self.node_priority[x[0][1]], x[0][0]))
+
+        # 2. 删除不需要的属性
+        for node_group in sorted_sensor_states:
+            node_state_group = []
+            for sensor_state in node_group:
+                processed_state = sensor_state[3:]  # 去除 node_id
+                node_state_group.append(processed_state)
+            encode_states.append(node_state_group)
+
+        return encode_states
+
+    def _encode_neighbor_UAV_states(self, UAV_states, max_num):
+        # [x, y, z]
+        # [105.23, 568.15. 225.65]
+        # 选取[x, y, z]
+
+        encode_states = []
+        for UAV_state in UAV_states:
+            position_x = (UAV_state[0] - self.min_position_x) / (self.max_position_x - self.min_position_x)
+            position_y = (UAV_state[1] - self.min_position_y) / (self.max_position_y - self.min_position_y)
+            position_z = (UAV_state[2] - self.min_position_z) / (self.max_position_z - self.min_position_z)
+
+            state = [position_x, position_y, position_z]
+            encode_states.append(state)
+
+        return encode_states
+
+    def _encode_trans_mission_states(self, trans_mission_states, max_num):
+        # [left_sensing_time, left_return_size, x, y, z]
+        # [5,30,120.25,262.05,553.25]
+        # 选取[left_sensing_time, left_return_size, x, y, z]
+
+        encode_states = []
+        for mission_state in trans_mission_states:
+            left_sensing_time = mission_state[3] / self.max_simulation_time
+            left_return_size = mission_state[2] / self.max_mission_size
+            position_x = (mission_state[6] - self.min_position_x) / (self.max_position_x - self.min_position_x)
+            position_y = (mission_state[7] - self.min_position_y) / (self.max_position_y - self.min_position_y)
+            position_z = (mission_state[8] - self.min_position_z) / (self.max_position_z - self.min_position_z)
+
+            state = [left_sensing_time, left_return_size, position_x, position_y, position_z]
+            encode_states.append(state)
+
+        return encode_states
+
+    def _encode_self_UAV_states(self, self_UAV_states,max_num):
+        # [x, y, z, energy]
+        # [105.23, 568.15, 225.65, 12000]
+        # 选取[x, y, z, energy]
+
+        position_x = (self_UAV_states[0] - self.min_position_x) / (self.max_position_x - self.min_position_x)
+        position_y = (self_UAV_states[1] - self.min_position_y) / (self.max_position_y - self.min_position_y)
+        position_z = (self_UAV_states[2] - self.min_position_z) / (self.max_position_z - self.min_position_z)
+        energy = self_UAV_states[3] / self.max_energy
+        state = [position_x, position_y, position_z, energy]
+
+        return state
 
     def scheduleStep(self, env: AirFogSimEnv):
         """The algorithm logic. Should be implemented by the subclass.

@@ -49,7 +49,7 @@ algorithm_module.initialize(env)
 evaluation_module = AirFogSimEvaluation()
 
 for episode in range(last_episode + 1, max_episode+1):
-    env.reset(config)
+    env.reset()
     algorithm_module.reset(env)
 
     while not env.isDone():

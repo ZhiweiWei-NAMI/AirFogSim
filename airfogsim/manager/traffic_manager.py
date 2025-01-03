@@ -268,6 +268,7 @@ class TrafficManager():
                 lanes = self._sumo_edges[edge]
                 for lane_id in lanes:
                     lane = self._net.getLane(lane_id)
+                    print('lane:',lane)
                     allowed_classes = lane.getPermissions()
                     self.all_allowed_classes.update(allowed_classes)
                     if len(allowed_classes) == 0 or 'passenger' in allowed_classes:
@@ -456,6 +457,15 @@ class TrafficManager():
             col = int((position[0] - self._x_range[0]) / self._grid_width)
             if row >= 0 and row < self._map_by_grid.shape[0] and col >= 0 and col < self._map_by_grid.shape[1]:
                 self._map_by_grid[row, col].append(RSU_id)
+
+    def getMapRange(self,axis):
+        assert axis in ['X', 'Y', 'Z']
+        if axis=='X':
+            return self._x_range
+        elif axis=='Y':
+            return self._y_range
+        else:
+            return self._UAV_z_range
 
     def getVehicleTrafficInfos(self):
         """Get the vehicle traffics at the given simulation time.

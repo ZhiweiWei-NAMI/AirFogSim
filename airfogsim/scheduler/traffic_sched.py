@@ -153,3 +153,8 @@ class TrafficScheduler(BaseScheduler):
         distances = np.linalg.norm(np.asarray(rsu_positions) - np.asarray(node_position), axis=1)
         nearest_idx = np.argmin(distances)
         return rsu_ids[nearest_idx]
+
+
+    @staticmethod
+    def getMapRange(env,axis):
+        return env.traffic_manager.getMapRange(axis)
