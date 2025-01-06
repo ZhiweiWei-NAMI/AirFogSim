@@ -39,7 +39,7 @@ class GreedyAlgorithmModule(BaseAlgorithmModule):
         self.rewardScheduler.setModel(env, 'PUNISH', '-1')
 
     def reset(self,env: AirFogSimEnv):
-        super().reset()
+        super().reset(env)
 
     def scheduleStep(self, env: AirFogSimEnv):
         """The algorithm logic.
@@ -131,7 +131,8 @@ class GreedyAlgorithmModule(BaseAlgorithmModule):
                 assert current_node_type is not None
                 vehicle_num = self.entityScheduler.getNodeNumByType(env, 'V')
                 UAV_num = self.entityScheduler.getNodeNumByType(env, 'U')
-                RSU_num = self.entityScheduler.getNodeNumByType(env, 'R')
+                RSU_num = self.entityScheduler.getNodeNumByType(env, 'I')
+
                 if current_node_type == 'V':
                     # relay_comm_rate = np.zeros((1, UAV_num, RSU_num))
                     # direct_comm_rate = np.zeros((1, RSU_num))
@@ -149,12 +150,12 @@ class GreedyAlgorithmModule(BaseAlgorithmModule):
                     # relay_max_value = np.max(relay_comm_rate)
                     # relay_max_index = np.unravel_index(np.argmax(relay_comm_rate), relay_comm_rate.shape)
                     # relay_u_id = self.entityScheduler.getNodeInfoByIndexAndType(env, int(relay_max_index[1]), 'U')['id']
-                    # relay_r_id = self.entityScheduler.getNodeInfoByIndexAndType(env, int(relay_max_index[2]), 'R')['id']
+                    # relay_r_id = self.entityScheduler.getNodeInfoByIndexAndType(env, int(relay_max_index[2]), 'I')['id']
                     # relay_max_route = [relay_u_id, relay_r_id]
                     #
                     # direct_max_value = np.max(direct_comm_rate)
                     # direct_max_index = np.unravel_index(np.argmax(direct_comm_rate), direct_comm_rate.shape)
-                    # direct_r_id = self.entityScheduler.getNodeInfoByIndexAndType(env, int(direct_max_index[1]), 'R')['id']
+                    # direct_r_id = self.entityScheduler.getNodeInfoByIndexAndType(env, int(direct_max_index[1]), 'I')['id']
                     # direct_max_route = [direct_r_id]
                     # print('relay',relay_max_value,relay_max_route)
                     # print('direct',direct_max_value,direct_max_route)
@@ -173,14 +174,14 @@ class GreedyAlgorithmModule(BaseAlgorithmModule):
                             'id']
 
                     if RSU_num > 0:
-                        V2R_distance = np.zeros((RSU_num))
+                        V2R_distance = np.zeros(RSU_num)
                         for r_idx in range(RSU_num):
-                            r_id = self.entityScheduler.getNodeInfoByIndexAndType(env, r_idx, 'R')['id']
+                            r_id = self.entityScheduler.getNodeInfoByIndexAndType(env, r_idx, 'I')['id']
                             distance = self.trafficScheduler.getDistanceBetweenNodesById(env, current_node_id, r_id)
                             V2R_distance[r_idx] = distance
                         nearest_r_distance = np.max(V2R_distance)
                         nearest_r_idx = np.unravel_index(np.argmax(V2R_distance), V2R_distance.shape)
-                        nearest_r_id = self.entityScheduler.getNodeInfoByIndexAndType(env, int(nearest_r_idx[0]), 'R')[
+                        nearest_r_id = self.entityScheduler.getNodeInfoByIndexAndType(env, int(nearest_r_idx[0]), 'I')[
                             'id']
 
                     relay_probability = 0.5
@@ -192,12 +193,12 @@ class GreedyAlgorithmModule(BaseAlgorithmModule):
                 elif current_node_type == 'U':
                     U2R_distance = np.zeros((RSU_num))
                     for r_idx in range(RSU_num):
-                        r_id = self.entityScheduler.getNodeInfoByIndexAndType(env, r_idx, 'R')['id']
+                        r_id = self.entityScheduler.getNodeInfoByIndexAndType(env, r_idx, 'I')['id']
                         distance = self.trafficScheduler.getDistanceBetweenNodesById(env, current_node_id, r_id)
                         U2R_distance[r_idx] = distance
                     nearest_r_distance = np.max(U2R_distance)
                     nearest_r_idx = np.unravel_index(np.argmax(U2R_distance), U2R_distance.shape)
-                    nearest_r_id = self.entityScheduler.getNodeInfoByIndexAndType(env, int(nearest_r_idx[0]), 'R')['id']
+                    nearest_r_id = self.entityScheduler.getNodeInfoByIndexAndType(env, int(nearest_r_idx[0]), 'I')['id']
                     return_route = [nearest_r_id]
                 else:
                     raise TypeError('Node type is invalid')

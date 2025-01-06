@@ -31,6 +31,7 @@ class MADDPG:
         self.dim_obs = dim_args.dim_observation
         self.dim_act = dim_args.dim_action
 
+        # 训练超参数
         self.buffer_size = train_args.buffer_size
         self.lr = train_args.lr
         self.gamma = train_args.gamma
@@ -143,7 +144,7 @@ class MADDPG:
             actions += torch.from_numpy(np.random.rand(self.dim_act) * 2 - 1 * self.var[i])  # 添加[-1,1]随机噪声
             actions = torch.clamp(actions, 0, 1)  # 限制动作范围在[0,1]
             if self.var[i] > self.var_end:
-                self.var[i] *= self.var_dec
+                self.var[i] *= self.var_dec # 噪声衰减
         self.steps_done += 1
 
         return actions

@@ -40,9 +40,9 @@ class TransDDQN_Env:
         self.max_q_value_list.append(self.max_q_value)
         return is_random,self.max_q_value,action
 
-    def addExperience(self, node_state, mission_state, sensor_state, sensor_mask, action,mask, reward, next_state,next_mask, done):
+    def addExperience(self, node_state, mission_state, sensor_state, sensor_mask, action, reward,next_node_state, next_mission_state, next_sensor_state, next_sensor_mask,done):
         # 添加到经验池
-        self.agent.remember(node_state, mission_state, sensor_state, sensor_mask, action,mask, reward, next_state,next_mask, done)
+        self.agent.remember(node_state, mission_state, sensor_state, sensor_mask, action, reward, next_node_state, next_mission_state, next_sensor_state, next_sensor_mask, done)
 
     def train(self):
         self.agent.update()

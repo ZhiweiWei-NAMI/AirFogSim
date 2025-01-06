@@ -71,6 +71,7 @@ class Mission:
             node (Node): The node object.
             sensor_usable (bool): If the sensor is usable
         """
+        step_duration=0
         xyz = node.getPosition()
         for i in range(len(self._mission_routes)):
             if self._mission_stayed_time[i] < self._mission_duration[i]:
@@ -79,7 +80,9 @@ class Mission:
                 if np.linalg.norm(np.array(xyz_2d) - np.array(route_2d)) < self._distance_threshold:
                     self._mission_stayed_time[i] += time_step
                     self._last_stayed_time[i] = current_time
+                    step_duration+=time_step
                     break
+        return step_duration
 
     def isFinished(self):
         """Check if the mission is finished.

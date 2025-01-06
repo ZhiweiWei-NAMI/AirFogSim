@@ -9,7 +9,8 @@ class AlgorithmScheduler(BaseScheduler):
         """Get node states (shape:[node_num,dim]).
 
          Args:
-             node_type(str): Type in ['V','R','U'].
+             env (AirFogSimEnv): The AirFogSim environment.
+             node_type(str): Type in ['V','I','U'].
 
          Returns:
              list: list of node states
@@ -41,10 +42,6 @@ class AlgorithmScheduler(BaseScheduler):
 
         node_num = len(node_info)
 
-        # state = state[:node_max_num]
-        # valid_node_num = len(state)
-        # if valid_node_num < node_max_num:
-        #     state.extend([[0] * state_dim] * (node_max_num - valid_node_num))  # 补充零
 
         return node_num, state
 
@@ -53,6 +50,7 @@ class AlgorithmScheduler(BaseScheduler):
         """Get mission states (shape:[mission_num,dim]).
 
          Args:
+             env (AirFogSimEnv): The AirFogSim environment.
              mission_profiles(dict):
 
          Returns:
@@ -83,6 +81,7 @@ class AlgorithmScheduler(BaseScheduler):
         """Get sensor states (shape:[10,dim]).
 
          Args:
+             env (AirFogSimEnv): The AirFogSim environment.
              sensor_type(str): The required type of sensor
              lower_bound_accuracy(float): The lowest permitted accuracy of sensor
              base_position(list): The position of core entity
@@ -138,6 +137,7 @@ class AlgorithmScheduler(BaseScheduler):
         """Get sensor states (shape:[sensor_num,dim]).
 
          Args:
+             env (AirFogSimEnv): The AirFogSim environment.
              sensor_type(str): The required type of sensor
              lower_bound_accuracy(float): The lowest permitted accuracy of sensor
              excluded_sensor_ids(list): The sensor ids of occupied sensors in this step
@@ -156,6 +156,7 @@ class AlgorithmScheduler(BaseScheduler):
         busy_sensors = env.sensor_manager.getSensorsByStateAndType('busy')
         combined_sensors = idle_sensors + busy_sensors
         sensor_states = []
+        valid_sensor_num=0
 
         # Choose the sensor with the highest accuracy among the idle sensors
         for node_id, sensors in combined_sensors.items():
@@ -167,6 +168,7 @@ class AlgorithmScheduler(BaseScheduler):
                         sensor.getSensorId() not in excluded_sensor_ids and \
                         node_id in candidate_sensors:
                     candidate = True
+                    valid_sensor_num+=1
                 else:
                     candidate = False
                 index = int(sensor.getSensorId().split('_')[-1])  # 转换为整数
@@ -176,13 +178,14 @@ class AlgorithmScheduler(BaseScheduler):
                 state = [node_index, node_type, index, sensor_type, accuracy, candidate]
                 sensor_states.append(state)
 
-        return sensor_states
+        return valid_sensor_num,sensor_states
 
     @staticmethod
     def getNeighborUAVStates(env, base_position, distance_threshold, max_num):
         """Get neighbor UAV states in (shape:[max_num,dim]).
 
          Args:
+             env (AirFogSimEnv): The AirFogSim environment.
              base_position(str): The position of core UAV
              distance_threshold(float): The distance threshold of UAV search range
              max_num(list): The max num of searched UAVs
@@ -219,6 +222,7 @@ class AlgorithmScheduler(BaseScheduler):
         """Get neighbor mission states in (shape:[max_num,dim]).
 
          Args:
+             env (AirFogSimEnv): The AirFogSim environment.
              base_position(str): The position of core UAV
              distance_threshold(float): The distance threshold of UAV search range
              max_num(list): The max num of searched UAVs
@@ -259,6 +263,7 @@ class AlgorithmScheduler(BaseScheduler):
         """Get UAV state in (shape:[dim]).
 
          Args:
+             env (AirFogSimEnv): The AirFogSim environment.
              UAV_id(str): The id of UAV
 
          Returns:
@@ -276,21 +281,47 @@ class AlgorithmScheduler(BaseScheduler):
         return state
 
     @staticmethod
-    def getSensorInfoByAction(env, action_index, sensor_states):
+    def getSensorInfoByAction(env, action_index, sensor_states,node_dict):
+        """Get sensor info from sensor states by action index.
+
+         Args:
+             env (AirFogSimEnv): The AirFogSim environment.
+             action_index(int): The index of sensor select action, corresponding to sensor
+             sensor_states(list): Sensor states, sensor_num*[node_id, node_type, id, type, accuracy, candidate]
+             node_dict(dict): {type_str:type_int,...}
+
+         Returns:
+             list: list of UAV state
+
+         Examples:
+             algoSched.getTransMissionStates(env, 1, [[node_id, node_type, id, type, accuracy, candidate], ..., ...], {'U':0,'V':1,'I':2,'C':3})
+         """
+        # [node_id, node_type, id, type, accuracy, candidate]
         attr_num = 6
         node_index_bias = 0
         node_type_bias = 1
         sensor_index_bias = 2
-        sensor_type_bias = 1
-        accuracy_bias = 1
-        candidate_bias = 1
+        sensor_type_bias = 3
+        accuracy_bias = 4
+        candidate_bias = 5
 
         node_id_num = int(sensor_states[action_index * attr_num + node_index_bias])
         sensor_id_num = int(sensor_states[action_index * attr_num + sensor_index_bias])
         accuracy = sensor_states[action_index * attr_num + accuracy_bias]
         node_type = int(sensor_states[action_index * attr_num + node_type_bias])
+        node_type = [type_str for type_str, type_int in node_dict.items() if type_int == node_type]
 
         sensor_id = env.sensor_manager.completeSensorId(sensor_id_num)
         node_id = env.traffic_manager.completeStrId(node_id_num, node_type)
 
         return node_type, node_id, sensor_id, accuracy
+
+    @staticmethod
+    def getUAVStepRecord(env):
+        UAV_energy_consumptions=env.getUAVStepEnergyConsumption()
+        UAV_trans_datas=env.getUAVStepTransmissionSize()
+        UAV_sensing_datas=env.getUAVStepSensingData()
+
+        return UAV_energy_consumptions,UAV_trans_datas,UAV_sensing_datas
+
+

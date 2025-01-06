@@ -229,14 +229,16 @@ class TrafficManager():
                 self._map_by_grid[row, col].append(UAV_id)
 
     def completeStrId(self, id_num, node_type):
-        assert node_type in ['R', 'V', 'U']
-        if node_type == 'R':
+        assert node_type in ['I', 'V', 'U']
+        if node_type == 'I':
             str_id = "RSU_" + str(id_num)
         elif node_type == 'V':
             str_id = "vehicle_" + str(id_num)
         elif node_type == 'U':
             str_id = "UAV_" + str(id_num)
         return str_id
+
+
 
     def _initialize_edges_and_lanes(self):
         """Initialize the edges and lanes information."""

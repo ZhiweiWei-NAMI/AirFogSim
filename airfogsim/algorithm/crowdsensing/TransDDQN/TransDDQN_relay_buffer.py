@@ -14,16 +14,16 @@ class ReplayBuffer:
 
 
     # 填充经验池
-    def add(self, node_state, mission_state, sensor_state, sensor_mask, action, mask, reward, next_state, next_mask, done):
-        self.buffer.append((node_state, mission_state, sensor_state, sensor_mask, action, mask, reward, next_state, next_mask, done))
+    def add(self, node_state, mission_state, sensor_state, sensor_mask, action, reward, next_node_state, next_mission_state, next_sensor_state, next_sensor_mask, done):
+        self.buffer.append((node_state, mission_state, sensor_state, sensor_mask, action, reward, next_node_state, next_mission_state, next_sensor_state, next_sensor_mask, done))
 
     # 随机采样batch组样本数据
     def sample(self, batch_size):
         transitions = random.sample(self.buffer, batch_size)
         # 分别取出这些数据，*获取list中的所有值
-        node_state, mission_state, sensor_state, sensor_mask, action, mask, reward, next_state, next_mask, done = zip(*transitions)
+        node_state, mission_state, sensor_state, sensor_mask, action,  reward, next_node_state, next_mission_state, next_sensor_state, next_sensor_mask, done = zip(*transitions)
         # 将state变成数组，后面方便计算
-        return np.array(node_state), np.array(mission_state), np.array(sensor_state), np.array(sensor_mask), action, mask, reward, np.array(next_state), next_mask, done
+        return np.array(node_state), np.array(mission_state), np.array(sensor_state), np.array(sensor_mask), action,  reward, np.array(next_node_state), np.array(next_mission_state), np.array(next_sensor_state), np.array(next_sensor_mask), done
 
     # 队列的长度
     def size(self):

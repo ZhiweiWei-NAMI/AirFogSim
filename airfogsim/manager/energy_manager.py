@@ -42,6 +42,7 @@ class EnergyManager:
 
     def updateEnergy(self):
         to_remove_UAVs_info={} # UAV_id -> { energy,is_flying,is_hovering,is_sensing,is_receiving,is_sending}
+        energy_consumption={}
         for UAV_id,UAV_energy_info in self._UAVs_energy_info.items():
             to_consume_energy=0
             to_consume_energy+=UAV_energy_info['is_flying']*self._fly_unit_cost
@@ -50,11 +51,14 @@ class EnergyManager:
             to_consume_energy+=UAV_energy_info['receiving_data_size']*self._receive_unit_cost
             to_consume_energy+=UAV_energy_info['sending_data_size']*self._send_unit_cost
             UAV_energy_info['energy']-=to_consume_energy
+            energy_consumption[UAV_id]=to_consume_energy
             if UAV_energy_info['energy']<=0:
                 to_remove_UAVs_info[UAV_id]=UAV_energy_info
         for UAV_id,UAV_energy_info in to_remove_UAVs_info.items():
             self._removed_UAVs_energy_info[UAV_id] = UAV_energy_info
             del self._UAVs_energy_info[UAV_id]
+
+        return energy_consumption
 
     def getAvailableUAVsId(self):
         return self._UAVs_energy_info.keys()

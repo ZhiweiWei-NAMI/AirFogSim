@@ -53,8 +53,8 @@ class TransDDQN:
         for q_target_params, q_params in zip(self.target_q_net.parameters(), self.q_net.parameters()):
             q_target_params.data.copy_(tau * q_params + (1 - tau) * q_target_params)
 
-    def remember(self, node_state, mission_state, sensor_state, sensor_mask, action, mask, reward, next_state, next_mask, done):
-        self.memory.add(node_state, mission_state, sensor_state, sensor_mask, action, mask, reward, next_state, next_mask, done)
+    def remember(self, node_state, mission_state, sensor_state, sensor_mask, action,  reward, next_node_state, next_mission_state, next_sensor_state, next_sensor_mask, done):
+        self.memory.add(node_state, mission_state, sensor_state, sensor_mask, action, reward, next_node_state, next_mission_state, next_sensor_state, next_sensor_mask, done)
 
     # 动作选择
     def take_action(self,node_state, mission_state, sensor_state, sensor_mask):
@@ -112,30 +112,62 @@ class TransDDQN:
     def update(self):
         if not self.memory.ready():
             return
-        states, actions, masks, rewards, next_states, next_masks, dones = self.memory.sample(self.batch_size)
+        node_states, mission_states, sensor_states, sensor_masks, actions, rewards, next_node_states, next_mission_states, next_sensor_states, next_sensor_masks, dones = self.memory.sample(self.batch_size)
 
-        # 当前状态，array_shape=[b,4]
-        states = torch.tensor(states, dtype=torch.float)
-        # 当前状态的动作，tuple_shape=[b]==>[b,1]
-        actions = torch.tensor(actions, dtype=torch.int64).view(-1, 1)
-        # 动作掩码（布尔张量，True为有效动作，False为无效动作）
-        masks = torch.tensor(masks, dtype=torch.bool).view(-1, 1)
-        # 选择当前动作的奖励, tuple_shape=[b]==>[b,1]
+        # 当前状态
+        # numpy[batch_size, m1, dim_node]-->Tensor[batch_size, m1, dim_node]
+        node_states = torch.tensor(node_states, dtype=torch.float)
+        # numpy[batch_size, dim_mission]-->Tensor[batch_size, dim_mission]
+        mission_states = torch.tensor(mission_states, dtype=torch.float)
+        # numpy[batch_size, m_uv, max_sensors, dim_sensor]-->Tensor[batch_size, m_uv, max_sensors, dim_sensor]
+        sensor_states = torch.tensor(sensor_states, dtype=torch.float)
+        # numpy[batch_size, m_uv, max_sensors]-->Tensor[batch_size, m_uv, max_sensors]
+        sensor_masks = torch.tensor(sensor_masks, dtype=torch.bool)
+
+        # 当前动作索引
+        # numpy[batch_size]-->Tensor[batch_size]
+        actions = torch.tensor(actions, dtype=torch.int64)
+
+        # 当前动作的奖励
+        # numpy[batch_size]-->Tensor[batch_size]
         rewards = torch.tensor(rewards, dtype=torch.float).view(-1, 1)
-        # 下一个时刻的状态array_shape=[b,4]
-        next_states = torch.tensor(next_states, dtype=torch.float)
-        # 动作掩码（布尔张量，True为有效动作，False为无效动作）
-        next_masks = torch.tensor(next_masks, dtype=torch.bool).view(-1, 1)
-        # 是否到达目标 tuple_shape=[b,1]
-        dones = torch.tensor(dones, dtype=torch.bool).view(-1, 1)
+
+        # 下一状态
+        # numpy[batch_size, m1, dim_node]-->Tensor[batch_size, m1, dim_node]
+        next_node_states = torch.tensor(next_node_states, dtype=torch.float)
+        # numpy[batch_size, dim_mission]-->Tensor[batch_size, dim_mission]
+        next_mission_states = torch.tensor(next_mission_states, dtype=torch.float)
+        # numpy[batch_size, m_uv, max_sensors, dim_sensor]-->Tensor[batch_size, m_uv, max_sensors, dim_sensor]
+        next_sensor_states = torch.tensor(next_sensor_states, dtype=torch.float)
+        # numpy[batch_size, m_uv, max_sensors]-->Tensor[batch_size, m_uv, max_sensors]
+        next_sensor_masks = torch.tensor(next_sensor_masks, dtype=torch.bool)
+
+        # 是否到达目标
+        # numpy[batch_size]-->Tensor[batch_size]
+        dones = torch.tensor(dones, dtype=torch.bool)
+
+        # # 当前状态，array_shape=[b,4]
+        # states = torch.tensor(states, dtype=torch.float)
+        # # 当前状态的动作，tuple_shape=[b]==>[b,1]
+        # actions = torch.tensor(actions, dtype=torch.int64).view(-1, 1)
+        # # 动作掩码（布尔张量，True为有效动作，False为无效动作）
+        # masks = torch.tensor(masks, dtype=torch.bool).view(-1, 1)
+        # # 选择当前动作的奖励, tuple_shape=[b]==>[b,1]
+        # rewards = torch.tensor(rewards, dtype=torch.float).view(-1, 1)
+        # # 下一个时刻的状态array_shape=[b,4]
+        # next_states = torch.tensor(next_states, dtype=torch.float)
+        # # 动作掩码（布尔张量，True为有效动作，False为无效动作）
+        # next_masks = torch.tensor(next_masks, dtype=torch.bool).view(-1, 1)
+        # # 是否到达目标 tuple_shape=[b,1]
+        # dones = torch.tensor(dones, dtype=torch.bool).view(-1, 1)
 
         with torch.no_grad():
-            next_q_values = self.q_net.forward(next_states)
-            next_masked_q_values = torch.where(next_masks, next_q_values, torch.tensor(float('-inf')))
+            next_q_values = self.q_net.forward(next_node_states,next_mission_states,next_sensor_states,next_sensor_masks)
+            next_masked_q_values = torch.where(next_sensor_masks, next_q_values, torch.tensor(float('-inf')))
             max_next_actions = torch.argmax(next_masked_q_values, dim=-1)
-            next_q_targets = self.target_q_net.forward(next_states)
+            next_q_targets = self.target_q_net.forward(next_node_states,next_mission_states,next_sensor_states,next_sensor_masks)
             td_q_targets = rewards + self.gamma * next_q_targets.gather(1, max_next_actions) * (1 - dones)
-        q_values = self.q_net(states).gather(1, actions)
+        q_values = self.q_net(node_states,mission_states,sensor_states,sensor_masks).gather(1, actions)
 
         # 预测值和目标值的均方误差损失(取一个batch的平均值)
         dqn_loss = torch.mean(F.mse_loss(q_values, td_q_targets.detach()))

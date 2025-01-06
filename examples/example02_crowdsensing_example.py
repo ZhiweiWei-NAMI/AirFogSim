@@ -49,9 +49,6 @@ algorithm_module.initialize(env)
 evaluation_module = AirFogSimEvaluation()
 
 for episode in range(last_episode + 1, max_episode+1):
-    env.reset()
-    algorithm_module.reset(env)
-
     while not env.isDone():
         algorithm_module.scheduleStep(env)
         env.step()
@@ -59,8 +56,10 @@ for episode in range(last_episode + 1, max_episode+1):
         # print(f"Simulation time: {env.simulation_time}", end='\r')
         # print(f"Simulation time: {env.simulation_time}, ACC_Reward: {accumulated_reward}")
         env.render()
-        # algorithm_module.updateExperience(env)
+        # algorithm_module.updateTAExperience(env)
         # algorithm_module.DDQN_env.train()
+        # algorithm_module.updatePPExperience(env)
+        # algorithm_module.MADDPG_env.train()
         evaluation_module.updateEvaluationIndicators(env, algorithm_module)
         evaluation_module.addToStepRecord()
         # evaluation_module.printEvaluation()
@@ -69,6 +68,10 @@ for episode in range(last_episode + 1, max_episode+1):
     evaluation_module.toFile(episode)
     evaluation_module.addToEpisodeRecord()
     evaluation_module.drawAndResetStepRecord(episode)
+
+    env.reset()
+    algorithm_module.reset(env)
+
 
 evaluation_module.drawAndResetEpisodeRecord()
 env.close()

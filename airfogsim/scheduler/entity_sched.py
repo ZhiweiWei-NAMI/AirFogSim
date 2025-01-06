@@ -31,7 +31,7 @@ class EntityScheduler(BaseScheduler):
         Args:
             env (AirFogSimEnv): The environment.
             idx (int): The index.
-            type (str): The type, ['vehicle' or 'v', 'uav' or 'u', 'rsu' or 'r', 'cloud_server' or 'c']
+            type (str): The type, ['vehicle' or 'v', 'uav' or 'u', 'rsu' or 'i', 'cloud_server' or 'c']
 
         Returns:
             dict: The node info.
@@ -41,7 +41,7 @@ class EntityScheduler(BaseScheduler):
             node = env.vehicles[env.vehicle_ids_as_index[idx]]
         elif type in ['uav', 'u']:
             node = env.UAVs[env.uav_ids_as_index[idx]]
-        elif type in ['rsu', 'r']:
+        elif type in ['rsu', 'i']:
             node = env.RSUs[env.rsu_ids_as_index[idx]]
         elif type in ['cloud_server', 'c']:
             node = env.cloudServers[env.cloud_server_ids_as_index[idx]]
@@ -116,7 +116,7 @@ class EntityScheduler(BaseScheduler):
 
         Args:
             env (AirFogSimEnv): The environment.
-            type (str): The type, ['vehicle' or 'v', 'uav' or 'u', 'rsu' or 'r', 'cloud_server' or 'c']
+            type (str): The type, ['vehicle' or 'v', 'uav' or 'u', 'rsu' or 'i', 'cloud_server' or 'c']
 
         Returns:
             int: The node num.
@@ -126,7 +126,7 @@ class EntityScheduler(BaseScheduler):
             num = len(env.vehicle_ids_as_index)
         elif type in ['uav', 'u']:
             num = len(env.uav_ids_as_index)
-        elif type in ['rsu', 'r']:
+        elif type in ['rsu', 'i']:
             num = len(env.rsu_ids_as_index)
         elif type in ['cloud_server', 'c']:
             num = len(env.cloud_server_ids_as_index)
@@ -259,7 +259,7 @@ class EntityScheduler(BaseScheduler):
 
         Args:
             env (AirFogSimEnv): The environment.
-            type (str): The type, ['vehicle' or 'v', 'uav' or 'u', 'rsu' or 'r']
+            type (str): The type, ['vehicle' or 'v', 'uav' or 'u', 'rsu' or 'i']
 
         Returns:
             list: The list of the fog nodes.
@@ -268,7 +268,7 @@ class EntityScheduler(BaseScheduler):
             fog_nodes = [vehicle for vehicle in env.vehicles.values()]
         elif type in ['uav', 'u']:
             fog_nodes = [uav for uav in env.UAVs.values()]
-        elif type in ['rsu', 'r']:
+        elif type in ['rsu', 'i']:
             fog_nodes = [rsu for rsu in env.RSUs.values()]
         # 判断fog_nodes.getId()是否在env.task_node_ids中
         fog_nodes = [fog_node for fog_node in fog_nodes if fog_node.getId() not in env.task_node_ids]

@@ -112,6 +112,16 @@ class MissionScheduler(BaseScheduler):
     def setMissionEvaluationIndicators(env,generate_num,allocate_num):
         env.setMissionEvaluationIndicators(generate_num,allocate_num)
 
+    @staticmethod
+    def getExecutingMissionProfiles(env,UAV_id):
+        missions=env.mission_manager.getExecutingMissions(UAV_id)
+        mission_profiles=[]
+        for mission in missions:
+            profile=mission.to_dict()
+            mission_profiles.append(profile)
+        return mission_profiles
+
+
 
     @staticmethod
     def getConfig(env,name):

@@ -163,12 +163,15 @@ class MissionManager:
         """
         self._checkMissions(current_time, sensor_manager)
 
+        step_duration_dict={}
         for node_id in self._executing_missions:
             to_remove = []
             for mission in self._executing_missions[node_id]:
                 sensor_id = mission.getAppointedSensorId()
                 node = _getNodeById(node_id)
-                mission.updateMission(time_step, current_time, node)
+                sum_duration=mission.updateMission(time_step, current_time, node)
+                step_duration_dict[node_id]=step_duration_dict.get(node_id,0)
+                step_duration_dict[node_id]+=sum_duration
 
                 # Task start only when sensing is completed
                 routes_length = mission.getRoutesLength()
@@ -191,6 +194,8 @@ class MissionManager:
 
             for mission in to_remove:
                 self._executing_missions[node_id].remove(mission)
+
+        return step_duration_dict
 
     def _checkMissions(self, current_time, sensor_manager):
         # 1.Check missions in _executing_missions
@@ -428,7 +433,7 @@ class MissionManager:
         self._failed_missions[mission.getAppointedNodeId()] = self._failed_missions.get(mission.getAppointedNodeId(), [])
         self._failed_missions[mission.getAppointedNodeId()].append(mission)
 
-    def getExecutingMissions(self):
+    def getExecutingMissions(self,node_id=None):
         """Get executing missions
 
         Args:
@@ -438,8 +443,13 @@ class MissionManager:
 
         Examples:
             mission_manager.getExecutingMissions()
+            mission_manager.getExecutingMissions('UAV_0')
         """
-        return self._executing_missions.copy()
+        if node_id is None:
+            missions=self._executing_missions.copy()
+        else:
+            missions = self._executing_missions.get(node_id, [])
+        return missions
 
     def getCurrentNodeId(self,mission_id):
         for node_id,mission in self._executing_missions:
