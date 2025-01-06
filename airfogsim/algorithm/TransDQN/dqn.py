@@ -26,13 +26,16 @@ class DQN_Agent:
         elif args.mode == 'test':
             self.q_network = TransformerDQN(self.d_node, self.d_task, self.max_tasks, self.m1, self.m2, self.d_model, self.nhead, self.num_layers)
             self.q_network.to(self.device)
-            self.q_network.load_state_dict(torch.load(args.model_path))
+            if os.path.exists(args.model_path):
+                self.q_network.load_state_dict(torch.load(args.model_path))
+            else:
+                print(f'Model path {args.model_path} does not exist!')
 
         self.target_network = TransformerDQN(self.d_node, self.d_task, self.max_tasks, self.m1, self.m2, self.d_model, self.nhead, self.num_layers)
         self.target_network.to(self.device)
         self.target_network.load_state_dict(self.q_network.state_dict())
         self.gamma = args.gamma
-        self.optimizer = torch.optim.Adam(self.q_network.parameters(), lr=args.lr, eps=1e-5)
+        self.optimizer = torch.optim.SGD(self.q_network.parameters(), lr=args.lr, momentum=0.9)
         self.criterion = nn.HuberLoss()
         self.replay_buffer = ReplayBuffer(args.replay_buffer_capacity)
         self.update_cnt = 0

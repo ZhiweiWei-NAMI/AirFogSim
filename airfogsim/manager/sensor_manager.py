@@ -48,14 +48,14 @@ class SensorManager:
         self._idle_sensors[node_id] = self._idle_sensors.get(node_id, [])
         assert len(self._idle_sensors[node_id]) == 0
         for idx in range(self._sensors_per_node):
-            new_sensor_type = 'Sensor_type_' + str(random.randint(1, self._sensor_type_num))
+            new_sensor_type = 'sensor_type_' + str(random.randint(1, self._sensor_type_num))
             new_sensor_accuracy = random.choice(SensorManager.ACCURACY_RANGE)  # 随机生成0-1之间的离散精度
-            new_sensor_id = 'Sensor_' + str(self.__getNewSensorId())
+            new_sensor_id = 'sensor_' + str(self.__getNewSensorId())
             new_sensor = Sensor(new_sensor_id, new_sensor_type, new_sensor_accuracy, node_id)
             self._idle_sensors[node_id].append(new_sensor)
 
     def completeSensorId(self, id_num):
-        return 'Sensor_' + str(id_num)
+        return 'sensor_' + str(id_num)
 
     def _getIdleSensorById(self, sensor_id):
         target_sensor = None

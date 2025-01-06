@@ -133,6 +133,20 @@ class TaskManager:
         task.startToCompute(current_time)
         self._computing_tasks[node_id] = to_compute_task_list
 
+    def getToComputeTasks(self, node_id):
+        """Get the tasks to compute by the node id.
+
+        Args:
+            node_id (str): The node id.
+
+        Returns:
+            list: The list of the tasks to compute.
+
+        Examples:
+            task_manager.getToComputeTasks('vehicle1')
+        """
+        return self._computing_tasks.get(node_id, [])
+
     def finishOffloadingTask(self, task:Task, current_time):
         """Remove the offloading task by the task id, and then move the task to the to_compute_tasks.
 
@@ -544,9 +558,12 @@ class TaskManager:
             Task: The task.
         """
         self._task_id += 1
-        return Task(task_id=f'Task_{self._task_id}', task_node_id=task_node_id, task_cpu=0, to_return_node_id=to_return_node_id,
-                    task_size=0, task_deadline=task_deadline,task_priority=self._generatePriority(), return_lazy_set=True ,
-                    task_arrival_time=arrival_time,required_returned_size= return_size)
+        task = Task(task_id=f'Task_{self._task_id}', task_node_id=task_node_id, task_cpu=0, to_return_node_id=to_return_node_id,
+                    task_size=0, task_deadline=task_deadline,task_priority=self._generatePriority(), return_lazy_set=True,
+                    task_arrival_time=arrival_time,required_returned_size = return_size)
+        task.setGenerated()
+        task.setStartToTransmitTime(arrival_time)
+        return task
 
     def _generateTasks(self, task_node_ids_kwardsDict, cur_time, simulation_interval):
         # 1. Move the tasks from the to_generate_task_infos to the todo_tasks according to the current time
@@ -650,7 +667,7 @@ class TaskManager:
                 if not task_info.requireReturn():
                     # 直接跳到下一个阶段
                     task_node_id = task_info.getTaskNodeId()
-                    task_info.transmit_to_Node(task_info.getToReturnNodeId(), 1, task_info.getLastComputeTime(), fast_return=True)
+                    task_info.transmit_to_Node(task_info.getToReturnNodeId(), 1, cur_time, fast_return=True)
                     if task_info.task_delay <= task_info.task_deadline:
                         self._done_tasks[task_node_id] = self._done_tasks.get(task_node_id, [])
                         self._done_tasks[task_node_id].append(task_info)
@@ -673,9 +690,11 @@ class TaskManager:
         all_tasks = itertools.chain(self._waiting_to_offload_tasks.items(), self._offloading_tasks.items(), self._computing_tasks.items(), self._waiting_to_return_tasks.items(), self._returning_tasks.items())
         for node_id, task_infos in all_tasks:
             for task_info in task_infos.copy():
-                if cur_time - task_info.getTaskArrivalTime() > task_info.getTaskDeadline():
+                if cur_time - task_info.getTaskArrivalTime() > self._config_task.get('hard_ddl', 2):
                     task_info.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_DDL)
-                    self.failOffloadingTask(task_info)
+                    task_infos.remove(task_info)
+                    self._out_of_ddl_tasks[node_id] = self._out_of_ddl_tasks.get(node_id, [])
+                    self._out_of_ddl_tasks[node_id].append(task_info)
 
 
     def offloadTask(self, task_node_id, task_id, target_node_id, current_time, route = None):
@@ -711,6 +730,20 @@ class TaskManager:
                         self._offloading_tasks[task_node_id].remove(task_info)
                     return True
         return False
+    
+    def getToOffloadTasks(self, task_node_id):
+        """Get the tasks to offload by the task node id.
+
+        Args:
+            task_node_id (str): The task node id.
+
+        Returns:
+            list: The list of the tasks to offload.
+
+        Examples:
+            task_manager.getToOffloadTasks('vehicle1')
+        """
+        return self._waiting_to_offload_tasks.get(task_node_id, [])
 
     def getWaitingToReturnTaskInfos(self):
         """Get waiting to return task infos.

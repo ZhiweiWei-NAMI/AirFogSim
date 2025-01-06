@@ -39,6 +39,22 @@ class TaskScheduler(BaseScheduler):
             for task in tasks:
                 task_info_list.append(task.to_dict())
         return task_info_list
+    
+    @staticmethod
+    def getToOffloadTaskNumberByTaskNode(env, task_node_id):
+        """Get the number of the tasks for the task node.
+
+        Args:
+            env (AirFogSimEnv): The AirFogSim environment.
+            task_node_id (str): The task node id.
+
+        Returns:
+            int: The number of the tasks.
+
+        Examples:
+            taskSched.getTaskNumberByTaskNode(env, 'UAV_1')
+        """
+        return len(env.task_manager.getToOffloadTasks(task_node_id))
 
     @staticmethod
     def getAllToOffloadTasks(env):

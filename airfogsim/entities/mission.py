@@ -44,9 +44,7 @@ class Mission:
         self._distance_threshold = mission_profile.get('distance_threshold', 100)
 
         if self._appointed_node_id is not None:
-            assert len(mission_profile['mission_routes']) == len(mission_profile['mission_task_sets']) == len(
-                mission_profile[
-                    'mission_duration']), "The length of mission_routes, mission_task_sets, and mission_duration should be the same."
+            assert len(mission_profile['mission_routes']) == len(mission_profile['mission_task_sets']) == len(mission_profile['mission_duration']), "The length of mission_routes, mission_task_sets, and mission_duration should be the same."
             for taskset in mission_profile['mission_task_sets']:
                 for task in taskset:
                     task.setFartherMission(self)
@@ -61,7 +59,7 @@ class Mission:
             bool: True if the mission is out of deadline, False otherwise.
         """
         return self._mission_arrival_time + self._mission_deadline <= current_time
-
+    
     def updateMission(self, time_step, current_time, node):
         """Check the position of each waypoint and update the mission duration.
 
@@ -126,7 +124,6 @@ class Mission:
 
     def getMissionId(self):
         return self._mission_id
-
     def getAppointedSensorId(self):
         return self._appointed_sensor_id
 

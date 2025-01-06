@@ -24,7 +24,9 @@ class TransformerDQN(nn.Module):
 
         # Compute node selection head sigmoid for possible values [0, 1]
         self.compute_node_selector = nn.Sequential(
-            nn.Linear(d_model, self.m2+1)
+            nn.Linear(d_model, d_model // 2),
+            nn.ReLU(),
+            nn.Linear(d_model//2, self.m2+1)
         )
 
     def forward(self, task_node, task_data, compute_node, task_mask, compute_node_mask):
@@ -63,7 +65,7 @@ class TransformerDQN(nn.Module):
         # Apply Transformer Encoder
         transformer_output = self.transformer(
             src=combined_sequence.permute(1, 0, 2),  # [seq_len, batch_size, d_model]
-            src_key_padding_mask=(1 - combined_mask).bool()  # Mask padded positions
+            # src_key_padding_mask=(1 - combined_mask).bool()  # Mask padded positions
         ).permute(1, 0, 2)  # [batch_size, seq_len, d_model]
 
         # Extract final outputs, m1*max_tasks

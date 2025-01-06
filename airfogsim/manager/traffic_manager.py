@@ -22,7 +22,7 @@ class TrafficManager():
         self._UAV_z_range = config_traffic.get("UAV_z_range", [100, 200])
         self._UAV_speed_range = config_traffic.get("UAV_speed_range", [20, 40])
         self._max_n_UAVs = config_traffic.get("max_n_UAVs", 10)
-        self._max_n_RSUs = config_traffic.get("max_n_RSUs", 1)
+        self._max_n_RSUs = config_traffic.get("max_n_RSUs", 4)
         self._RSU_positions = config_traffic.get("RSU_positions", [[0, 0, 0]])
         self._max_n_cloudServers = config_traffic.get("max_n_cloudServers", 1)
         self._arrival_lambda = config_traffic.get("arrival_lambda", 1)
@@ -31,15 +31,15 @@ class TrafficManager():
         self._traci_connection = traci_connection
         self._current_time = 0.0
 
-        self._vehicle_infos = {}  # vehicle_id -> {position, speed, routeId}
-        self._UAV_infos = {}  # uav_id -> {position, speed, acceleration, angle, phi}
-        self._RSU_infos = {}  # rsu_id -> {position, id}
+        self._vehicle_infos = {} # vehicle_id -> {position, speed, routeId}
+        self._UAV_infos = {} # uav_id -> {position, speed, acceleration, angle, phi}
+        self._RSU_infos = {} # rsu_id -> {position, id}
         self._cloudServer_infos = {}
-        # self._new_added_vehicle_ids = []  # The latest(this time slot) added vehicle's id
+        self._new_added_vehicle_ids=[] # The latest(this time slot) added vehicle's id
 
-        self._sumo_route_ids = []  # all route ids in SUMO, further information can be gained by traci_connection.route.getEdges(route_id)
-        self._sumo_edges = {}  # each edge is a series of lanes in SUMO, edgeId -> [laneId1, laneId2, ...]
-        self._sumo_laneIds = []  # all lane ids in SUMO
+        self._sumo_route_ids = [] # all route ids in SUMO, further information can be gained by traci_connection.route.getEdges(route_id)
+        self._sumo_edges = {} # each edge is a series of lanes in SUMO, edgeId -> [laneId1, laneId2, ...]
+        self._sumo_laneIds = [] # all lane ids in SUMO
 
         self._traffic_interval = config_traffic.get("traffic_interval", 1)
         self._tripinfo = None
@@ -80,7 +80,7 @@ class TrafficManager():
         self._UAV_infos = {}
         self._RSU_infos = {}
         self._cloudServer_infos = {}
-        # self._new_added_vehicle_ids = []
+        self._new_added_vehicle_ids = []
         self._vehicle_id_counter = 0
         self._UAV_id_counter = 0
         self._RSU_id_counter = 0
@@ -122,7 +122,7 @@ class TrafficManager():
     @property
     def map_by_grid(self):
         return self._map_by_grid.copy()
-
+    
     @property
     def grid_width(self):
         return self._grid_width
@@ -167,7 +167,7 @@ class TrafficManager():
             int: The number of RSUs.
         """
         return len(self._RSU_infos)
-
+    
     def getNumberOfCloudServers(self):
         """Get the number of cloud servers.
 
@@ -175,7 +175,7 @@ class TrafficManager():
             int: The number of cloud servers.
         """
         return len(self._cloudServer_infos)
-
+    
     def getNumberOfUAVs(self):
         """Get the number of UAVs.
 
@@ -183,7 +183,7 @@ class TrafficManager():
             int: The number of UAVs.
         """
         return len(self._UAV_infos)
-
+    
     def getNumberOfVehicles(self):
         """Get the number of vehicles.
 
@@ -208,7 +208,7 @@ class TrafficManager():
         """Initialize the cloud server information.
         """
         for _ in range(self._max_n_cloudServers):
-            cloudServer_id = "CloudServer_" + str(self._RSU_id_counter)
+            cloudServer_id = "cloudServer_" + str(self._RSU_id_counter)
             self._cloudServer_id_counter += 1
             position = (0, 0, 0)
             self._cloudServer_infos[cloudServer_id] = {"position": position, "id": cloudServer_id}
@@ -219,9 +219,7 @@ class TrafficManager():
         for _ in range(self._max_n_UAVs):
             UAV_id = "UAV_" + str(self._UAV_id_counter)
             self._UAV_id_counter += 1
-            position = (
-                random.uniform(self._x_range[0], self._x_range[1]), random.uniform(self._y_range[0], self._y_range[1]),
-                random.uniform(self._UAV_z_range[0], self._UAV_z_range[1]))
+            position = (random.uniform(self._x_range[0], self._x_range[1]), random.uniform(self._y_range[0], self._y_range[1]), random.uniform(self._UAV_z_range[0], self._UAV_z_range[1]))
             self._UAV_infos[UAV_id] = {"position": position}
             row = int((position[1] - self._y_range[0]) / self._grid_width)
             col = int((position[0] - self._x_range[0]) / self._grid_width)
@@ -229,13 +227,15 @@ class TrafficManager():
                 self._map_by_grid[row, col].append(UAV_id)
 
     def completeStrId(self, id_num, node_type):
-        assert node_type in ['I', 'V', 'U']
+        assert node_type in ['I', 'V', 'U','C']
         if node_type == 'I':
             str_id = "RSU_" + str(id_num)
         elif node_type == 'V':
             str_id = "vehicle_" + str(id_num)
         elif node_type == 'U':
             str_id = "UAV_" + str(id_num)
+        elif node_type == 'C':
+            str_id = "cloudServer_" + str(id_num)
         return str_id
 
 
@@ -270,7 +270,6 @@ class TrafficManager():
                 lanes = self._sumo_edges[edge]
                 for lane_id in lanes:
                     lane = self._net.getLane(lane_id)
-                    print('lane:',lane)
                     allowed_classes = lane.getPermissions()
                     self.all_allowed_classes.update(allowed_classes)
                     if len(allowed_classes) == 0 or 'passenger' in allowed_classes:
@@ -297,7 +296,7 @@ class TrafficManager():
         valid_edges = self.valid_edges
         while True:
             try:
-                from_edge, to_edge = random.sample(valid_edges, 2)
+                from_edge, to_edge = random.sample(valid_edges, 2) 
                 route = traci.simulation.findRoute(from_edge, to_edge)
                 while len(route.edges) == 0:
                     from_edge, to_edge = random.sample(valid_edges, 2)
@@ -305,11 +304,11 @@ class TrafficManager():
                 break
             except traci.exceptions.TraCIException as e:
                 pass
-
+            
         self._traci_connection.route.add(route_id, route.edges)
         self._route_id_counter += 1
         return route_id
-
+    
     def updateVehicleMobilityPatterns(self, vehicle_mobility_patterns):
         """Update the vehicle mobility patterns.
 
@@ -351,7 +350,11 @@ class TrafficManager():
         else:
             # 把self._tripinfo中current_time之前的数据删除
             # self._tripinfo = self._tripinfo[self._tripinfo['data_timestep']>=self._current_time]
-            return self._current_time + self._traffic_interval
+            tmp_time = self._current_time + self._traffic_interval
+            # 保证tmp_time mod self._traffic_interval == 0
+            tmp_time = round(tmp_time / self._traffic_interval) 
+            tmp_time = tmp_time * self._traffic_interval
+            return tmp_time
 
     def getVehicleIDsList(self):
         """Get the vehicle ids list.
@@ -364,8 +367,8 @@ class TrafficManager():
         else:
             # 根据当前的时隙，从tripinfo中获取当前时隙的车辆信息
             current_time = self._current_time
-            # tripinfo是pd.DataFrame，可以直接使用pandas的查询功能,'data_timestep'==current_time
-            vehicle_ids = self._tripinfo[self._tripinfo['data_timestep']==current_time]['vehicle_id'].tolist()
+            # tripinfo是pd.DataFrame，可以直接使用pandas的查询功能,date_timestep在current_time-traffic_interval到current_time之间的车辆
+            vehicle_ids = self._tripinfo[(self._tripinfo['data_timestep']>current_time-self._traffic_interval) & (self._tripinfo['data_timestep']<=current_time)]['vehicle_id'].tolist()
             return vehicle_ids
         
     def getVehicleInfoByIds(self, vehicle_ids):
@@ -383,7 +386,7 @@ class TrafficManager():
             return vehicle_infos
         else:
             # 从pd中批量获取车辆信息
-            cur_time_trip_info = self._tripinfo[self._tripinfo['data_timestep']==self._current_time]
+            cur_time_trip_info = self._tripinfo[(self._tripinfo['data_timestep']>self._current_time-self._traffic_interval) & (self._tripinfo['data_timestep']<=self._current_time)]
             pd_vehicle_infos = cur_time_trip_info[cur_time_trip_info['vehicle_id'].isin(vehicle_ids)]
             vehicle_infos = {}
             for idx, vehicle_info in pd_vehicle_infos.iterrows():
@@ -403,14 +406,14 @@ class TrafficManager():
             to_generate_vehicles = int(np.random.poisson(self._arrival_lambda*self._traffic_interval))
             current_n_vehicles = self._traci_connection.vehicle.getIDCount()
             to_generate_vehicles = min(to_generate_vehicles, self._max_n_vehicles - current_n_vehicles)
-            # self._new_added_vehicle_ids = []  # Clear the list in each step.
+            self._new_added_vehicle_ids = []  # Clear the list in each step.
             if to_generate_vehicles > 0 :
                 for _ in range(to_generate_vehicles):
                     vehicle_id = "vehicle_" + str(self._vehicle_id_counter)
+                    self._new_added_vehicle_ids.append(vehicle_id)
                     self._vehicle_id_counter += 1
                     route_id = self._generateRandomRoute()
                     self._traci_connection.vehicle.add(vehicle_id, route_id)
-                    # self._new_added_vehicle_ids.append(vehicle_id)
             self._traci_connection.simulationStep()
             # vehicles will be updated by sumo. (Vehicles which are out of map will be cleared automatically by sumo)
             vehicle_ids = self.getVehicleIDsList()
@@ -464,9 +467,9 @@ class TrafficManager():
         assert axis in ['X', 'Y', 'Z']
         if axis=='X':
             return self._x_range
-        elif axis=='Y':
+        if axis=='Y':
             return self._y_range
-        else:
+        if axis=='Z':
             return self._UAV_z_range
 
     def getVehicleTrafficInfos(self):
@@ -476,7 +479,7 @@ class TrafficManager():
             dict: The vehicle traffics, including the vehicle id, position, speed, angle, acceleration, and current routeId.
         """
         return self._vehicle_infos
-
+    
     def getUAVTrafficInfos(self):
         """Get the UAV traffics at the given simulation time. The trajectory of the UAVs is controlled by their missions
 
@@ -484,7 +487,7 @@ class TrafficManager():
             dict: The UAV traffics, including the UAV id, position, acceleration, speed, angle, and phi.
         """
         return self._UAV_infos
-
+    
     def getRSUInfos(self):
         """Get the RSU information.
 
@@ -492,7 +495,7 @@ class TrafficManager():
             dict: The RSU information, including the RSU id and position
         """
         return self._RSU_infos
-
+    
     def getCloudServerInfos(self):
         """Get the cloud server information.
 
@@ -501,14 +504,14 @@ class TrafficManager():
         """
         return self._cloudServer_infos
 
-    # def getNewVehicleIds(self):
-    #     """Get vehicle ids which is added in latest timeslot.
-    #
-    #     Returns:
-    #         list: The Id list of vehicles.
-    #     """
-    #     return self._new_added_vehicle_ids
+    def getNewVehicleIds(self):
+        """Get vehicle ids which is added in latest timeslot.
 
+        Returns:
+            list: The Id list of vehicles.
+        """
+        return self._new_added_vehicle_ids
+    
     def getCurrentTime(self):
         """Get the current simulation time.
 

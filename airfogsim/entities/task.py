@@ -28,13 +28,6 @@ class Task:
         self._task_size = task_size
         self._required_returned_size = required_returned_size
         self._return_lazy_set = return_lazy_set
-        if to_return_node_id is not None:
-            self._to_return_node_id = to_return_node_id
-        elif return_lazy_set:
-            self._to_return_node_id = None
-        else:
-            self._to_return_node_id = task_node_id
-
         self._task_deadline = task_deadline
         self._task_priority = task_priority
         self._task_arrival_time = task_arrival_time
@@ -57,11 +50,25 @@ class Task:
         self._failure_reason_code = -1
         self._farther_mission = farther_mission
         self._is_generated = False
+        if to_return_node_id is not None:
+            self._to_return_node_id = to_return_node_id
+        elif return_lazy_set:
+            self._to_return_node_id = None
+        else:
+            self._to_return_node_id = task_node_id
 
     def setGenerated(self):
         """Set the task as generated.
         """
         self._is_generated = True
+
+    def setStartToTransmitTime(self, time):
+        """Set the start time to transmit the task.
+
+        Args:
+            time (float): The start time to transmit the task.
+        """
+        self._start_to_transmit_time = time
 
     # get task_ratio
     @property
@@ -259,7 +266,7 @@ class Task:
         Returns:
             bool: True if the task is transmitted, False if requires more transmission.
         """
-        assert self.isTransmitting() or fast_return, "The task should be transmitting or not require return."
+        assert self.isTransmitting() or fast_return or self.isReturning(), "The task should be transmitting (returning) or not require return."
         isReturning = self.isReturning()
         self._transmitted_size += trans_data
         if isReturning:

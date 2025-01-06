@@ -1,30 +1,30 @@
 
 simulation:
   vehicle_count: 200
-  max_simulation_time: 200
+  max_simulation_time: 100
   simulation_interval: 0.1 # in seconds, for transmission, computation, task generation and assignment, etc.
-  traffic_interval: 0.5 # in seconds, for traffic simulation. Remember to set the same value in the SUMO configuration file; otherwise, the simulation will not work properly
+  traffic_interval: 0.1 # in seconds, for traffic simulation. Remember to set the same value in the SUMO configuration file; otherwise, the simulation will not work properly
   
 
 sumo:
-  sumo_config: "../sumo_wujiaochang/osm.sumocfg"
-  sumo_osm: "../sumo_wujiaochang/osm_bbox.osm.xml"
-  sumo_net: "../sumo_wujiaochang/osm.net.xml"
+  sumo_config: "./sumo_wujiaochang/osm.sumocfg"
+  sumo_osm: "./sumo_wujiaochang/osm_bbox.osm.xml"
+  sumo_net: "./sumo_wujiaochang/osm.net.xml"
   sumo_port: 8813
-  export_tripinfo: False # 如果true，则导出tripinfo.xml文件（很大）
-  tripinfo_output: "../sumo_wujiaochang/tripinfo.xml"
+  export_tripinfo: False # 如果True，则导出tripinfo.xml文件（很大）
+  tripinfo_output: "./sumo_wujiaochang/tripinfo.xml"
 
 visualization:
-  icon_path: "../icon"
+  icon_path: "./icon"
 
 traffic:
-  traffic_mode: "SUMO" # "real" or "SUMO"
-  tripinfo: "../sumo_wujiaochang/tripinfo.csv" # The path to the SUMO tripinfo file
-  traffic_interval: 0.5 # in seconds, for traffic simulation. Remember to set the same value in the SUMO configuration file; otherwise, the simulation will not work properly
+  traffic_mode: "real" # "real" or "SUMO"
+  tripinfo: "./sumo_wujiaochang/tripinfo.csv" # The path to the SUMO tripinfo file
+  traffic_interval: 0.1 # in seconds, for traffic simulation. Remember to set the same value in the SUMO configuration file; otherwise, the simulation will not work properly
   UAV_z_range: [100, 200] # The range of z coordinates for UAVs
   UAV_speed_range: [10,30] # The speed of UAV (distance unit per timeslot)
   uav_traffic_file: "path/to/uav_traffic_file.csv" # UAV traffic file
-  max_n_vehicles: 20 # Number of vehicles to simulate
+  max_n_vehicles: 100 # Number of vehicles to simulate
   max_n_UAVs: 10 # Number of UAVs to simulate. UAVs are randomly generated in the simulation area initially
   max_n_RSUs: 4 # Number of UAVs to simulate. RSU are generated in fixed position in the simulation area initially
   RSU_positions: [[100, 100, 0], [100, 2000, 0], [2500, 100, 0], [2500, 2000, 0]] # List of RSU positions, each RSU is represented by a list of x, y, z coordinates
@@ -33,28 +33,30 @@ traffic:
   distance_threshold: 50 # The distance threshold to check if the node is reach target position
   nonfly_zone_coordinates: [[[1000, 1200], [1200, 1200], [1200, 1000], [1000, 1000]],[[1500, 1700], [1700, 1700], [1700, 1500], [1500, 1500]]] # The non-fly zones in the simulation area, each zone is represented by a list of x1, y1, x2, y2, x3, y3 coordinates
 
-task:
+task: # default task profile for all nodes
+  tti_threshold: 0.5 # The threshold of TTI for task offloading
+  hard_ddl: 2 # The hard deadline for tasks
   task_generation_model: "None" # supported model:['Poisson', 'Uniform', 'Normal', 'Exponential', 'None']
   task_generation_kwargs:
-    lambda: 1 # Poission -> lambda; Uniform -> low, high; Normal -> mean, std; Exponential -> beta
-  task_min_cpu: 0.5
-  task_max_cpu: 1
-  task_min_size: 0.5
-  task_max_size: 1
+    lambda: 0.5 # Poission -> lambda; Uniform -> low, high; Normal -> mean, std; Exponential -> beta
+  task_min_cpu: 0.2
+  task_max_cpu: 0.7
+  task_min_size: 0.2
+  task_max_size: 0.7
   task_min_required_returned_size: 0
   task_max_required_returned_size: 0
-  task_min_deadline: 0.5
-  task_max_deadline: 1
+  task_min_deadline: 1
+  task_max_deadline: 2
   task_min_priority: 0.5
   task_max_priority: 1
   cpu_model: "Uniform" # supported model:['Uniform', 'Normal']
   cpu_kwargs:
-    low: 0.5
-    high: 1
+    low: 0.2
+    high: 0.7
   size_model: "Uniform" # supported model:['Uniform', 'Normal']
   size_kwargs:
-    low: 0.5
-    high: 1
+    low: 0.2
+    high: 0.7
   deadline_model: "Uniform" # supported model:['Uniform', 'Normal']
   deadline_kwargs:
     low: 0.5
@@ -70,11 +72,11 @@ task:
 
 task_profile: # task profile for each node type
   task_node_gen_poss: 0.5 # The possibility of generating a task node when inializing the node
-  task_node_profiles: [{'type':'UAV', 'max_node_num': 15}, {'type':'vehicle', 'max_node_num': 10}] # The types of task nodes and the maximum number of nodes of each type
+  task_node_profiles: [{'type':'UAV', 'max_node_num': 30}, {'type':'vehicle', 'max_node_num': 20}] # The types of task nodes and the maximum number of nodes of each type
   vehicle: # The profile of vehicles
-    lambda: 1
+    lambda: 0.5
   uav: # The profile of UAVs
-    lambda: 1
+    lambda: 0.5
 
 fog_profile:
   vehicle:
@@ -140,7 +142,7 @@ mission:
   duration_range: [5,10]
   mission_size_range: [10,20]
   sensor_accuracy_range: [0,1]
-  distance_threshold: 100
+  distance_threshold: 150
   predictable_seconds: 2
   mission_generation_model: "Poisson" # supported model:['Poisson', 'Uniform', 'Normal', 'Exponential']
   generation_model_args:

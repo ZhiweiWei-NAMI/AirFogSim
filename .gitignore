@@ -5,3 +5,5 @@
 /evaluation
 **.pth
 **/runs/**
+tripinfo.xml
+tripinfo.csv

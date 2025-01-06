@@ -88,4 +88,4 @@ https://github.com/user-attachments/assets/f6d1b1ce-dfa7-4bef-b2ad-a0e1ccce91b1
 <!-- use ./baselines/ -->
 ## Baselines:
 ### DQN for Task Offloading
-This is a baseline implementation of the DQN algorithm for task offloading in a multi-agent system. The algorithm is implemented in the `dqn_offloading` directory. Please refer to the [README](./baselines/dqn_offloading/README.md) for more details.
+This is a baseline implementation of the DQN algorithm for task offloading in a multi-agent system. The algorithm is implemented in the `dqn_offloading` directory. Please refer to the [README](./baselines/dqn_offloading/README.md) for more details. 

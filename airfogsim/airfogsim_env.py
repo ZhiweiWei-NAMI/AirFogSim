@@ -249,12 +249,13 @@ class AirFogSimEnv():
         if self.config['state_attribute'].get('log_state', False):
             # 12. Update State Info
             self._updateStateInfo()
+        self.task_manager.checkTasks(self.simulation_time)
         # ensure the simulation time is the same as the traffic time
         self.simulation_time = self.traffic_manager.getCurrentTime()
         self.clearDecisions()
         self.clearTempRecords()
         return self.isDone()
-
+    
     def clearDecisions(self):
         """Clear the decisions for the next time step.
         """
@@ -280,11 +281,10 @@ class AirFogSimEnv():
         all_uav_ids_set = set(self.UAVs.keys())
         all_rsus_ids_set = set(self.RSUs.keys())
         all_cloud_servers_ids_set = set(self.cloudServers.keys())
-        all_node_ids_set = all_vehicle_ids_set.union(all_uav_ids_set).union(all_rsus_ids_set).union(
-            all_cloud_servers_ids_set)
+        all_node_ids_set = all_vehicle_ids_set.union(all_uav_ids_set).union(all_rsus_ids_set).union(all_cloud_servers_ids_set)
         task_node_ids = set(self.task_node_ids)
         fog_node_ids = all_node_ids_set - task_node_ids
-        task_node_ids = task_node_ids.intersection(all_node_ids_set)  # 交集，保证都在场景中
+        task_node_ids = task_node_ids.intersection(all_node_ids_set) # 交集，保证都在场景中
         task_node_ids = list(task_node_ids)
         fog_node_ids = list(fog_node_ids)
         # 2. 从self.vehicles, self.UAVs, self.RSUs, self.cloudServers中获取fog node和task node的状态信息
@@ -299,15 +299,15 @@ class AirFogSimEnv():
         # 5. 存储task的状态信息
         recently_done_100_tasks = self.task_manager.getRecentlyDoneTasks()
         # 只选取task.getLastOperationTime()在当前时刻的集合
-        recently_done_tasks = [task for task in recently_done_100_tasks if
-                               task.getLastOperationTime() == self.simulation_time]
+        recently_done_tasks = [task for task in recently_done_100_tasks if task.getLastOperationTime() == self.simulation_time]
         self.node_state_manager.logTaskState(recently_done_tasks, self.simulation_time)
 
     def _updateSensor(self):
         """
         Update the sensor for the entities.
         """
-        for new_vehicle_id in self.new_vehicle_id_list:
+        new_vehicle_id_list = self.traffic_manager.getNewVehicleIds()
+        for new_vehicle_id in new_vehicle_id_list:
             self.sensor_manager.initializeSensorsByNodeId(new_vehicle_id)
 
     def _updateMission(self):
@@ -345,62 +345,6 @@ class AirFogSimEnv():
         activated_task_dict = self._allocate_communication_RBs(self.activated_offloading_tasks_with_RB_Nos)
         self._compute_communication_rate(activated_task_dict)
         self._execute_communication(activated_task_dict)
-
-    def _allocate_communication_RBs(self, activated_offloading_tasks_with_RB_Nos: dict):
-        """Allocate the communication resources (RBs) for the offloading tasks.
-
-        Args:
-            activated_offloading_tasks_with_RB_Nos (dict): The activated offloading tasks with RB numbers. The key is the task ID, and the value is the list of RB numbers.
-
-        Returns:
-            dict: The activated offloading tasks profiles. The key is the task ID, and the value is the dict {tx_idx, rx_idx, channel_type, task}
-
-        Examples:
-            activated_offloading_tasks_with_RB_Nos = {
-                'Task_1': [1, 2, 3],
-                'Task_2': [4, 5, 6],
-                'Task_3': [7, 8, 9]
-            }
-
-        """
-        offloading_tasks, total_num = self.task_manager.getOffloadingTasksWithNumber()  # dict, key是node_id, value是task
-        activated_tasks = {}
-        if total_num == 0:
-            return activated_tasks
-
-        # 初始化
-        self.channel_manager.resetActiveLinks()
-        # 遍历激活连接
-        for _, task_set in offloading_tasks.items():
-            for task in task_set:
-                assert isinstance(task, Task)
-                task_id = task.getTaskId()
-                if task_id not in activated_offloading_tasks_with_RB_Nos:
-                    continue
-                path = task.getToOffloadRoute()
-                assert not task.isExecutedLocally(), '任务已经在本地执行，不需要分配RB！'
-                if len(path) == 0: continue
-                allocated_RBs = activated_offloading_tasks_with_RB_Nos[task_id]
-                tx, rx = task.getCurrentNodeId(), path[0]
-                tx_idx = self._getNodeIdxById(tx)
-                rx_idx = self._getNodeIdxById(rx)
-                TX_Node = self._getNodeById(tx)
-                RX_Node = self._getNodeById(rx)
-                TX_Node.setTransmitting(True)
-                RX_Node.setReceiving(True)
-                TX_Node_type = self._getNodeTypeById(tx)  # 'V', 'U', 'I'
-                RX_Node_type = self._getNodeTypeById(rx)  # 'V', 'U', 'I'
-                assert TX_Node_type in ['V', 'U', 'I'], 'TX_Node_type不在["Vehicle", "UAV", "RSU"]中！'
-                assert RX_Node_type in ['V', 'U', 'I'], 'RX_Node_type不在["Vehicle", "UAV", "RSU"]中！'
-                channel_type = f'{TX_Node_type}2{RX_Node_type}'
-                self.channel_manager.activateLink(tx_idx, rx_idx, allocated_RBs, channel_type)
-                activated_tasks[task_id] = {
-                    'tx_idx': tx_idx,
-                    'rx_idx': rx_idx,
-                    'channel_type': channel_type,
-                    'task': task
-                }
-        return activated_tasks
 
     def _compute_communication_rate(self, activated_task_dict):
         """Compute the communication rate for the offloading tasks. The communication rate is computed based on the channel model, such as path loss, shadowing, fading, etc.
@@ -554,6 +498,58 @@ class AirFogSimEnv():
         if node is None:
             node = self.cloudServers.get(node_id, None)
         return node
+
+    def _allocate_communication_RBs(self, activated_offloading_tasks_with_RB_Nos: dict):
+        """Allocate the communication resources (RBs) for the offloading tasks.
+        
+        Args:
+            activated_offloading_tasks_with_RB_Nos (dict): The activated offloading tasks with RB numbers. The key is the task ID, and the value is the list of RB numbers.
+
+        Returns:
+            dict: The activated offloading tasks profiles. The key is the task ID, and the value is the dict {tx_idx, rx_idx, channel_type, task}
+
+        Examples:
+            activated_offloading_tasks_with_RB_Nos = {
+                'Task_1': [1, 2, 3],
+                'Task_2': [4, 5, 6],
+                'Task_3': [7, 8, 9]
+            }
+
+        """
+        offloading_tasks, total_num = self.task_manager.getOffloadingTasksWithNumber()  # dict, key是node_id, value是task
+        activated_tasks = {}
+        if total_num == 0:
+            return activated_tasks
+
+        # 初始化
+        self.channel_manager.resetActiveLinks()
+        # 遍历激活连接
+        for _, task_set in offloading_tasks.items():
+            for task in task_set:
+                assert isinstance(task, Task)
+                task_id = task.getTaskId()
+                if task_id not in activated_offloading_tasks_with_RB_Nos:
+                    continue
+                path = task.getToOffloadRoute()
+                assert not task.isExecutedLocally(), '任务已经在本地执行，不需要分配RB！'
+                if len(path) == 0: continue
+                allocated_RBs = activated_offloading_tasks_with_RB_Nos[task_id]
+                tx, rx = task.getCurrentNodeId(), path[0]
+                tx_idx = self._getNodeIdxById(tx)
+                rx_idx = self._getNodeIdxById(rx)
+                TX_Node_type = self._getNodeTypeById(tx)  # 'V', 'U', 'I'
+                RX_Node_type = self._getNodeTypeById(rx)  # 'V', 'U', 'I'
+                assert TX_Node_type in ['V', 'U', 'I'], 'TX_Node_type不在["Vehicle", "UAV", "RSU"]中！'
+                assert RX_Node_type in ['V', 'U', 'I'], 'RX_Node_type不在["Vehicle", "UAV", "RSU"]中！'
+                channel_type = f'{TX_Node_type}2{RX_Node_type}'
+                self.channel_manager.activateLink(tx_idx, rx_idx, allocated_RBs, channel_type)
+                activated_tasks[task_id] = {
+                    'tx_idx': tx_idx,
+                    'rx_idx': rx_idx,
+                    'channel_type': channel_type,
+                    'task': task
+                }
+        return activated_tasks
 
     def _updateWiredCommunication(self):
         """Update the wired communication for the cloud computing network nodes.
@@ -773,8 +769,7 @@ class AirFogSimEnv():
         cloudserver_infos = self.traffic_manager.getCloudServerInfos()
         for rsu_id, rsu_info in rsu_infos.items():
             if rsu_id not in self.RSUs:
-                self.RSUs[rsu_id] = RSU(id=rsu_id, position=rsu_info['position'],
-                                        fog_profile=self.config['fog_profile'].get('rsu', {}),
+                self.RSUs[rsu_id] = RSU(id=rsu_id, position=rsu_info['position'], fog_profile=self.config['fog_profile'].get('rsu', {}),
                                         task_profile=self.config['task_profile'].get('rsu', {}))
 
         for cloudserver_id, cloudserver_info in cloudserver_infos.items():
@@ -804,26 +799,25 @@ class AirFogSimEnv():
         for vehicle_id, vehicle_traffic_info in vehicle_traffic_infos.items():
             if vehicle_id not in self.vehicles:
                 added_veh_nums += 1
-                self.vehicles[vehicle_id] = self._initVehicle(vehicle_traffic_info,
-                                                              task_profile=self.config['task_profile'].get('vehicle',
-                                                                                                           {}),
+                self.vehicles[vehicle_id] = self._initVehicle(vehicle_traffic_info, 
+                                                              task_profile=self.config['task_profile'].get('vehicle', {}), 
                                                               fog_profile=self.config['fog_profile'].get('vehicle', {}))
                 # check if the vehicle_id should be in the task_node_ids
-                if 'vehicle' in self.task_node_types and np.random.rand() < self.task_node_gen_poss and self.getTaskNodeNumByType(
-                        'vehicle') < self.max_task_node_num['vehicle'] and vehicle_id not in self.task_node_ids:
+                if 'vehicle' in self.task_node_types and np.random.rand() < self.task_node_gen_poss and self.getTaskNodeNumByType('vehicle') < self.max_task_node_num['vehicle'] and vehicle_id not in self.task_node_ids:
                     self.task_node_ids.append(vehicle_id)
-            self.vehicles[vehicle_id].update(vehicle_traffic_info, self.simulation_time)
 
+            self.vehicles[vehicle_id].update(vehicle_traffic_info, self.simulation_time)
+        # print(self.simulation_time)
         for uav_id, uav_traffic_info in uav_traffic_infos.items():
+            # print(uav_id, uav_traffic_info['position'])
             if uav_id not in self.UAVs:
                 self.UAVs[uav_id] = UAV(uav_id, uav_traffic_info['position'], uav_traffic_info['speed'],
                                         uav_traffic_info['acceleration'], uav_traffic_info['angle'],
-                                        uav_traffic_info['phi'],
+                                        uav_traffic_info['phi'], 
                                         fog_profile=self.config['fog_profile'].get('uav', {}),
                                         task_profile=self.config['task_profile'].get('uav', {}))
                 # check if the uav_id should be in the task_node_ids
-                if 'UAV' in self.task_node_types and np.random.rand() < self.task_node_gen_poss and self.getTaskNodeNumByType(
-                        'UAV') < self.max_task_node_num['UAV'] and uav_id not in self.task_node_ids:
+                if 'UAV' in self.task_node_types and np.random.rand() < self.task_node_gen_poss and self.getTaskNodeNumByType('UAV') < self.max_task_node_num['UAV'] and uav_id not in self.task_node_ids:
                     self.task_node_ids.append(uav_id)
             self.UAVs[uav_id].update(uav_traffic_info, self.simulation_time)
 

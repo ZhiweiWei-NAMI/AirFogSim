@@ -71,7 +71,7 @@ class Blockchain():
         self.transaction_threshold = transaction_threshold
         self.consensus_type = consensus
         self.chain = [self.create_genesis_block()]
-        print("The initialization of the blockchain is completed, and the consensus mechanism is: ", EnumerateConstants.getDescByCode(consensus))
+        # print("The initialization of the blockchain is completed, and the consensus mechanism is: ", EnumerateConstants.getDescByCode(consensus))
         self.to_mine_blocks = []
     
     @property
