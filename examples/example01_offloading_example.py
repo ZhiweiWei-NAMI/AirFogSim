@@ -33,18 +33,21 @@ random.seed(0)
 v2u_rate = [0]
 v2i_rate = [0]
 u2i_rate = [0]
-while not env.isDone():
-    algorithm_module.scheduleStep(env)
-    env.step()
-    accumulated_reward += algorithm_module.getRewardByTask(env)
-    task_num = TaskScheduler.getDoneTaskNum(env)
-    out_of_ddl_task_num = TaskScheduler.getOutOfDDLTasks(env)
-    succ_ratio = task_num / max(1,task_num + out_of_ddl_task_num)
-    env.render()
-    v2u_rate.append(env.getChannelAvgRate('V2U'))
-    v2i_rate.append(env.getChannelAvgRate('V2I'))
-    u2i_rate.append(env.getChannelAvgRate('U2I'))
-    print(f'Simulation time: {env.simulation_time:.2f}, Ratio: {succ_ratio:.2f}, ACC_Reward: {succ_ratio*accumulated_reward/max(1,task_num):.2f} V2U: {v2u_rate[-1]:.2f}, V2I: {v2i_rate[-1]:.2f}, U2I: {u2i_rate[-1]:.2f}', end='\r')
+for _ in range(10):
+    while not env.isDone():
+        algorithm_module.scheduleStep(env)
+        env.step()
+        accumulated_reward += algorithm_module.getRewardByTask(env)
+        task_num = TaskScheduler.getDoneTaskNum(env)
+        out_of_ddl_task_num = TaskScheduler.getOutOfDDLTasks(env)
+        succ_ratio = task_num / max(1,task_num + out_of_ddl_task_num)
+        env.render()
+        v2u_rate.append(env.getChannelAvgRate('V2U'))
+        v2i_rate.append(env.getChannelAvgRate('V2I'))
+        u2i_rate.append(env.getChannelAvgRate('U2I'))
+        print(f'Simulation time: {env.simulation_time:.2f}, Ratio: {succ_ratio:.2f}, ACC_Reward: {succ_ratio*accumulated_reward/max(1,task_num):.2f} V2U: {v2u_rate[-1]:.2f}, V2I: {v2i_rate[-1]:.2f}, U2I: {u2i_rate[-1]:.2f}', end='\r')
+    print()
+    env.reset()
 env.close()
 # plt绘制
 import matplotlib.pyplot as plt

@@ -71,9 +71,10 @@ class TrafficManager():
         self._initialize_cloudServers()
         self._initialize_UAVs()
 
-    def reset(self):
+    def reset(self, traci_connection = None):
         """Reset the traffic manager.
         """
+        self._traci_connection = traci_connection
         self._current_time = 0.0
         self._vehicle_infos = {}
         self._UAV_infos = {}

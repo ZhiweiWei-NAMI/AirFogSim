@@ -91,6 +91,9 @@ class AirFogSimEnv():
         self.task_return_routes = {}  # dict, key是task_id, value是route=[node_id_1,node_id_2,...]
 
         # ----------------indicators, managed by evaluation----------------
+        self.init_indicators()
+
+    def init_indicators(self):
         self.channel = {'time': 0, 'data_size': 0}
         self.V2U_channel = {'time': 0, 'data_size': 0}
         self.V2I_channel = {'time': 0, 'data_size': 0}
@@ -99,7 +102,11 @@ class AirFogSimEnv():
     def reset(self):
         """Reset the environment.
         """
-        self.traffic_manager.reset()
+        self.close()
+        # time.sleep(3)
+        self.init_indicators()
+        self.traci_connection = self._connectToSUMO(self.config['sumo'], self.config['traffic']['traffic_mode'] == 'SUMO')
+        self.traffic_manager.reset(self.traci_connection)
         self.task_manager.reset()
         self.channel_manager.reset()
         self.mission_manager.reset()
