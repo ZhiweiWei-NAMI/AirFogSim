@@ -4,6 +4,22 @@ Vehicular Fog Computing (VFC) is significantly enhancing the efficiency, safety,
 
 ![image](https://github.com/ZhiweiWei-NAMI/AirFogSim/assets/153070550/0e28ce03-8eed-40e7-8f9d-a85e067df575)
 
+## Citation
+
+If you use AirFogSim in your research, please cite our paper:
+
+```bibtex
+@misc{wei2024airfogsimlightweightmodularsimulator,
+      title={AirFogSim: A Light-Weight and Modular Simulator for UAV-Integrated Vehicular Fog Computing}, 
+      author={Zhiwei Wei and Chenran Huang and Bing Li and Yiting Zhao and Xiang Cheng and Liuqing Yang and Rongqing Zhang},
+      year={2024},
+      eprint={2409.02518},
+      archivePrefix={arXiv},
+      primaryClass={cs.NI},
+      url={https://arxiv.org/abs/2409.02518}, 
+}
+```
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
