@@ -123,7 +123,7 @@ class AirFogSimEnv():
         self.traffic_manager = TrafficManager(config['traffic'], self.traci_connection, config['sumo']['sumo_net'])
         self._initRSUsAndCloudServers()
         # 2. Config the task manager
-        self.task_manager = TaskManager(config['task'], predictable_seconds=self.traffic_interval)  # suppose tasks are generated every traffic interval
+        self.task_manager = TaskManager(config['task'], predictable_seconds=5)  # suppose tasks are generated every traffic interval
         self.channel_manager = ChannelManagerCP(config['channel'], 
                                               n_RSU=self.traffic_manager.getNumberOfRSUs(),
                                               n_UAV=self.traffic_manager.getNumberOfUAVs(),
@@ -344,6 +344,7 @@ class AirFogSimEnv():
             channel_type = task_profile['channel_type']
             tx_idx = task_profile['tx_idx']
             rx_idx = task_profile['rx_idx']
+            allocated_RB_Nos = task_profile['RB_Nos']
             offload_objs = task.getToOffloadRoute()
             tx_id, rx_id = task.getCurrentNodeId(), offload_objs[0]
             TX_Node, RX_Node = self._getNodeById(tx_id), self._getNodeById(rx_id)
@@ -356,7 +357,7 @@ class AirFogSimEnv():
             if task.isReturning():
                 last_transmission_time = task.getLastReturnTime()
             trans_data = np.sum(
-                self.channel_manager.getRateByChannelType(tx_idx, rx_idx, channel_type)) * self.simulation_interval
+                self.channel_manager.getRateByChannelType(tx_idx, rx_idx, channel_type, allocated_RB_Nos)) * self.simulation_interval
 
             tx_size = tx_size_dict.get(tx_id, 0)
             tx_size += trans_data
@@ -497,7 +498,8 @@ class AirFogSimEnv():
                     'tx_idx': tx_idx,
                     'rx_idx': rx_idx,
                     'channel_type': channel_type,
-                    'task': task
+                    'task': task,
+                    'RB_Nos': allocated_RBs
                 }
         return activated_tasks
 

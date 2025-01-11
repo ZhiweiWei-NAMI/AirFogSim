@@ -1,7 +1,7 @@
 
 simulation:
-  vehicle_count: 50
-  max_simulation_time: 10
+  vehicle_count: 200
+  max_simulation_time: 100
   simulation_interval: 0.1 # in seconds, for transmission, computation, task generation and assignment, etc.
   traffic_interval: 0.1 # in seconds, for traffic simulation. Remember to set the same value in the SUMO configuration file; otherwise, the simulation will not work properly
   
@@ -11,14 +11,14 @@ sumo:
   sumo_osm: "./sumo_wujiaochang/osm_bbox.osm.xml"
   sumo_net: "./sumo_wujiaochang/osm.net.xml"
   sumo_port: 8813
-  export_tripinfo: False # 如果True，则导出tripinfo.xml文件（很大）
+  export_tripinfo: False # 如果true，则导出tripinfo.xml文件（很大）
   tripinfo_output: "./sumo_wujiaochang/tripinfo.xml"
 
 visualization:
   icon_path: "./icon"
 
 traffic:
-  traffic_mode: "SUMO" # "real" or "SUMO"
+  traffic_mode: "real" # "real" or "SUMO"
   tripinfo: "./sumo_wujiaochang/tripinfo.csv" # The path to the SUMO tripinfo file
   traffic_interval: 0.1 # in seconds, for traffic simulation. Remember to set the same value in the SUMO configuration file; otherwise, the simulation will not work properly
   UAV_z_range: [100, 200] # The range of z coordinates for UAVs
@@ -37,7 +37,7 @@ task: # default task profile for all nodes
   hard_ddl: 2 # The hard deadline for tasks
   task_generation_model: "Poisson" # supported model:['Poisson', 'Uniform', 'Normal', 'Exponential']
   task_generation_kwargs:
-    lambda: 0.5 # Poission -> lambda; Uniform -> low, high; Normal -> mean, std; Exponential -> beta
+    lambda: 1 # Poission -> lambda; Uniform -> low, high; Normal -> mean, std; Exponential -> beta
   task_min_cpu: 0.2
   task_max_cpu: 0.7
   task_min_size: 0.2
@@ -51,15 +51,15 @@ task: # default task profile for all nodes
   cpu_model: "Uniform" # supported model:['Uniform', 'Normal']
   cpu_kwargs:
     low: 0.2
-    high: 0.7
+    high: 2
   size_model: "Uniform" # supported model:['Uniform', 'Normal']
   size_kwargs:
     low: 0.2
-    high: 0.7
+    high: 2
   deadline_model: "Uniform" # supported model:['Uniform', 'Normal']
   deadline_kwargs:
-    low: 0.5
-    high: 1
+    low: 0.2
+    high: 0.8
   priority_model: "Uniform" # supported model:['Uniform', 'Normal']
   priority_kwargs:
     low: 0.5
@@ -70,8 +70,8 @@ task: # default task profile for all nodes
     high: 0
 
 task_profile: # task profile for each node type
-  task_node_gen_poss: 0.5 # The possibility of generating a task node when inializing the node
-  task_node_profiles: [{'type':'UAV', 'max_node_num': 30}, {'type':'vehicle', 'max_node_num': 20}] # The types of task nodes and the maximum number of nodes of each type
+  task_node_gen_poss: 0.8 # The possibility of generating a task node when inializing the node
+  task_node_profiles: [{'type':'UAV', 'max_node_num': 10}, {'type':'vehicle', 'max_node_num': 40}] # The types of task nodes and the maximum number of nodes of each type
   vehicle: # The profile of vehicles
     lambda: 0.5
     dag_edge_prob: 0.3 # The probability of generating an edge in the DAG of task graph
@@ -106,7 +106,7 @@ state_attribute:
 
 channel:
   outage_model: 'Rayleigh' # supported model:['Rayleigh'], further implementation can be added in airfogsim/channel_callback/*_callback.py
-  outage_snr_threshold: 10 # The SNR threshold for outage detection
+  outage_snr_threshold: 0 # The SNR threshold for outage detection
   V2V:
     pathloss_model: 'V2V_urban_tr37885'
     shadowing_model: '3GPP_LogNormal'

@@ -3,6 +3,58 @@ from ..entities.task import Task
 from ..enum_const import EnumerateConstants
 from collections import deque
 import itertools
+
+import random
+import networkx as nx
+
+def generate_random_dag(node_ids, edge_probability):
+    """
+    Generates a random DAG using NetworkX.
+
+    Args:
+        node_ids: The node ids in the DAG.
+        edge_probability: The probability of an edge existing between two nodes.
+
+    Returns:
+        A NetworkX DiGraph representing the DAG.
+    """
+    dag = nx.DiGraph()
+    dag.add_nodes_from(node_ids)
+    for i in range(len(node_ids)):
+        for j in range(i + 1, len(node_ids)):
+            if random.random() < edge_probability:
+                dag.add_edge(node_ids[i], node_ids[j])
+
+    # Ensure the graph is acyclic
+    if not nx.is_directed_acyclic_graph(dag):
+        return generate_random_dag(node_ids, edge_probability) # Regenerate if cyclic
+
+    return dag
+
+def merge_two_dags(dag1, dag2, edge_probability):
+    """
+    Merges two DAGs into a new DAG.
+
+    Args:
+        dag1: The first DAG.
+        dag2: The second DAG.
+        edge_probability: The probability of an edge existing between two nodes.
+
+    Returns:
+        A NetworkX DiGraph representing the merged DAG.
+    """
+    if dag1 is None:
+        return dag2
+    merged_dag = nx.union(dag1, dag2)
+    # for node1 in dag1.nodes():
+    #     for node2 in dag2.nodes():
+    #         if random.random() < edge_probability:
+    #             merged_dag.add_edge(node1, node2)
+    # Ensure the graph is acyclic
+    # if not nx.is_directed_acyclic_graph(dag1):
+    #     return merge_two_dags(dag1, dag2, edge_probability)
+    return merged_dag
+
 class TaskManager:
     """ Task Manager is responsible for generating tasks and managing the task status. 
     """
@@ -22,6 +74,7 @@ class TaskManager:
         priority_model = config_task.get('priority_model', 'Uniform')
         priority_kwargs = config_task.get('priority_kwargs', {})
         self._config_task = config_task
+        self._task_dependencies = {}
 
         self._task_generation_model = task_generation_model
         assert task_generation_model in TaskManager.SUPPORTED_TASK_GENERATION_MODELS, 'The task generation model is not supported. Only support {}'.format(TaskManager.SUPPORTED_TASK_GENERATION_MODELS)
@@ -171,7 +224,7 @@ class TaskManager:
                     to_compute_task_list.append(task_info)
                     self._computing_tasks[node_id] = to_compute_task_list
                     return True
-        elif task.isReturning(): # if the task is returning
+        else: # if the task is returning
             for task_info in self._returning_tasks[node_id]:
                 if task_info.getTaskId() == task_id:
                     self._returning_tasks[node_id].remove(task_info)
@@ -183,10 +236,11 @@ class TaskManager:
                         self._out_of_ddl_tasks[task_node_id] = self._out_of_ddl_tasks.get(task_node_id, [])
                         self._out_of_ddl_tasks[task_node_id].append(task_info)
                         self._recently_failed_100_tasks.append(task_info)
+                        task_info.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_DDL)
                     return True
         return False
     
-    def failOffloadingTask(self, task:Task):
+    def failOffloadingTask(self, task:Task, failure = EnumerateConstants.TASK_FAIL_OUT_OF_NODE):
         """Remove the offloading task by the task id, and then move the task to the failed_tasks.
 
         Args:
@@ -198,6 +252,7 @@ class TaskManager:
         node_id = task.getAssignedTo()
         task_node_id = task.getTaskNodeId()
         task_id = task.getTaskId()
+        task.setTaskFailueCode(failure)
         if not task.isReturning():
             for task_info in self._offloading_tasks.get(task_node_id, []):
                 if task_info.getTaskId() == task_id:
@@ -568,13 +623,29 @@ class TaskManager:
     def _generateTasks(self, task_node_ids_kwardsDict, cur_time, simulation_interval):
         # 1. Move the tasks from the to_generate_task_infos to the todo_tasks according to the current time
         for task_node_id, task_infos in self._to_generate_task_infos.items():
+            done_task_id_for_node = [task_info.getTaskId() for task_info in self._done_tasks.get(task_node_id, [])]
+            failed_task_id_for_node = [task_info.getTaskId() for task_info in self._out_of_ddl_tasks.get(task_node_id, [])]
             for task_info in task_infos.copy():
-                if task_info.getTaskArrivalTime() <= cur_time: # if the task is arrived, i.e., the task arrival time is less than the current time
-                    todo_task_list = self._waiting_to_offload_tasks.get(task_node_id, [])
-                    todo_task_list.append(task_info)
-                    self._waiting_to_offload_tasks[task_node_id] = todo_task_list
-                    self._to_generate_task_infos[task_node_id].remove(task_info)
-                    task_info.setGenerated()
+                if task_info.getTaskArrivalTime() <= cur_time: # if the task is arrived
+                    task_dag = self._task_dependencies[task_node_id] # nx.DiGraph
+                    parents = []
+                    if task_dag is not None and task_info.getTaskId() in task_dag:
+                        # if the parent tasks are done, then the task is generated
+                        parents = list(task_dag.predecessors(task_info.getTaskId()))
+                    if all([task_id in done_task_id_for_node for task_id in parents]) or len(parents) == 0:
+                        todo_task_list = self._waiting_to_offload_tasks.get(task_node_id, [])
+                        todo_task_list.append(task_info)
+                        self._waiting_to_offload_tasks[task_node_id] = todo_task_list
+                        self._to_generate_task_infos[task_node_id].remove(task_info)
+                        task_info.setGenerated()
+                    # if the parent tasks failed, then the task is failed
+                    elif any([task_id in failed_task_id_for_node for task_id in parents]) and len(parents) > 0:
+                        failed_task_list = self._out_of_ddl_tasks.get(task_node_id, [])
+                        failed_task_list.append(task_info)
+                        self._out_of_ddl_tasks[task_node_id] = failed_task_list
+                        self._to_generate_task_infos[task_node_id].remove(task_info)
+                        task_info.setGenerated()
+                        task_info.setTaskFailueCode(EnumerateConstants.TASK_FAIL_PARENT_FAILED)
 
         # 2. Generate new to_generate_task_infos, oblige to the task generation model, simulation_interval, and predictable_seconds
         todo_task_num = 0
@@ -591,6 +662,7 @@ class TaskManager:
                         task_info = self._generateTaskInfo(task_node_id, last_generation_time) # Task()
                         to_genernate_task_infos.append(task_info)
                         todo_task_num += 1
+                        
                 elif self._task_generation_model == 'Uniform':
                     kwlow = kwargsDict.get('low', self._task_generation_low)
                     kwhigh = kwargsDict.get('high', self._task_generation_high)
@@ -612,6 +684,7 @@ class TaskManager:
                         task_info = self._generateTaskInfo(task_node_id, last_generation_time)
                         to_genernate_task_infos.append(task_info)
                         todo_task_num += 1
+
                 elif self._task_generation_model == 'Exponential':
                     kwbeta = kwargsDict.get('beta', self._task_generation_beta)
                     task_num = np.random.exponential(kwbeta * simulation_interval)
@@ -645,9 +718,29 @@ class TaskManager:
         Examples:
             task_manager.generateAndCheckTasks(['vehicle1', 'vehicle2'], 10.3, 1.5)
         """
+        # 对每个task node当前to_generate_task，对to_offload_task或to_compute_task生成
+        self._generateTaskDAG(task_node_ids_kwardsDict)
         todo_task_number = self._generateTasks(task_node_ids_kwardsDict, cur_time, simulation_interval)
         self.checkTasks(cur_time)
         return todo_task_number
+
+    def _generateTaskDAG(self, task_node_ids_kwardsDict):
+        # 保持每个task_node 至少有一个DAG，从而保持to_generate_task_infos中至少有一个task_info
+        for task_node_id, kwargsDict in task_node_ids_kwardsDict.items():
+            # self._task_dependencies={}
+            task_dag = self._task_dependencies.get(task_node_id, None)
+            # 从to_generate_task_infos中获取待生成的task；如果没有出现在现在的dag中，则新建一个dag，并且整合到当前的dag中
+            task_id_in_dag = []
+            if task_dag is not None:
+                task_id_in_dag = list(task_dag.nodes())
+            task_id_in_to_gen = [task_info.getTaskId() for task_info in self._to_generate_task_infos.get(task_node_id, [])]
+            task_id_not_in_dag = [task_id for task_id in task_id_in_to_gen if task_id not in task_id_in_dag]
+
+            dag_edge_prob = kwargsDict.get('dag_edge_prob', 0.3)
+            # nx.DiGraph(), 生成一个有向图
+            new_task_dag = generate_random_dag(task_id_not_in_dag, dag_edge_prob)
+            merged_task_dag = merge_two_dags(task_dag, new_task_dag, dag_edge_prob)
+            self._task_dependencies[task_node_id] = merged_task_dag
 
     def checkTasks(self, cur_time):
         # 1. Check the todo tasks
@@ -683,11 +776,10 @@ class TaskManager:
             for task_info in task_infos.copy():
                 last_transmission_time = task_info.getLastTransmissionTime()
                 if cur_time - last_transmission_time > self._config_task.get('tti_threshold', 0.5):
-                    task_info.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_TTI)
-                    self.failOffloadingTask(task_info)
+                    self.failOffloadingTask(task_info, failure = EnumerateConstants.TASK_FAIL_OUT_OF_TTI)
 
         # 4. Out of Hard DDL (self._config_task.get('hard_ddl', 2))
-        all_tasks = itertools.chain(self._waiting_to_offload_tasks.items(), self._offloading_tasks.items(), self._computing_tasks.items(), self._waiting_to_return_tasks.items(), self._returning_tasks.items())
+        all_tasks = itertools.chain(self._waiting_to_offload_tasks.items(), self._offloading_tasks.items(), self._computing_tasks.items(), self._waiting_to_return_tasks.items(), self._returning_tasks.items(), self._to_generate_task_infos.items())
         for node_id, task_infos in all_tasks:
             for task_info in task_infos.copy():
                 if cur_time - task_info.getTaskArrivalTime() > self._config_task.get('hard_ddl', 2):
@@ -695,7 +787,39 @@ class TaskManager:
                     task_infos.remove(task_info)
                     self._out_of_ddl_tasks[node_id] = self._out_of_ddl_tasks.get(node_id, [])
                     self._out_of_ddl_tasks[node_id].append(task_info)
+                    self._recently_failed_100_tasks.append(task_info)
 
+        # 5. Check the task DAG
+        for task_node_id, task_dag in self._task_dependencies.items():
+            # 如果对于task_dag中后继为0的task，不在to_generate_task_infos中，则将其以及其前序task移除
+            not_finished_tasks = self._getNotFinishedTasksByNode(task_node_id)
+            remove_flag = True
+            removed_nodes = []
+            while remove_flag:
+                remove_flag = False
+                for task_id in list(task_dag.nodes()).copy():
+                    if task_dag.out_degree(task_id) == 0 and task_id not in not_finished_tasks:
+                        removed_nodes.append({task_id: task_dag.predecessors(task_id)})
+                        task_dag.remove_node(task_id)
+                        remove_flag = True
+            if len(removed_nodes) > 1:
+                a=3 #debug                    
+
+    def _getNotFinishedTasksByNode(self, task_node_id):
+        not_finished_tasks = []
+        for task_info in self._to_generate_task_infos.get(task_node_id, []):
+            not_finished_tasks.append(task_info.getTaskId())
+        for task_info in self._waiting_to_offload_tasks.get(task_node_id, []):
+            not_finished_tasks.append(task_info.getTaskId())
+        for task_info in self._offloading_tasks.get(task_node_id, []):
+            not_finished_tasks.append(task_info.getTaskId())
+        for task_info in self._computing_tasks.get(task_node_id, []):
+            not_finished_tasks.append(task_info.getTaskId())
+        for task_info in self._waiting_to_return_tasks.get(task_node_id, []):
+            not_finished_tasks.append(task_info.getTaskId())
+        for task_info in self._returning_tasks.get(task_node_id, []):
+            not_finished_tasks.append(task_info.getTaskId())
+        return not_finished_tasks
 
     def offloadTask(self, task_node_id, task_id, target_node_id, current_time, route = None):
         """Offload the task by the task id and the target node id.

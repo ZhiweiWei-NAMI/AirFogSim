@@ -2,6 +2,7 @@ class EnumerateConstants:
     TASK_FAIL_OUT_OF_DDL = 0
     TASK_FAIL_OUT_OF_TTI = 1
     TASK_FAIL_OUT_OF_NODE = 2
+    TASK_FAIL_PARENT_FAILED = 3
 
     CONSENSUS_POW = 11
     CONSENSUS_POS = 12
@@ -22,6 +23,8 @@ class EnumerateConstants:
             return "Task fails due to transmission timeout."
         elif code == EnumerateConstants.TASK_FAIL_OUT_OF_NODE:
             return "Task fails due to out of node."
+        elif code == EnumerateConstants.TASK_FAIL_PARENT_FAILED:
+            return "Task fails due to parent task failed."
         elif code == EnumerateConstants.CONSENSUS_POW:
             return "Proof of work."
         elif code == EnumerateConstants.CONSENSUS_POS:

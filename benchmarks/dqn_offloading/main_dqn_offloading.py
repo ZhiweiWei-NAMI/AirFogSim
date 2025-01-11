@@ -18,7 +18,7 @@ import numpy as np
 import random
 import yaml
 from airfogsim.scheduler import RewardScheduler, TaskScheduler, EntityScheduler
-from baselines.dqn_offloading.dqn_algorithm import DQNOffloadingAlgorithm
+from benchmarks.dqn_offloading.dqn_algorithm import DQNOffloadingAlgorithm
 
 def load_config(path):
     with open(path, 'r') as file:

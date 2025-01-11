@@ -207,6 +207,10 @@ class ChannelManagerCP:
         self.U2UChannel_with_fastfading = self.U2UChannel_abs - self.U2UChannel.FastFading
         self.U2IChannel_with_fastfading = self.U2IChannel_abs - self.U2IChannel.FastFading
         self.I2IChannel_with_fastfading = self.I2IChannel_abs
+        # 把U2U, V2V, I2I的对角线元素设为inf.由于Channel是[tx, rx, RB]的形式，所以对角线元素是[tx, tx, RB]的形式
+        self.V2VChannel_with_fastfading = cp.where(cp.eye(self.n_Veh)[:, :, cp.newaxis], cp.inf, self.V2VChannel_with_fastfading)
+        self.U2UChannel_with_fastfading = cp.where(cp.eye(self.n_UAV)[:, :, cp.newaxis], cp.inf, self.U2UChannel_with_fastfading)
+        self.I2IChannel_with_fastfading = cp.where(cp.eye(self.n_RSU)[:, :, cp.newaxis], cp.inf, self.I2IChannel_with_fastfading)
 
     def _update_small_fading(self):
         self.V2IChannel.update_fast_fading()
@@ -285,7 +289,7 @@ class ChannelManagerCP:
         elif channel_type == 'I2I':
             self.I2I_active_links[transmitter_idx, receiver_idx, allocated_RBs] = True
 
-    def getRateByChannelType(self, transmitter_idx, receiver_idx, channel_type):
+    def getRateByChannelType(self, transmitter_idx, receiver_idx, channel_type, allocated_RB_Nos = None):
         """Get the rate by the channel type.
 
         Args:
@@ -296,26 +300,28 @@ class ChannelManagerCP:
         Returns:
             cp.ndarray: The rate of the channel in each RB.
         """
+        if allocated_RB_Nos is None:
+            allocated_RB_Nos = cp.arange(self.n_RB)
         channel_type = channel_type.lower()
         if channel_type == 'v2v':
-            return self.V2V_Rate[transmitter_idx, receiver_idx, :]
+            rate = self.V2V_Rate[transmitter_idx, receiver_idx, allocated_RB_Nos]
         elif channel_type == 'v2i':
-            return self.V2I_Rate[transmitter_idx, receiver_idx, :]
+            rate = self.V2I_Rate[transmitter_idx, receiver_idx, allocated_RB_Nos]
         elif channel_type == 'v2u':
-            return self.V2U_Rate[transmitter_idx, receiver_idx, :]
+            rate = self.V2U_Rate[transmitter_idx, receiver_idx, allocated_RB_Nos]
         elif channel_type == 'u2u':
-            return self.U2U_Rate[transmitter_idx, receiver_idx, :]
+            rate = self.U2U_Rate[transmitter_idx, receiver_idx, allocated_RB_Nos]
         elif channel_type == 'u2v':
-            return self.U2V_Rate[transmitter_idx, receiver_idx, :]
+            rate = self.U2V_Rate[transmitter_idx, receiver_idx, allocated_RB_Nos]
         elif channel_type == 'u2i':
-            return self.U2I_Rate[transmitter_idx, receiver_idx, :]
+            rate = self.U2I_Rate[transmitter_idx, receiver_idx, allocated_RB_Nos]
         elif channel_type == 'i2u':
-            return self.I2U_Rate[transmitter_idx, receiver_idx, :]
+            rate = self.I2U_Rate[transmitter_idx, receiver_idx, allocated_RB_Nos]
         elif channel_type == 'i2v':
-            return self.I2V_Rate[transmitter_idx, receiver_idx, :]
+            rate = self.I2V_Rate[transmitter_idx, receiver_idx, allocated_RB_Nos]
         elif channel_type == 'i2i':
-            return self.I2I_Rate[transmitter_idx, receiver_idx, :]
-        
+            rate = self.I2I_Rate[transmitter_idx, receiver_idx, allocated_RB_Nos]
+        return rate
     def computeRate(self, activated_task_dict):
         """Compute the rate of the activated links considering the interference.
 
@@ -349,52 +355,49 @@ class ChannelManagerCP:
             channel_type = task_profile['channel_type']
             txidx = task_profile['tx_idx']
             rxidx = task_profile['rx_idx']
+            rb_nos_idx = task_profile['RB_Nos']
+            # 把rb_nos从index变成对应坐标为True的形式
+            rb_nos = cp.zeros(self.n_RB, dtype='bool')
+            rb_nos[rb_nos_idx] = True
             if txidx == rxidx and channel_type in ['V2V', 'U2U', 'I2I']:
                 continue
             power_db = None
             # 计算信号；并且把干扰减去，这样保证接收端的信号强度是正确的
             if channel_type == 'V2V':
-                rb_nos = self.V2V_active_links[txidx, rxidx, :]
                 addMatrix(V2V_Signal, self.V2V_power_dB, self.V2VChannel_with_fastfading, rb_nos, txidx, rxidx)
+                assert txidx != rxidx, "V2V channel should not be activated between the same vehicle."
                 subMatrix(interference_power_matrix_vtx_x2v, self.V2V_power_dB, self.V2VChannel_with_fastfading, rb_nos, txidx, rxidx)
                 power_db = self.V2V_power_dB
             elif channel_type == 'V2U':
-                rb_nos = self.V2U_active_links[txidx, rxidx, :]
                 addMatrix(V2U_Signal, self.V2U_power_dB, self.V2UChannel_with_fastfading, rb_nos, txidx, rxidx)
                 subMatrix(interference_power_matrix_vtx_x2u, self.V2U_power_dB, self.V2UChannel_with_fastfading, rb_nos, txidx, rxidx)
                 power_db = self.V2U_power_dB
             elif channel_type == 'V2I':
-                rb_nos = self.V2I_active_links[txidx, rxidx, :]
                 addMatrix(V2I_Signal, self.V2I_power_dB, self.V2IChannel_with_fastfading, rb_nos, txidx, rxidx)
                 subMatrix(interference_power_matrix_vtx_x2i, self.V2I_power_dB, self.V2IChannel_with_fastfading, rb_nos, txidx, rxidx)
                 power_db = self.V2I_power_dB
             elif channel_type == 'U2U':
-                rb_nos = self.U2U_active_links[txidx, rxidx, :]
+                assert txidx != rxidx, "U2U channel should not be activated between the same UAV."
                 addMatrix(U2U_Signal, self.U2U_power_dB, self.U2UChannel_with_fastfading, rb_nos, txidx, rxidx)
                 subMatrix(interference_power_matrix_utx_x2u, self.U2U_power_dB, self.U2UChannel_with_fastfading, rb_nos, txidx, rxidx)
                 power_db = self.U2U_power_dB
             elif channel_type == 'U2V':
-                rb_nos = self.U2V_active_links[txidx, rxidx, :]
                 addMatrix(U2V_Signal, self.U2V_power_dB, self.V2UChannel_with_fastfading, rb_nos, txidx, rxidx)
                 subMatrix(interference_power_matrix_utx_x2v, self.U2V_power_dB, self.V2UChannel_with_fastfading, rb_nos, txidx, rxidx, inverse=True)
                 power_db = self.U2V_power_dB
             elif channel_type == 'U2I':
-                rb_nos = self.U2I_active_links[txidx, rxidx, :]
                 addMatrix(U2I_Signal, self.U2I_power_dB, self.U2IChannel_with_fastfading, rb_nos, txidx, rxidx)
                 subMatrix(interference_power_matrix_utx_x2i, self.U2I_power_dB, self.U2IChannel_with_fastfading, rb_nos, txidx, rxidx)
                 power_db = self.U2I_power_dB
             elif channel_type == 'I2U': # channel有对称性，所以直接用现有的channel就行了
-                rb_nos = self.I2U_active_links[txidx, rxidx, :]
                 addMatrix(I2U_Signal, self.I2U_power_dB, self.U2IChannel_with_fastfading, rb_nos, txidx, rxidx, inverse=True)
                 subMatrix(interference_power_matrix_itx_x2u, self.I2U_power_dB, self.U2IChannel_with_fastfading, rb_nos, txidx, rxidx, inverse=True)
                 power_db = self.I2U_power_dB
             elif channel_type == 'I2V':
-                rb_nos = self.I2V_active_links[txidx, rxidx, :]
                 addMatrix(I2V_Signal, self.I2V_power_dB, self.V2IChannel_with_fastfading, rb_nos, txidx, rxidx, inverse=True)
                 subMatrix(interference_power_matrix_itx_x2v, self.I2V_power_dB, self.V2IChannel_with_fastfading, rb_nos, txidx, rxidx, inverse=True)
                 power_db = self.I2V_power_dB
             elif channel_type == 'I2I':
-                rb_nos = self.I2I_active_links[txidx, rxidx, :]
                 addMatrix(I2I_Signal, self.I2I_power_dB, self.I2IChannel_with_fastfading, rb_nos, txidx, rxidx)
                 subMatrix(interference_power_matrix_itx_x2i, self.I2I_power_dB, self.I2IChannel_with_fastfading, rb_nos, txidx, rxidx)
                 power_db = self.I2I_power_dB
