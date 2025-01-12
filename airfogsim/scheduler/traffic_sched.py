@@ -50,7 +50,7 @@ class TrafficScheduler(BaseScheduler):
         if len(vehicle_positions) == 0:
             return {}
         vehicle_positions = np.asarray(vehicle_positions)
-        distances = np.linalg.norm(vehicle_positions - np.asarray(target_position), axis=1)
+        distances = np.linalg.norm(vehicle_positions - np.asarray(target_position),axis=1)
         selected_vehicle_ids = np.where(distances <= distance_threshold)[0]
         for idx in selected_vehicle_ids:
             vehicle_id = vehicle_ids_list[idx]
@@ -75,7 +75,7 @@ class TrafficScheduler(BaseScheduler):
         # 从env的traffic manager获取当前uav位置；随机找一个不在禁飞区的位置作为目标位置，并且保证两个位置之间的直线也不经过禁飞区
         current_position = env.traffic_manager.getNodePositionById(UAV_id)
         target_positions = env.traffic_manager.getAllJunctionPositions()
-        nonfly_zones = env.traffic_manager.getNonFlyZones() # [[[x1,y1],[x2,y2],[x3,y3]], ...]
+        nonfly_zones = env.traffic_manager.getNonFlyZones()  # [[[x1,y1],[x2,y2],[x3,y3]], ...]
         target_position = None
         while target_position is None and len(target_positions) > 0:
             target_position = target_positions.pop(np.random.randint(0, len(target_positions)))
@@ -94,7 +94,7 @@ class TrafficScheduler(BaseScheduler):
             if line.crosses(LineString([Point(start_point), Point(end_point)])):
                 return True
         return False
-    
+
     @staticmethod
     def getDefaultUAVMobilityPattern(env, UAV_id, current_position, target_position):
         if target_position is None:
@@ -120,7 +120,7 @@ class TrafficScheduler(BaseScheduler):
         return mobility_pattern
 
     @staticmethod
-    def getNextPositionOfUav(env, UAV_id):
+    def getNextPositionOfUAV(env, UAV_id):
         route = env.uav_routes.get(UAV_id, [])
         if len(route) == 0:
             return None
@@ -134,13 +134,19 @@ class TrafficScheduler(BaseScheduler):
         env.uav_routes[UAV_id] = route
 
     @staticmethod
-    def updateRoute(env, UAV_id, stay_time):
+    def updateRoute(env, UAV_id, current_position, distance_threshold, stay_time):
         route = env.uav_routes.get(UAV_id, [])
-        assert len(route) > 0, f"Route length of {UAV_id} should larger than 0."
-        route[0]['to_stay_time'] = max(route[0]['to_stay_time'] - stay_time, 0)
-        if route[0]['to_stay_time'] <= 0:
-            del route[0]
-        env.uav_routes[UAV_id] = route
+        # assert len(route) > 0, f"Route length of {UAV_id} should larger than 0."
+        if len(route) == 0:
+            return
+
+        target_position = route[0]
+        distance = np.linalg.norm(np.asarray(current_position) - np.asarray(target_position))
+        if distance < distance_threshold:
+            route[0]['to_stay_time'] = max(route[0]['to_stay_time'] - stay_time, 0)
+            if route[0]['to_stay_time'] <= 0:
+                del route[0]
+            env.uav_routes[UAV_id] = route
 
     @staticmethod
     def getNearestRSUById(env, node_id):
@@ -150,11 +156,14 @@ class TrafficScheduler(BaseScheduler):
         node_position = env.traffic_manager.getNodePositionById(node_id)
         if node_position is None:
             return rsu_ids[0]
-        distances = np.linalg.norm(np.asarray(rsu_positions) - np.asarray(node_position), axis=1)
+        distances = np.linalg.norm(np.asarray(rsu_positions) - np.asarray(node_position),axis=1)
         nearest_idx = np.argmin(distances)
         return rsu_ids[nearest_idx]
 
+    @staticmethod
+    def getMapRange(env, axis):
+        return env.traffic_manager.getMapRange(axis)
 
     @staticmethod
-    def getMapRange(env,axis):
-        return env.traffic_manager.getMapRange(axis)
+    def completeStrId(env,node_id,type):
+        return env.traffic_manager.completeStrId(node_id,type)

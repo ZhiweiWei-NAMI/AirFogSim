@@ -33,7 +33,7 @@ class MADDPG:
 
         # 训练超参数
         self.buffer_size = train_args.buffer_size
-        self.lr = train_args.lr
+        self.lr = train_args.learning_rate
         self.gamma = train_args.gamma
         self.var = [train_args.var for i in range(self.n_agents)]  # 动作探索随机噪声
         self.var_end = train_args.var_end
@@ -83,12 +83,16 @@ class MADDPG:
         a_loss = []
         for agent in range(self.n_agents):
             # 同一时间的全局state,action,next_state,reward
-            states, actions, next_states, rewards = self.memory.sample(self.batch_size)
+            states, actions, rewards, next_states= self.memory.sample(self.batch_size)
             # 转换为 PyTorch 张量
-            states = torch.tensor(states, dtype=torch.float)
-            actions = torch.tensor(actions, dtype=torch.float).view(-1, 1)
-            rewards = torch.tensor(rewards, dtype=torch.float).view(-1, 1)
-            next_states = torch.tensor(next_states, dtype=torch.float)
+            # numpy[batch_size, n_agents, state_dim]-->Tensor[batch_size, n_agents, state_dim]
+            states = torch.tensor(states, dtype=torch.float).to(self.device)
+            # numpy[batch_size, n_agents, action_dim]-->Tensor[batch_size, n_agents, action_dim]
+            actions = torch.tensor(actions, dtype=torch.float).to(self.device)
+            # numpy[batch_size, n_agents]-->Tensor[batch_size, n_agents]
+            rewards = torch.tensor(rewards, dtype=torch.float).to(self.device)
+            # numpy[batch_size, n_agents, state_dim]-->Tensor[batch_size, n_agents, state_dim]
+            next_states = torch.tensor(next_states, dtype=torch.float).to(self.device)
 
             whole_states = states.view(self.batch_size, -1)
             whole_actions = actions.view(self.batch_size, -1)
@@ -102,9 +106,15 @@ class MADDPG:
                     self.actors_target[i](next_states[:, i, :]) for i in range(self.n_agents)
                 ]
                 next_whole_actions = torch.cat(next_whole_actions, dim=-1)
-                q_targets_i = self.critics_target[agent](next_whole_states, next_whole_actions).squeeze()
-                td_targets_i = rewards[:, agent] + self.gamma * q_targets_i
+                q_targets_i = self.critics_target[agent](next_whole_states, next_whole_actions)
+                td_targets_i = rewards[:, agent].unsqueeze(-1) + self.gamma * q_targets_i
 
+            # print(rewards.shape)
+            # print(rewards[:, agent].shape)
+            # print(q_targets_i.shape)
+            #
+            # print(q_values_i.shape)
+            # print(td_targets_i.shape)
             critic_loss = F.mse_loss(q_values_i, td_targets_i.detach())
             self.critic_optimizer[agent].zero_grad()
             critic_loss.backward()
@@ -137,12 +147,15 @@ class MADDPG:
         self.memory.add(state, action, reward, next_state)
 
     def take_action(self, agents_state):
-        # agents_state: n_agents x state_dim
+        # agents_state: [n_agents, state_dim]
+        agents_state=torch.tensor(agents_state,dtype=torch.float).to(self.device)
+        actions=[]
         for i in range(self.n_agents):
             state = agents_state[i, :].detach()
-            actions = self.actors[i](state.unsqueeze(0)).squeeze()
-            actions += torch.from_numpy(np.random.rand(self.dim_act) * 2 - 1 * self.var[i])  # 添加[-1,1]随机噪声
-            actions = torch.clamp(actions, 0, 1)  # 限制动作范围在[0,1]
+            action = self.actors[i](state.unsqueeze(0)).squeeze()
+            action += torch.from_numpy(np.random.rand(self.dim_act) * 2 - 1 * self.var[i]).to(self.device)  # 添加[-1,1]随机噪声
+            action = torch.clamp(action, 0, 1)  # 限制动作范围在[0,1]
+            actions.append(action)
             if self.var[i] > self.var_end:
                 self.var[i] *= self.var_dec # 噪声衰减
         self.steps_done += 1
@@ -164,6 +177,9 @@ class MADDPG:
             self.actors[i].save_model(file_dir + f'MADDPG_actorst_{i}.pth')
             print(f'Saving MADDPG_actorst_{i} network successfully!')
 
+        self.memory.save(file_dir+f'MADDPG_memory.pkl')
+        print('Saving MADDPG memory successfully!')
+
     def load_models(self, episode, base_dir):
         file_dir = f"{base_dir}/episode_{episode}/"
 
@@ -176,3 +192,6 @@ class MADDPG:
             print(f'Loading MADDPG_critics_{i} network successfully!')
             self.actors[i].load_model(file_dir + f'MADDPG_actorst_{i}.pth')
             print(f'Loading MADDPG_actorst_{i} network successfully!')
+
+        self.memory.load(file_dir+f'MADDPG_memory.pkl')
+        print('Loading MADDPG memory successfully!')

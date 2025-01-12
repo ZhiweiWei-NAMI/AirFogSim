@@ -1,3 +1,4 @@
+import json
 import math
 
 # from airfogsim_env import AirFogSimEnv
@@ -8,12 +9,13 @@ import matplotlib.pyplot as plt
 
 
 class AirFogSimEvaluation:
-    def __init__(self):
+    def __init__(self,tag):
         self.initOrResetStepIndicators()
         self.initOrResetStepRecords()
         self.initOrResetEpisodeRecords()
         # Path to save image
-        self.base_path = "../evaluation/"
+        self.base_path = f"../evaluation/{tag}/"
+        self.tag=tag
         if not os.path.exists(self.base_path):
             os.makedirs(self.base_path)
 
@@ -329,57 +331,6 @@ class AirFogSimEvaluation:
 
         print('\n')
 
-    def toFile(self, episode):
-        file_dir = self.base_path+"evaluation.log"
-        # 将print输出重定向到文件
-        sys.stdout = open(file_dir, 'a')
-        # episode
-        print('episode: ', episode)
-        # 过程监控
-        print('过程监控')
-        print('to_generate_missions_num: ', self.to_generate_missions_num)
-        print('executing_missions_num: ', self.executing_missions_num)
-        print('success_missions_num: ', self.success_missions_num)
-        print('failed_missions_num: ', self.failed_missions_num)
-        print('early_failed_missions_num: ', self.early_failed_missions_num)
-
-        print('traffic_step_generate_num: ', self.traffic_step_generate_num)
-        print('traffic_step_allocate_num: ', self.traffic_step_allocate_num)
-        print('traffic_step_success_num: ', self.traffic_step_success_num)
-        print('traffic_step_fail_num: ', self.traffic_step_fail_num)
-        print('traffic_step_early_fail_num: ', self.traffic_step_early_fail_num)
-
-        # 信道速率指标
-        print('信道速率')
-        print('avg_trans_rate: {:.2f}'.format(self.avg_trans_rate))
-        print('avg_V2U_trans_rate: {:.2f}'.format(self.avg_V2U_trans_rate))
-        print('avg_V2I_trans_rate: {:.2f}'.format(self.avg_V2I_trans_rate))
-        print('avg_U2I_trans_rate: {:.2f}'.format(self.avg_U2I_trans_rate))
-
-        # 奖励
-        print('奖励')
-        print('avg_reward: {:.2f}'.format(self.avg_reward))
-        print('avg_success_reward: {:.2f}'.format(self.avg_success_reward))
-
-        # 比率
-        print('比率')
-        print('completion_ratio: {:.2f}'.format(self.completion_ratio))
-        print('completion_ratio_on_vehicle: ', self.completion_ratio_on_vehicle)
-        print('completion_ratio_on_UAV: ', self.completion_ratio_on_UAV)
-
-        print('weighted_acceleration_ratio: {:.2f}'.format(self.weighted_acceleration_ratio))
-        print('acceleration_ratio: {:.2f}'.format(self.acceleration_ratio))
-
-
-        # 优化目标
-        print('优化目标')
-        print('avg_floating_time: {:.2f}s'.format(self.avg_floating_time))
-        print('avg_executing_time: {:.2f}s'.format(self.avg_executing_time))
-
-        print('\n')
-        # 恢复标准输出
-        sys.stdout = sys.__stdout__
-
     def addToStepRecord(self):
         self.step_num += 1
         # 过程监控
@@ -425,7 +376,7 @@ class AirFogSimEvaluation:
         # 过程监控
         # 累计任务
         x_indices = list(range(1, self.step_num + 1))
-        plt.figure()
+        plt.figure(clear=True)
         plt.plot(x_indices, self.step_to_generate_missions_num,label='To generate', color='gray')
         plt.plot(x_indices, self.step_executing_missions_num,label='Executing', color='blueviolet')
         plt.plot(x_indices, self.step_success_missions_num,label='Success', color='limegreen')
@@ -441,7 +392,7 @@ class AirFogSimEvaluation:
 
         # 时隙任务
         x_indices = list(range(1, self.step_num + 1))
-        plt.figure()
+        plt.figure(clear=True)
         fig, axes = plt.subplots(2, 3, figsize=(12, 8))  # 两行三列
         # 子图1: Generate
         axes[0, 0].plot(x_indices, self.step_generate_num, label='Generate', color='gray')
@@ -484,7 +435,7 @@ class AirFogSimEvaluation:
 
         # 信道速率指标
         x_indices = list(range(1, self.step_num + 1))
-        plt.figure()
+        plt.figure(clear=True)
         plt.plot(x_indices, self.step_avg_trans_rate, label='Avg', color='blueviolet')
         plt.plot(x_indices, self.step_avg_V2U_trans_rate, label='V2U', color='limegreen')
         plt.plot(x_indices, self.step_avg_V2I_trans_rate, label='V2I', color='red')
@@ -499,7 +450,7 @@ class AirFogSimEvaluation:
 
         # 信道使用情况
         x_indices = list(range(1, len(self.V2U_link_using) + 1))
-        plt.figure()
+        plt.figure(clear=True)
         plt.plot(x_indices, self.V2U_link_using, label='V2U', color='limegreen')
         plt.plot(x_indices, self.V2I_link_using, label='V2I', color='red')
         plt.plot(x_indices, self.U2I_link_using, label='U2I', color='orange')
@@ -514,7 +465,7 @@ class AirFogSimEvaluation:
         # data trans
         # V2U
         x_indices = list(range(1, len(self.V2U_data_trans_list) + 1))
-        plt.figure()
+        plt.figure(clear=True)
         plt.plot(x_indices, self.V2U_data_trans_list, color='orange')
         plt.title('V2U Data Trans')
         plt.xlabel('Trans Step')
@@ -524,7 +475,7 @@ class AirFogSimEvaluation:
         plt.close()
         # V2I
         x_indices = list(range(1, len(self.V2I_data_trans_list) + 1))
-        plt.figure()
+        plt.figure(clear=True)
         plt.plot(x_indices, self.V2I_data_trans_list, color='orange')
         plt.title('V2I Data Trans')
         plt.xlabel('Trans Step')
@@ -534,7 +485,7 @@ class AirFogSimEvaluation:
         plt.close()
         # U2I
         x_indices = list(range(1, len(self.U2I_data_trans_list) + 1))
-        plt.figure()
+        plt.figure(clear=True)
         plt.plot(x_indices, self.U2I_data_trans_list, color='orange')
         plt.title('U2I Data Trans')
         plt.xlabel('Trans Step')
@@ -545,7 +496,7 @@ class AirFogSimEvaluation:
 
         # reward
         x_indices = list(range(1, self.step_num + 1))
-        plt.figure()
+        plt.figure(clear=True)
         plt.plot(x_indices, self.step_avg_reward, label='Avg', color='orange')
         plt.plot(x_indices, self.step_avg_success_reward, label='Suc', color='limegreen')
         plt.title('Reward')
@@ -558,7 +509,7 @@ class AirFogSimEvaluation:
 
         # completion ratio
         x_indices = list(range(1, self.step_num + 1))
-        plt.figure()
+        plt.figure(clear=True)
         plt.plot(x_indices, self.step_completion_ratio,label='Sum', color='blueviolet')
         plt.plot(x_indices, self.step_completion_ratio_on_vehicle,label='Vehicle', color='limegreen')
         plt.plot(x_indices, self.step_completion_ratio_on_UAV,label='UAV', color='orange')
@@ -572,7 +523,7 @@ class AirFogSimEvaluation:
 
         # acceleration ratio
         x_indices = list(range(1, self.step_num + 1))
-        plt.figure()
+        plt.figure(clear=True)
         plt.plot(x_indices, self.step_weighted_acceleration_ratio,label='Weighted', color='orange')
         plt.plot(x_indices, self.step_acceleration_ratio,label='Not Weighted', color='limegreen')
         plt.title('Acceleration Ratio')
@@ -585,7 +536,7 @@ class AirFogSimEvaluation:
 
         # optimization objectives
         x_indices = list(range(1, self.step_num + 1))
-        plt.figure()
+        plt.figure(clear=True)
         plt.plot(x_indices, self.step_avg_floating_time,label='Floating', color='orange')
         plt.plot(x_indices, self.step_avg_executing_time,label='Executing', color='limegreen')
         plt.title('Time')
@@ -631,6 +582,7 @@ class AirFogSimEvaluation:
         self.episode_avg_floating_time.append(self.avg_floating_time)
         self.episode_avg_executing_time.append(self.avg_executing_time)
 
+
     def drawAndResetEpisodeRecord(self):
         path_to_save = self.base_path + 'final/'
         if not os.path.exists(path_to_save):
@@ -640,7 +592,7 @@ class AirFogSimEvaluation:
         x_indices = list(range(1,self.episode_num+1))
 
         # 过程监控
-        plt.figure()
+        plt.figure(clear=True)
         plt.plot(x_indices, self.episode_to_generate_missions_num, label='To generate', color='gray')
         plt.plot(x_indices, self.episode_executing_missions_num, label='Executing', color='blueviolet')
         plt.plot(x_indices, self.episode_success_missions_num, label='Success', color='limegreen')
@@ -655,7 +607,7 @@ class AirFogSimEvaluation:
         plt.close()
 
         # 信道速率指标
-        plt.figure()
+        plt.figure(clear=True)
         plt.plot(x_indices, self.episode_avg_trans_rate, label='Avg', color='blueviolet')
         plt.plot(x_indices, self.episode_avg_V2U_trans_rate, label='V2U', color='limegreen')
         plt.plot(x_indices, self.episode_avg_V2I_trans_rate, label='V2I', color='red')
@@ -669,7 +621,7 @@ class AirFogSimEvaluation:
         plt.close()
 
         # reward
-        plt.figure()
+        plt.figure(clear=True)
         plt.plot(x_indices, self.episode_avg_reward, label='Avg', color='orange')
         plt.plot(x_indices, self.episode_avg_success_reward, label='Suc', color='limegreen')
         plt.title('Reward')
@@ -681,7 +633,7 @@ class AirFogSimEvaluation:
         plt.close()
 
         # completion ratio
-        plt.figure()
+        plt.figure(clear=True)
         plt.plot(x_indices, self.episode_completion_ratio, label='Sum', color='blueviolet')
         plt.plot(x_indices, self.episode_completion_ratio_on_vehicle, label='Vehicle', color='limegreen')
         plt.plot(x_indices, self.episode_completion_ratio_on_UAV, label='UAV', color='orange')
@@ -694,7 +646,7 @@ class AirFogSimEvaluation:
         plt.close()
 
         # acceleration ratio
-        plt.figure()
+        plt.figure(clear=True)
         plt.plot(x_indices, self.episode_weighted_acceleration_ratio, label='Weighted Acc', color='orange')
         plt.plot(x_indices, self.episode_acceleration_ratio, label='Not Weighted Acc', color='limegreen')
         plt.title('Acceleration Ratio')
@@ -706,7 +658,7 @@ class AirFogSimEvaluation:
         plt.close()
 
         # optimization objectives
-        plt.figure()
+        plt.figure(clear=True)
         plt.plot(x_indices, self.episode_avg_floating_time, label='Floating', color='orange')
         plt.plot(x_indices, self.episode_avg_executing_time, label='Executing', color='limegreen')
         plt.title('Time')
@@ -721,6 +673,172 @@ class AirFogSimEvaluation:
         self.initOrResetStepRecords()
         self.initOrResetEpisodeRecords()
 
+    def episodeRecordToFile(self, episode):
+        file_dir = self.base_path+"evaluation.json"
+        data = {
+            "episode": episode,
+            "to_generate_missions_num": self.to_generate_missions_num,
+            "executing_missions_num": self.executing_missions_num,
+            "success_missions_num": self.success_missions_num,
+            "failed_missions_num": self.failed_missions_num,
+            "early_failed_missions_num": self.early_failed_missions_num,
+
+            "avg_trans_rate": float(self.avg_trans_rate),
+            "avg_V2U_trans_rate": float(self.avg_V2U_trans_rate),
+            "avg_V2I_trans_rate": float(self.avg_V2I_trans_rate),
+            "avg_U2I_trans_rate": float(self.avg_U2I_trans_rate),
+
+            "avg_reward": float(self.avg_reward),
+            "avg_success_reward": float(self.avg_success_reward),
+
+            "completion_ratio": float(self.completion_ratio),
+            "completion_ratio_on_vehicle": float(self.completion_ratio_on_vehicle),
+            "completion_ratio_on_UAV": float(self.completion_ratio_on_UAV),
+
+            "weighted_acceleration_ratio": float(self.weighted_acceleration_ratio),
+            "acceleration_ratio":float(self.acceleration_ratio),
+
+            "avg_floating_time": float(self.avg_floating_time),
+            "avg_executing_time": float(self.avg_executing_time)
+        }
+
+        # 检查文件是否存在
+        if os.path.exists(file_dir):
+            # 如果文件存在，读取现有数据并追加新数据
+            with open(file_dir, "r") as file:
+                existing_data = json.load(file)
+            existing_data.append(data)
+        else:
+            # 如果文件不存在，初始化为嵌套列表
+            existing_data = [data]
+
+        # 将数据写回文件
+        with open(file_dir, "w") as file:
+            json.dump(existing_data, file, indent=4)  # json格式缩进4个空格
+
+        print(f"save {self.tag} episode_{episode} records successfully")
+
+    def drawEpisodeRecordsByFile(self):
+        """
+        Generate plots from JSON files stored for each episode.
+        Args:
+            json_folder_path (str): The folder path containing JSON files for each episode.
+        """
+        # json文件路径
+        file_path = self.base_path + "evaluation.json"
+
+        # 保存路径
+        save_dir = self.base_path + 'final/'
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+
+        # 读取 JSON 文件并累积数据
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+            episode_nums = [entry["episode"] for entry in data]
+            to_generate_missions_num = [entry["to_generate_missions_num"] for entry in data]
+            executing_missions_num = [entry["executing_missions_num"] for entry in data]
+            success_missions_num = [entry["success_missions_num"] for entry in data]
+            failed_missions_num = [entry["failed_missions_num"] for entry in data]
+            early_failed_missions_num = [entry["early_failed_missions_num"] for entry in data]
+
+            avg_trans_rate = [entry["avg_trans_rate"] for entry in data]
+            avg_V2U_trans_rate = [entry["avg_V2U_trans_rate"] for entry in data]
+            avg_V2I_trans_rate = [entry["avg_V2I_trans_rate"] for entry in data]
+            avg_U2I_trans_rate = [entry["avg_U2I_trans_rate"] for entry in data]
+
+            avg_reward = [entry["avg_reward"] for entry in data]
+            avg_success_reward = [entry["avg_success_reward"] for entry in data]
+
+            completion_ratio = [entry["completion_ratio"] for entry in data]
+            completion_ratio_on_vehicle = [entry["completion_ratio_on_vehicle"] for entry in data]
+            completion_ratio_on_UAV = [entry["completion_ratio_on_UAV"] for entry in data]
+
+            weighted_acceleration_ratio = [entry["weighted_acceleration_ratio"] for entry in data]
+            acceleration_ratio = [entry["acceleration_ratio"] for entry in data]
+
+            avg_floating_time = [entry["avg_floating_time"] for entry in data]
+            avg_executing_time = [entry["avg_executing_time"] for entry in data]
+
+        # 绘图
+        # 过程监控
+        plt.figure()
+        plt.plot(episode_nums, to_generate_missions_num, label='To generate', color='gray')
+        plt.plot(episode_nums, executing_missions_num, label='Executing', color='blueviolet')
+        plt.plot(episode_nums, success_missions_num, label='Success', color='limegreen')
+        plt.plot(episode_nums, failed_missions_num, label='Fail', color='red')
+        plt.plot(episode_nums, early_failed_missions_num, label='Not Allocate', color='orange')
+        plt.title('Process Monitoring')
+        plt.xlabel('Episode')
+        plt.ylabel('The Number of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(save_dir + 'ProcessMonitoring.png')
+        plt.close()
+
+        # 信道速率指标
+        plt.figure()
+        plt.plot(episode_nums, avg_trans_rate, label='Avg', color='blueviolet')
+        plt.plot(episode_nums, avg_V2U_trans_rate, label='V2U', color='limegreen')
+        plt.plot(episode_nums, avg_V2I_trans_rate, label='V2I', color='red')
+        plt.plot(episode_nums, avg_U2I_trans_rate, label='U2I', color='orange')
+        plt.title('Channel Rate')
+        plt.xlabel('Episode')
+        plt.ylabel('The Average Rate of Channel')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(save_dir + 'ChannelRate.png')
+        plt.close()
+
+        # reward
+        plt.figure()
+        plt.plot(episode_nums, avg_reward, label='Avg', color='orange')
+        plt.plot(episode_nums, avg_success_reward, label='Suc', color='limegreen')
+        plt.title('Reward')
+        plt.xlabel('Episode')
+        plt.ylabel('The Average Reward of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(save_dir + 'Reward.png')
+        plt.close()
+
+        # completion ratio
+        plt.figure()
+        plt.plot(episode_nums, completion_ratio, label='Sum', color='blueviolet')
+        plt.plot(episode_nums, completion_ratio_on_vehicle, label='Vehicle', color='limegreen')
+        plt.plot(episode_nums, completion_ratio_on_UAV, label='UAV', color='orange')
+        plt.title('Completion Ratio')
+        plt.xlabel('Episode')
+        plt.ylabel('The Completion Ratio of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(save_dir + 'CompletionRatio.png')
+        plt.close()
+
+        # acceleration ratio
+        plt.figure()
+        plt.plot(episode_nums, weighted_acceleration_ratio, label='Weighted Acc', color='orange')
+        plt.plot(episode_nums, acceleration_ratio, label='Not Weighted Acc', color='limegreen')
+        plt.title('Acceleration Ratio')
+        plt.xlabel('Episode')
+        plt.ylabel('The Acceleration Ratio of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(save_dir + 'AccelerationRatio.png')
+        plt.close()
+
+        # optimization objectives
+        plt.figure()
+        plt.plot(episode_nums, avg_floating_time, label='Floating', color='orange')
+        plt.plot(episode_nums, avg_executing_time, label='Executing', color='limegreen')
+        plt.title('Time')
+        plt.xlabel('Episode')
+        plt.ylabel('The Related Time of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(save_dir + 'Time.png')
+        plt.close()
+
     def __getNodeTypeById(self,node_id):
         node_id=node_id.capitalize()
         assert node_id[0] in ['V','I','U','C'],f'Invalid node type of {node_id}'
@@ -734,4 +852,13 @@ class AirFogSimEvaluation:
             return 'C'
         else:
             return None
+
+    def getAccReward(self):
+        return self.sum_reward
+
+    def getAvgReward(self):
+        return self.avg_reward
+
+    def getCompletionRatio(self):
+        return self.completion_ratio
 

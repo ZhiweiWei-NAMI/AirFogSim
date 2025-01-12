@@ -46,6 +46,7 @@ class MissionManager:
         self._early_failed_missions = []  # list: item is early failed missions(missions failed before assigned)
         self._recently_done_100_missions = deque(maxlen=100)
         self._recently_fail_100_missions = deque(maxlen=100)
+        self._recently_early_fail_100_missions = deque(maxlen=100)
         self._mission_id_counter = 0
 
     def __getNewMissionId(self):
@@ -65,7 +66,7 @@ class MissionManager:
         new_mission_profile['mission_duration'] = [random.randint(start, end)]
         size_min, size_max = self._mission_size_range
         new_mission_profile['mission_size'] = random.randint(size_min, size_max)
-        new_mission_profile['mission_sensor_type'] = 'Sensor_type_' + str(random.randint(1, self._sensor_type_num))
+        new_mission_profile['mission_sensor_type'] = 'sensor_type_' + str(random.randint(1, self._sensor_type_num))
         new_mission_profile['mission_accuracy'] = random.random()  # 随机生成0-1之间的精度
         new_mission_profile['mission_start_time'] = None
         new_mission_profile['mission_deadline'] = random.randint(self._TTL_range[0],self._TTL_range[1]) # TTL
@@ -166,11 +167,11 @@ class MissionManager:
         step_duration_dict={}
         for node_id in self._executing_missions:
             to_remove = []
+            node = _getNodeById(node_id)
+            step_duration_dict[node_id] = step_duration_dict.get(node_id, 0)
             for mission in self._executing_missions[node_id]:
                 sensor_id = mission.getAppointedSensorId()
-                node = _getNodeById(node_id)
                 sum_duration=mission.updateMission(time_step, current_time, node)
-                step_duration_dict[node_id]=step_duration_dict.get(node_id,0)
                 step_duration_dict[node_id]+=sum_duration
 
                 # Task start only when sensing is completed

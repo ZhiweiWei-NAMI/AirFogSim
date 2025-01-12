@@ -22,6 +22,7 @@ class BaseAlgorithmModule:
     '''
 
     def __init__(self):
+        self.algorithm_module_tag = "Base"
         self.compScheduler = AirFogSimScheduler.getComputationScheduler()
         self.commScheduler = AirFogSimScheduler.getCommunicationScheduler()
         self.entityScheduler = AirFogSimScheduler.getEntityScheduler()
@@ -130,7 +131,8 @@ class BaseAlgorithmModule:
         UAVs_mobile_pattern = {}
         for UAV_id, UAV_info in UAVs_info.items():
             current_position = UAV_info['position']
-            target_position = self.trafficScheduler.getNextPositionOfUav(env, UAV_id)
+            # target_position = self.trafficScheduler.getNextPositionOfUAV(env, UAV_id)
+            target_position = self.missionScheduler.getNearestMissionPosition(env,UAV_id,current_position)
 
             if target_position is None:
                 # 在 [0, 2π) 范围内生成一个随机角度（弧度）
@@ -269,6 +271,8 @@ class BaseAlgorithmModule:
             sum_reward += mission_punish
         return reward, punish, sum_reward
 
+    def getAlgorithmTag(self):
+        return self.algorithm_module_tag
 
 
 

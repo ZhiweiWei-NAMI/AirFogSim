@@ -1,4 +1,5 @@
 import collections
+import pickle
 import random
 import numpy as np
 
@@ -23,7 +24,7 @@ class ReplayBuffer:
         # 分别取出这些数据，*获取list中的所有值
         state, action, mask, reward, next_state, next_mask, done = zip(*transitions)
         # 将state变成数组，后面方便计算
-        return np.array(state), action, mask, reward, np.array(next_state), next_mask, done
+        return np.array(state), np.array(action), np.array(mask), np.array(reward), np.array(next_state), np.array(next_mask), np.array(done)
 
     # 队列的长度
     def size(self):
@@ -31,3 +32,13 @@ class ReplayBuffer:
 
     def ready(self):
         return len(self.buffer) > self.train_min_size
+
+    def save(self, file_path):
+        with open(file_path, 'wb') as f:
+            pickle.dump(self.buffer, f)
+        print(f"ReplayBuffer saved to {file_path}")
+
+    def load(self, file_path):
+        with open(file_path, 'rb') as f:
+            self.buffer = pickle.load(f)
+        print(f"ReplayBuffer loaded from {file_path}")

@@ -1,6 +1,10 @@
 import collections
+import pickle
 from collections import namedtuple
 import random
+from pprint import pprint
+
+import numpy as np
 
 
 class ReplayBuffer:
@@ -14,10 +18,24 @@ class ReplayBuffer:
         self.buffer.append((state,action,next_state,reward))
 
     def sample(self, batch_size):
-        return random.sample(self.buffer, batch_size)
+        transitions=random.sample(self.buffer, batch_size)
+        # 分别取出这些数据，*获取list中的所有值
+        state, action, reward, next_state = zip(*transitions)
+        # 将state变成数组，后面方便计算
+        return np.array(state), np.array(action), np.array(reward), np.array(next_state)
 
     def size(self):
         return len(self.buffer)
 
     def ready(self):
         return len(self.buffer) > self.train_min_size
+
+    def save(self, file_path):
+        with open(file_path, 'wb') as f:
+            pickle.dump(self.buffer, f)
+        print(f"ReplayBuffer saved to {file_path}")
+
+    def load(self, file_path):
+        with open(file_path, 'rb') as f:
+            self.buffer = pickle.load(f)
+        print(f"ReplayBuffer loaded from {file_path}")

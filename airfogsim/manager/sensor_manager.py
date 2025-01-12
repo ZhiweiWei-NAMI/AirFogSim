@@ -22,11 +22,12 @@ class SensorManager:
         self._sensor_type_num = config_sensing['sensor_type_num']
         self._initializeSensors(traffic_manager)
 
-    def reset(self):
+    def reset(self,traffic_manager):
         self._busy_sensors = {}  # key: node_id, value: list of busy sensors
         self._idle_sensors = {}  # key: node_id, value: list of idle sensors
         self._unavailable_sensors = {}  # key: node_id, value: list of unavailable sensors
         self._sensor_id_counter = 0
+        self._initializeSensors(traffic_manager)
 
     def __getNewSensorId(self):
         new_id = self._sensor_id_counter
@@ -34,9 +35,7 @@ class SensorManager:
         return new_id
 
     def _initializeSensors(self, traffic_manager):
-        UAV_numbers = traffic_manager.getNumberOfUAVs()
         UAV_infos = traffic_manager.getUAVTrafficInfos()
-        vehicle_numbers = traffic_manager.getNumberOfVehicles()
         vehicle_infos = traffic_manager.getVehicleTrafficInfos()
 
         for UAV_id in UAV_infos.keys():
@@ -94,6 +93,9 @@ class SensorManager:
     def _removeSensor(self, sensors_dict, node_id, sensor_id):
         assert node_id in sensors_dict
         sensors_dict[node_id] = [sensor for sensor in sensors_dict[node_id] if sensor.getSensorId() != sensor_id]
+        # 删除多余的键
+        if len(sensors_dict[node_id])==0:
+            del sensors_dict[node_id]
 
     def initializeSensorsByNodeId(self, node_id):
         self._initializeSensorsForNode(node_id)
@@ -109,7 +111,6 @@ class SensorManager:
         Examples:
             sensor_manager.startUseById('Sensor_1')
         """
-
         node_id, sensor = self._getIdleSensorById(sensor_id)
         assert sensor is not None
         sensor.startUse()
@@ -196,12 +197,19 @@ class SensorManager:
             target_sensors_dict = sensors_dict
         else:
             for node_id, sensors in sensors_dict.items():
-                target_sensors_dict[node_id] = []
-                for sensor in sensors:
-                    if sensor.getSensorType() == type:
-                        target_sensors_dict[node_id].append(sensor)
-                if len(target_sensors_dict[node_id]) == 0:
-                    target_sensors_dict.pop(node_id)
+                # target_sensors_dict[node_id] = []
+                # for sensor in sensors:
+                #     if sensor.getSensorType() == type:
+                #         target_sensors_dict[node_id].append(sensor)
+                # if len(target_sensors_dict[node_id]) == 0:
+                #     target_sensors_dict.pop(node_id)
+
+                # 用列表推导式快速筛选符合条件的传感器
+                filtered_sensors = [sensor for sensor in sensors if sensor.getSensorType() == type]
+                # 如果有匹配的传感器，才添加到 target_sensors_dict
+                if filtered_sensors:
+                    target_sensors_dict[node_id] = filtered_sensors
+
         return target_sensors_dict
 
     def getUsingSensorsNumByNodeId(self, node_id):
@@ -264,6 +272,20 @@ class SensorManager:
             for sensor in sensors:
                 if sensor.getSensorId() == sensor_id:
                     return sensor.getDeployedNodeId()
+
+    def getSensorById(self, sensor_id):
+        for node_id, sensors in self._idle_sensors.items():
+            for sensor in sensors:
+                if sensor.getSensorId() == sensor_id:
+                    return sensor
+        for node_id, sensors in self._busy_sensors.items():
+            for sensor in sensors:
+                if sensor.getSensorId() == sensor_id:
+                    return sensor
+        for node_id, sensors in self._unavailable_sensors.items():
+            for sensor in sensors:
+                if sensor.getSensorId() == sensor_id:
+                    return sensor
 
     def getConfig(self, name):
         return self._config_sensing.get(name, None)

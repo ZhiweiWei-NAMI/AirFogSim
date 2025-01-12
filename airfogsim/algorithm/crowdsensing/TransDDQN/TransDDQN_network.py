@@ -49,7 +49,7 @@ class Net(nn.Module):
         """
         Args:
             node_state: [batch_size, m1, dim_node]
-            mission_state: [batch_size, dim_mission]
+            mission_state: [batch_size, 1, dim_mission]
             sensor_state: [batch_size, m_uv, max_sensors, dim_sensor]
             sensor_mask: [batch_size, m_uv, max_sensors], 1 for valid sensors, 0 for others
         """
@@ -57,18 +57,18 @@ class Net(nn.Module):
 
         # Process neighbor task nodes and data
         node_state_emb = self.node_embedding(node_state)  # [batch_size, m1, dim_model]
-        mission_state_emb = self.mission_embedding(mission_state)  # [batch_size, dim_model]
+        mission_state_emb = self.mission_embedding(mission_state)  # [batch_size, 1, dim_model]
         sensor_state_emb = self.sensor_embedding(sensor_state)  # [batch_size, m_uv, max_sensors, dim_model]
 
-        # Add node embedding to each task [batch_size, m_uv, max_sensors, d_model]
+        # Add node embedding to each task [batch_size, m_uv, max_sensors, dim_model]
         sensor_state_combined = node_state_emb[:, :self.m_uv].unsqueeze(2) + sensor_state_emb
         # Flatten to [batch_size, m_uv * max_sensors, dim_model]
-        sensor_state_sequence = sensor_state_combined.view(batch_size, -1, self.d_model)
+        sensor_state_sequence = sensor_state_combined.view(batch_size, -1, self.dim_model)
 
         # Combine all sequences
         combined_sequence = torch.cat([
             node_state_emb,  # nodes(Veh+UAV+RSU) [batch_size, m1, dim_model]
-            mission_state_emb.unsqueeze(1),  # mission [batch_size,1, dim_model]
+            mission_state_emb,  # mission [batch_size, 1, dim_model]
             sensor_state_sequence,  # sensors [batch_size, m_uv * max_sensors, dim_model]
         ], dim=1)  # [batch_size,  m1+1+m_uv * max_sensors, dim_model ]
 
@@ -76,18 +76,18 @@ class Net(nn.Module):
 
         # Apply Transformer Encoder
         transformer_output = self.transformer(
-            src=combined_sequence.permute(1, 0, 2),  # [seq_len, batch_size, d_model]
-        ).permute(1, 0, 2)  # [batch_size, seq_len, d_model]
+            src=combined_sequence.permute(1, 0, 2),  # [seq_len, batch_size, dim_model]
+        ).permute(1, 0, 2)  # [batch_size, seq_len, dim_model]
         flatten_outputs = transformer_output.view(batch_size,
                                                   -1)  # [batch_size, (m1+1+m_uv * max_sensors) * dim_model ]
 
-        # Select compute node or local computation
-        q_value = self.compute_node_selector(flatten_outputs)  # [batch_size, m2]
+        # Select mission node
+        q_value = self.mission_node_selector(flatten_outputs)  # [batch_size, m2]
 
         return q_value
 
-    def save_model(self, file_dir):
-        torch.save(self.state_dict(), file_dir, _use_new_zipfile_serialization=False)
+    def save_model(self, file_path):
+        torch.save(self.state_dict(), file_path, _use_new_zipfile_serialization=False)
 
-    def load_model(self, file_dir):
-        self.load_state_dict(torch.load(file_dir))
+    def load_model(self, file_path):
+        self.load_state_dict(torch.load(file_path))

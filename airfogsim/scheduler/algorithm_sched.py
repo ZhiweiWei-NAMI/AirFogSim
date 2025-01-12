@@ -1,3 +1,5 @@
+import itertools
+
 import numpy as np
 
 from .base_sched import BaseScheduler
@@ -5,7 +7,7 @@ from .base_sched import BaseScheduler
 
 class AlgorithmScheduler(BaseScheduler):
     @staticmethod
-    def getNodeStates(env, node_type):
+    def getNodeStates(env, node_type=None, node_priority=None):
         """Get node states (shape:[node_num,dim]).
 
          Args:
@@ -13,37 +15,70 @@ class AlgorithmScheduler(BaseScheduler):
              node_type(str): Type in ['V','I','U'].
 
          Returns:
+             int: node num,
              list: list of node states
+             node_priority:  {{node_type: priority}, ...}
 
          Examples:
              algoSched.getNodeState(env,'U')
          """
         # dim:[id, type, is_mission_node, is_schedulable, x, y, z]
         # [1, 'U', True, True, 105.23, 568.15. 225.65]
-        assert node_type in ['V', 'I', 'U']
+        if node_type is not None:
+            assert node_type in ['V', 'I', 'U']
         state_dim = 5
+        feature_dict = {
+            'V': {
+                'is_mission_node': True,
+                'is_schedulable': False
+            },
+            'U': {
+                'is_mission_node': True,
+                'is_schedulable': True
+            },
+            'I': {
+                'is_mission_node': False,
+                'is_schedulable': False
+            }
+        }
 
-        state = []
+        states = []
+        candidate_nodes = {}
         if node_type == 'V':
             node_infos = env.traffic_manager.getVehicleTrafficInfos()
+            candidate_nodes[node_type] = node_infos
             # node_type_enum = NodeTypeEnum.VEHICLE
         elif node_type == 'I':
             node_infos = env.traffic_manager.getRSUInfos()
+            candidate_nodes[node_type] = node_infos
             # node_type_enum = NodeTypeEnum.RSU
         elif node_type == 'U':
             node_infos = env.traffic_manager.getUAVTrafficInfos()
+            candidate_nodes[node_type] = node_infos
             # node_type_enum = NodeTypeEnum.UAV
+        else:
+            vehicle_infos = env.traffic_manager.getVehicleTrafficInfos()
+            RSU_infos = env.traffic_manager.getRSUInfos()
+            UAV_infos = env.traffic_manager.getUAVTrafficInfos()
+            candidate_nodes['V'] = vehicle_infos
+            candidate_nodes['I'] = RSU_infos
+            candidate_nodes['U'] = UAV_infos
 
-        for node_id, node_info in node_infos.items():
-            index = int(node_id.split('_')[-1])  # 转换为整数
-            x, y, z = node_info['position']
-            node_state = [index, node_type, x, y, z]  # 注意position解包
-            state.append(node_state)
+        node_num = 0
+        for node_type, node_infos in candidate_nodes.items():
+            node_num += len(node_infos)
+            for node_id, node_info in node_infos.items():
+                index = int(node_id.split('_')[-1])  # 转换为整数
+                x, y, z = node_info['position']
+                is_mission_node = feature_dict[node_type]['is_mission_node']
+                is_schedulable = feature_dict[node_type]['is_schedulable']
+                node_state = [index, node_type, is_mission_node, is_schedulable, x, y, z]
+                states.append(node_state)
 
-        node_num = len(node_info)
+        # 按type,id排序
+        sorted_node_states = sorted(states, key=lambda x: (node_priority[x[1]], x[0]))
 
-
-        return node_num, state
+        return node_num, sorted_node_states
 
     @staticmethod
     def getMissionStates(env, mission_profiles):
@@ -123,7 +158,8 @@ class AlgorithmScheduler(BaseScheduler):
 
         top_10_sensor_states = []
         for item in sensor_states_sorted[:sensor_max_num]:
-            top_10_sensor_states.append([item[1:]])
+            used_state = item[1:]
+            top_10_sensor_states.append(used_state)
 
         # mask = np.array([True] * valid_sensor_num + [False] * (sensor_max_num - valid_sensor_num)).flatten()
         # if valid_sensor_num < sensor_max_num:
@@ -133,7 +169,7 @@ class AlgorithmScheduler(BaseScheduler):
         return top_10_sensor_states
 
     @staticmethod
-    def getSensorStates(env, sensor_type, lower_bound_accuracy, excluded_sensor_ids):
+    def getSensorStates(env, sensor_type, lower_bound_accuracy, excluded_sensor_ids, node_priority):
         """Get sensor states (shape:[sensor_num,dim]).
 
          Args:
@@ -141,6 +177,7 @@ class AlgorithmScheduler(BaseScheduler):
              sensor_type(str): The required type of sensor
              lower_bound_accuracy(float): The lowest permitted accuracy of sensor
              excluded_sensor_ids(list): The sensor ids of occupied sensors in this step
+             node_priority(dict): {{node_type: priority}, ...}
 
          Returns:
              list: list of sensor states
@@ -149,26 +186,29 @@ class AlgorithmScheduler(BaseScheduler):
              algoSched.getSensorStates(env,2,0.5,[1,2,3,4])
          """
         # dim:[node_id,node_type,id,type, accuracy,candidate]
-        # [1, 'U', 3, 0.8, True]
+        # [1, 'U', 3, 2, 0.8, True]
 
         candidate_sensors = env.sensor_manager.getSensorsByStateAndType('idle', sensor_type)
         idle_sensors = env.sensor_manager.getSensorsByStateAndType('idle')
         busy_sensors = env.sensor_manager.getSensorsByStateAndType('busy')
-        combined_sensors = idle_sensors + busy_sensors
-        sensor_states = []
-        valid_sensor_num=0
+        combined_sensors = itertools.chain(idle_sensors.items(), busy_sensors.items())
+        sensor_states_dict = {}
+        valid_sensor_num = 0
+
+        candidate_sensor_ids=[sensor.getSensorId() for node_id, sensors in candidate_sensors.items() for sensor in sensors]
 
         # Choose the sensor with the highest accuracy among the idle sensors
-        for node_id, sensors in combined_sensors.items():
-
+        for node_id, sensors in combined_sensors:
+            node_sensor_states = sensor_states_dict.get(node_id, [])
             node_type = env._getNodeTypeById(node_id)
             assert node_type is not None, "Node is invalid."
             for sensor in sensors:
+                sensor_id=sensor.getSensorId()
                 if sensor.getSensorAccuracy() > lower_bound_accuracy and \
-                        sensor.getSensorId() not in excluded_sensor_ids and \
-                        node_id in candidate_sensors:
+                        sensor_id not in excluded_sensor_ids and \
+                        sensor_id in candidate_sensor_ids:
                     candidate = True
-                    valid_sensor_num+=1
+                    valid_sensor_num += 1
                 else:
                     candidate = False
                 index = int(sensor.getSensorId().split('_')[-1])  # 转换为整数
@@ -176,9 +216,15 @@ class AlgorithmScheduler(BaseScheduler):
                 node_index = int(node_id.split('_')[-1])
                 accuracy = sensor.getSensorAccuracy()
                 state = [node_index, node_type, index, sensor_type, accuracy, candidate]
-                sensor_states.append(state)
+                node_sensor_states.append(state)
+            sensor_states_dict[node_id] = node_sensor_states
 
-        return valid_sensor_num,sensor_states
+        # 将dict转为list
+        sensor_states = list(sensor_states_dict.values())
+        # 按 node_type,node_id 排序
+        sorted_sensor_states = sorted(sensor_states, key=lambda x: (node_priority[x[0][1]], x[0][0]))
+
+        return valid_sensor_num, sorted_sensor_states
 
     @staticmethod
     def getNeighborUAVStates(env, base_position, distance_threshold, max_num):
@@ -213,7 +259,8 @@ class AlgorithmScheduler(BaseScheduler):
 
         max_num_sensor_states = []
         for item in states_sorted[:max_num]:
-            max_num_sensor_states.append([item[1:]])
+            used_state = item[1:]
+            max_num_sensor_states.append(used_state)
 
         return max_num_sensor_states
 
@@ -254,7 +301,8 @@ class AlgorithmScheduler(BaseScheduler):
 
         max_num_mission_states = []
         for item in states_sorted[:max_num]:
-            max_num_mission_states.append([item[1:]])
+            used_state = item[1:]
+            max_num_mission_states.append(used_state)
 
         return max_num_mission_states
 
@@ -281,13 +329,13 @@ class AlgorithmScheduler(BaseScheduler):
         return state
 
     @staticmethod
-    def getSensorInfoByAction(env, action_index, sensor_states,node_dict):
+    def getSensorInfoByAction(env, action_index, sensor_states):
         """Get sensor info from sensor states by action index.
 
          Args:
              env (AirFogSimEnv): The AirFogSim environment.
              action_index(int): The index of sensor select action, corresponding to sensor
-             sensor_states(list): Sensor states, sensor_num*[node_id, node_type, id, type, accuracy, candidate]
+             sensor_states(list): Sensor states, [node_num, node_sensor_num, sensor_dim]
              node_dict(dict): {type_str:type_int,...}
 
          Returns:
@@ -305,11 +353,14 @@ class AlgorithmScheduler(BaseScheduler):
         accuracy_bias = 4
         candidate_bias = 5
 
-        node_id_num = int(sensor_states[action_index * attr_num + node_index_bias])
-        sensor_id_num = int(sensor_states[action_index * attr_num + sensor_index_bias])
-        accuracy = sensor_states[action_index * attr_num + accuracy_bias]
-        node_type = int(sensor_states[action_index * attr_num + node_type_bias])
-        node_type = [type_str for type_str, type_int in node_dict.items() if type_int == node_type]
+        flattened_states = [sensor_state for node in sensor_states for sensor_state in node]
+
+        # 打印形状
+        node_id_num = int(flattened_states[action_index][node_index_bias])
+        sensor_id_num = int(flattened_states[action_index][sensor_index_bias])
+        accuracy = flattened_states[action_index][accuracy_bias]
+        node_type = flattened_states[action_index][node_type_bias]
+        # node_type = [type_str for type_str, type_int in node_dict.items() if type_int == node_type]
 
         sensor_id = env.sensor_manager.completeSensorId(sensor_id_num)
         node_id = env.traffic_manager.completeStrId(node_id_num, node_type)
@@ -318,10 +369,8 @@ class AlgorithmScheduler(BaseScheduler):
 
     @staticmethod
     def getUAVStepRecord(env):
-        UAV_energy_consumptions=env.getUAVStepEnergyConsumption()
-        UAV_trans_datas=env.getUAVStepTransmissionSize()
-        UAV_sensing_datas=env.getUAVStepSensingData()
+        UAV_energy_consumptions = env.getUAVStepEnergyConsumption()
+        UAV_trans_datas = env.getUAVStepTransmissionSize()
+        UAV_sensing_datas = env.getUAVStepSensingData()
 
-        return UAV_energy_consumptions,UAV_trans_datas,UAV_sensing_datas
-
-
+        return UAV_energy_consumptions, UAV_trans_datas, UAV_sensing_datas

@@ -16,7 +16,7 @@ class TransDDQN:
     # （1）初始化
     def __init__(self, dim_args, train_args):
         # 训练超参数
-        self.learning_rate = train_args.learning_rate
+        self.lr = train_args.learning_rate
         self.gamma = train_args.gamma
         self.epsilon = train_args.epsilon
         self.eps_min = train_args.eps_end
@@ -38,7 +38,7 @@ class TransDDQN:
         self.target_q_net.to(self.device)
 
         # 优化器，更新训练网络的参数
-        self.optimizer = torch.optim.Adam(params=self.q_net.parameters(), lr=self.learning_rate)
+        self.optimizer = torch.optim.Adam(params=self.q_net.parameters(), lr=self.lr)
         # 损失函数
         self.criterion = torch.nn.MSELoss()
 
@@ -66,13 +66,13 @@ class TransDDQN:
             sensor_mask: [m_uv, max_sensors], 1 for valid sensors, 0 for others
         """
         # numpy[m1, dim_node]-->[1, m1, dim_node]-->Tensor
-        node_state = torch.Tensor(node_state[np.newaxis, :])
+        node_state = torch.tensor(node_state[np.newaxis, :], dtype=torch.float).to(self.device)
         # numpy[dim_mission]-->[1, dim_mission]-->Tensor
-        mission_state = torch.Tensor(mission_state[np.newaxis, :])
+        mission_state = torch.tensor(mission_state[np.newaxis, :], dtype=torch.float).to(self.device)
         # numpy[m_uv, max_sensors, dim_sensor]-->[1, m_uv, max_sensors, dim_sensor]-->Tensor
-        sensor_state = torch.Tensor(sensor_state[np.newaxis, :])
+        sensor_state = torch.tensor(sensor_state[np.newaxis, :], dtype=torch.float).to(self.device)
         # numpy[m_uv, max_sensors]-->[1, m_uv, max_sensors]-->Tensor
-        sensor_mask = torch.Tensor(sensor_mask[np.newaxis, :])
+        sensor_mask = torch.tensor(sensor_mask[np.newaxis, :], dtype=torch.bool).to(self.device)
         # 获取当前状态下采取各动作的q值
         q_values = self.q_net(node_state, mission_state, sensor_state, sensor_mask)
         # 非法动作置为最小值
@@ -194,6 +194,8 @@ class TransDDQN:
         print('Saving TransDDQN_Q_net network successfully!')
         self.target_q_net.save_model(file_dir + f'TransDDQN_Q_target.pth')
         print('Saving TransDDQN_Q_target network successfully!')
+        self.memory.save(file_dir+f'TransDDQN_memory.pkl')
+        print('Saving TransDDQN memory successfully!')
 
     def load_models(self, episode,base_dir):
         file_dir = f"{base_dir}/episode_{episode}/"
@@ -201,3 +203,5 @@ class TransDDQN:
         print('Loading TransDDQN_Q_net network successfully!')
         self.target_q_net.load_model(file_dir + f'TransDDQN_Q_target.pth')
         print('Loading TransDDQN_Q_target network successfully!')
+        self.memory.load(file_dir+f'TransDDQN_memory.pkl')
+        print('Loading TransDDQN memory successfully!')

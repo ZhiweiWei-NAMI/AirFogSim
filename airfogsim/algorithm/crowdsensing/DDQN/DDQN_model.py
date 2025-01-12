@@ -21,7 +21,7 @@ class Double_DQN:
         self.dim_actions = dim_args.dim_actions
 
         # 训练超参数
-        self.learning_rate = train_args.learning_rate
+        self.lr = train_args.learning_rate
         self.gamma = train_args.gamma
         self.epsilon = train_args.epsilon
         self.eps_min = train_args.eps_end
@@ -39,9 +39,13 @@ class Double_DQN:
         self.q_net = Net(dim_states=self.dim_states, dim_hiddens=self.dim_hiddens, dim_actions=self.dim_actions)
         # 实例化目标网络
         self.target_q_net = Net(dim_states=self.dim_states, dim_hiddens=self.dim_hiddens, dim_actions=self.dim_actions)
+        # 是否使用GPU
+        if self.device == 'cuda':
+            self.q_net.cuda()
+            self.target_q_net.cuda()
 
         # 优化器，更新训练网络的参数
-        self.optimizer = torch.optim.Adam(params=self.q_net.parameters(), lr=self.learning_rate)
+        self.optimizer = torch.optim.Adam(params=self.q_net.parameters(), lr=self.lr)
 
         # 经验池
         self.memory = ReplayBuffer(buffer_size=self.buffer_size, train_min_size=self.train_min_size)
@@ -62,10 +66,10 @@ class Double_DQN:
 
     # 动作选择
     def take_action(self, state, mask):
-        # numpy[n_states]-->[1, n_states]-->Tensor
-        state = torch.Tensor(state[np.newaxis, :])
-        # numpy[n_actions]-->[1, n_actions]-->Tensor
-        mask = torch.Tensor(mask[np.newaxis, :]).bool()
+        # numpy[n_states]-->[1, dim_statess]-->Tensor
+        state = torch.Tensor(state[np.newaxis, :]).to(self.device)
+        # numpy[n_actions]-->[1, dim_actions]-->Tensor
+        mask = torch.Tensor(mask[np.newaxis, :]).bool().to(self.device)
         # 获取当前状态下采取各动作的q值
         q_values = self.q_net(state)
         # 非法动作置为最小值
@@ -107,20 +111,20 @@ class Double_DQN:
             return
         states, actions, masks, rewards, next_states, next_masks, dones = self.memory.sample(self.batch_size)
 
-        # 当前状态，array_shape=[b,4]
-        states = torch.tensor(states, dtype=torch.float)
-        # 当前状态的动作，tuple_shape=[b]==>[b,1]
-        actions = torch.tensor(actions, dtype=torch.int64).view(-1, 1)
-        # 动作掩码（布尔张量，True为有效动作，False为无效动作）
-        masks = torch.tensor(masks, dtype=torch.bool).view(-1, 1)
-        # 选择当前动作的奖励, tuple_shape=[b]==>[b,1]
-        rewards = torch.tensor(rewards, dtype=torch.float).view(-1, 1)
-        # 下一个时刻的状态array_shape=[b,4]
-        next_states = torch.tensor(next_states, dtype=torch.float)
-        # 动作掩码（布尔张量，True为有效动作，False为无效动作）
-        next_masks = torch.tensor(next_masks, dtype=torch.bool).view(-1, 1)
-        # 是否到达目标 tuple_shape=[b,1]
-        dones = torch.tensor(dones, dtype=torch.bool).view(-1, 1)
+        # 当前状态, array_shape=[b,dim_states]
+        states = torch.tensor(states, dtype=torch.float).to(self.device)
+        # 当前状态的动作, array_shape=[b]==>[b,1]
+        actions = torch.tensor(actions, dtype=torch.int64).view(-1, 1).to(self.device)
+        # 动作掩码（布尔张量，True为有效动作，False为无效动作）, array_shape=[b,dim_actions]
+        masks = torch.tensor(masks, dtype=torch.bool).to(self.device)
+        # 选择当前动作的奖励, array_shape=[b]==>[b,1]
+        rewards = torch.tensor(rewards, dtype=torch.float).view(-1, 1).to(self.device)
+        # 下一个时刻的状态, array_shape=[b,dim_states]
+        next_states = torch.tensor(next_states, dtype=torch.float).to(self.device)
+        # 动作掩码（布尔张量，True为有效动作，False为无效动作）, array_shape=[b,dim_actions]
+        next_masks = torch.tensor(next_masks, dtype=torch.bool).to(self.device)
+        # 是否到达目标, array_shape=[b]==>[b,1]
+        dones = torch.tensor(dones, dtype=torch.bool).view(-1, 1).to(self.device)
 
         with torch.no_grad():
             next_q_values = self.q_net.forward(next_states)
@@ -155,10 +159,15 @@ class Double_DQN:
         print('Saving DDQN_Q_net network successfully!')
         self.target_q_net.save_model(file_dir + f'DDQN_Q_target.pth')
         print('Saving DDQN_Q_target network successfully!')
+        self.memory.save(file_dir+f'DDQN_memory.pkl')
+        print('Saving DDQN memory successfully!')
 
     def load_models(self, episode,base_dir):
         file_dir = f"{base_dir}/episode_{episode}/"
+
         self.q_net.load_model(file_dir + f'DDQN_Q_net.pth')
         print('Loading DDQN_Q_net network successfully!')
         self.target_q_net.load_model(file_dir + f'DDQN_Q_target.pth')
         print('Loading DDQN_Q_target network successfully!')
+        self.memory.load(file_dir+f'DDQN_memory.pkl')
+        print('Loading DDQN memory successfully!')

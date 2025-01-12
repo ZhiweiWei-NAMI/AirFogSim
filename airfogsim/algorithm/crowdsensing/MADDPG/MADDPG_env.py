@@ -9,10 +9,11 @@ class MADDPG_Env:
 
     def __init__(self,dim_args, train_args):
         # 模型文件路径
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        self.model_base_dir = os.path.join(current_dir, "model")
+        # current_dir = os.path.dirname(os.path.abspath(__file__))
+        # self.model_base_dir = os.path.join(current_dir, "model")
+        self.model_base_dir=train_args.model_base_dir
 
-        # 实例化 Double-DQN
+        # 实例化 MADDPG
         self.agent = MADDPG(dim_args, train_args)
 
     def takeAction(self, state):

@@ -15,6 +15,7 @@ class TrafficManager():
         """
         self._config_traffic = config_traffic
         self._net = sumolib.net.readNet(sumo_network_xml)
+        self._start_traffic_time = config_traffic.get("start_traffic_time", 0)
         self._max_n_vehicles = config_traffic.get("max_n_vehicles", 100)
         self._x_range = config_traffic.get("x_range", [0, 1000]) # set in airfogsim_env.py according to used area map
         self._y_range = config_traffic.get("y_range", [0, 1000]) # set in airfogsim_env.py according to used area map
@@ -29,7 +30,7 @@ class TrafficManager():
         self._distance_threshold = config_traffic.get("distance_threshold", 1)
 
         self._traci_connection = traci_connection
-        self._current_time = 0.0
+        self._current_time = self._start_traffic_time
 
         self._vehicle_infos = {} # vehicle_id -> {position, speed, routeId}
         self._UAV_infos = {} # uav_id -> {position, speed, acceleration, angle, phi}
@@ -72,10 +73,11 @@ class TrafficManager():
         self._initialize_cloudServers()
         self._initialize_UAVs()
 
-    def reset(self):
+    def reset(self,new_traci_connection):
         """Reset the traffic manager.
         """
-        self._current_time = 0.0
+        self._traci_connection=new_traci_connection
+        self._current_time = self._start_traffic_time
         self._vehicle_infos = {}
         self._UAV_infos = {}
         self._RSU_infos = {}
@@ -418,8 +420,13 @@ class TrafficManager():
             # vehicles will be updated by sumo. (Vehicles which are out of map will be cleared automatically by sumo)
             vehicle_ids = self.getVehicleIDsList()
         else:
+            self._new_added_vehicle_ids = []  # Clear the list in each step.
+            old_vehicle_ids=self._vehicle_infos.keys() if len(self._vehicle_infos)>0 else []
             # 从tripinfo中获取当前时间的车辆信息
             vehicle_ids = self.getVehicleIDsList()
+            self._new_added_vehicle_ids=set(vehicle_ids)-set(old_vehicle_ids)
+
+
         self._current_time = self.updateCurrentTime()
         self._vehicle_infos = self.getVehicleInfoByIds(vehicle_ids)
 

@@ -31,6 +31,7 @@ class AirFogSimEnv():
             interactive_mode (str, optional): The interactive mode. 'graphic' or 'text'. Defaults to None.
         """
         self.config = config
+        self.start_simulation_time = 0 if config['traffic']['traffic_mode'] == 'SUMO' else config['simulation']['start_simulation_time']
         self.max_simulation_time = config['simulation']['max_simulation_time']
         self.simulation_interval = config['simulation']['simulation_interval']  # TTI
         self.traffic_interval = config['simulation']['traffic_interval']
@@ -58,9 +59,9 @@ class AirFogSimEnv():
         if interactive_mode is not None:
             self.mountVisualizer(interactive_mode)
 
-    def reset(self,init=False):
+    def reset(self, init=False):
         self.force_quit = False
-        self.simulation_time = 0
+        self.simulation_time = self.start_simulation_time
 
         self.vehicles = {}
         self.vehicle_ids_as_index = []  # vehicle ids as a list, used for indexing
@@ -75,6 +76,8 @@ class AirFogSimEnv():
 
         self.cloudServers = {}
         self.cloud_server_ids_as_index = []  # cloud server ids as a list, used for indexing
+
+        self.traci_connection = self._connectToSUMO(self.config['sumo'], self.config['traffic']['traffic_mode'] == 'SUMO')
 
         if init is True:
             self._configManagersModelsInit()
@@ -108,7 +111,6 @@ class AirFogSimEnv():
         self.traffic_step_allocate = 0
 
         # ----------------temporary records in each traffic simulation step----------------
-        self.new_vehicle_id_list = []
         self.UAV_energy_consumption = self._generateUAVDict()
         self.UAV_sensing_data = self._generateUAVDict()
         self.UAV_trans_data = self._generateUAVDict()
@@ -142,12 +144,12 @@ class AirFogSimEnv():
                                                        'state_attribute'])  # 用pandas管理节点每个时隙的状态，以fog node/task node划分不同类型的实体（UAV, veh, RSU, cloud server），并从config中获取需要存储的属性列表
 
     def _configManagersModelsReset(self):
-        self.traffic_manager.reset()
+        self.traffic_manager.reset(self.traci_connection)
         self._initRSUsAndCloudServers()
         self.task_manager.reset()
         self.channel_manager.reset()
         self.mission_manager.reset()
-        self.sensor_manager.reset()
+        self.sensor_manager.reset(self.traffic_manager)
         self.blockchain_manager.reset()
         self.energy_manager.reset(self.traffic_manager.getUAVTrafficInfos().keys())
         self.node_state_manager.reset()
@@ -176,7 +178,8 @@ class AirFogSimEnv():
         if self.config['traffic']['traffic_mode'] == 'SUMO':
             traci.close()
         else:
-            self.traffic_manager.reset()
+            return
+            # self.traffic_manager.reset(self.traci_connection)
 
     def _connectToSUMO(self, config, useSUMO=True):
         """Connect to the SUMO simulator with a generated label (e.g., airfogsim_{timestamp}).
@@ -210,7 +213,7 @@ class AirFogSimEnv():
         Returns:
             bool: The done signal. True if the episode is done, False otherwise.
         """
-        return self.simulation_time >= self.max_simulation_time or self.force_quit == True
+        return self.simulation_time >= self.max_simulation_time or self.force_quit is True
 
     def step(self):
         """The step function of the environment. It simulates the environment for one time step.
@@ -255,7 +258,7 @@ class AirFogSimEnv():
         self.clearDecisions()
         self.clearTempRecords()
         return self.isDone()
-    
+
     def clearDecisions(self):
         """Clear the decisions for the next time step.
         """
@@ -268,7 +271,6 @@ class AirFogSimEnv():
     def clearTempRecords(self):
         """Clear the temporary records for the next traffic step.
          """
-        self.new_vehicle_id_list = []
         self.UAV_energy_consumption = self._generateUAVDict()
         self.UAV_sensing_data = self._generateUAVDict()
         self.UAV_trans_data = self._generateUAVDict()
@@ -281,10 +283,11 @@ class AirFogSimEnv():
         all_uav_ids_set = set(self.UAVs.keys())
         all_rsus_ids_set = set(self.RSUs.keys())
         all_cloud_servers_ids_set = set(self.cloudServers.keys())
-        all_node_ids_set = all_vehicle_ids_set.union(all_uav_ids_set).union(all_rsus_ids_set).union(all_cloud_servers_ids_set)
+        all_node_ids_set = all_vehicle_ids_set.union(all_uav_ids_set).union(all_rsus_ids_set).union(
+            all_cloud_servers_ids_set)
         task_node_ids = set(self.task_node_ids)
         fog_node_ids = all_node_ids_set - task_node_ids
-        task_node_ids = task_node_ids.intersection(all_node_ids_set) # 交集，保证都在场景中
+        task_node_ids = task_node_ids.intersection(all_node_ids_set)  # 交集，保证都在场景中
         task_node_ids = list(task_node_ids)
         fog_node_ids = list(fog_node_ids)
         # 2. 从self.vehicles, self.UAVs, self.RSUs, self.cloudServers中获取fog node和task node的状态信息
@@ -299,7 +302,8 @@ class AirFogSimEnv():
         # 5. 存储task的状态信息
         recently_done_100_tasks = self.task_manager.getRecentlyDoneTasks()
         # 只选取task.getLastOperationTime()在当前时刻的集合
-        recently_done_tasks = [task for task in recently_done_100_tasks if task.getLastOperationTime() == self.simulation_time]
+        recently_done_tasks = [task for task in recently_done_100_tasks if
+                               task.getLastOperationTime() == self.simulation_time]
         self.node_state_manager.logTaskState(recently_done_tasks, self.simulation_time)
 
     def _updateSensor(self):
@@ -320,9 +324,10 @@ class AirFogSimEnv():
             self.mission_manager.addMission(mission, self.sensor_manager)
         self.new_missions = []
         step_duration_dict = self.mission_manager.updateMissions(self.simulation_interval, self.simulation_time,
-                                                                 self._getNodeById,self.sensor_manager, self.task_manager)
-        for UAV_id,_ in self.UAV_sensing_data.items():
-            step_duration=step_duration_dict.get(UAV_id,0)
+                                                                 self._getNodeById, self.sensor_manager,
+                                                                 self.task_manager)
+        for UAV_id, _ in self.UAV_sensing_data.items():
+            step_duration = step_duration_dict.get(UAV_id, 0)
             self.UAV_sensing_data[UAV_id] += step_duration
 
     def _updateAuthPrivacy(self):
@@ -769,7 +774,8 @@ class AirFogSimEnv():
         cloudserver_infos = self.traffic_manager.getCloudServerInfos()
         for rsu_id, rsu_info in rsu_infos.items():
             if rsu_id not in self.RSUs:
-                self.RSUs[rsu_id] = RSU(id=rsu_id, position=rsu_info['position'], fog_profile=self.config['fog_profile'].get('rsu', {}),
+                self.RSUs[rsu_id] = RSU(id=rsu_id, position=rsu_info['position'],
+                                        fog_profile=self.config['fog_profile'].get('rsu', {}),
                                         task_profile=self.config['task_profile'].get('rsu', {}))
 
         for cloudserver_id, cloudserver_info in cloudserver_infos.items():
@@ -780,8 +786,8 @@ class AirFogSimEnv():
                                                                     'cloud_server', {}),
                                                                 task_profile=self.config['task_profile'].get(
                                                                     'cloud_server', {}))
-        self.rsu_ids_as_index=list(self.RSUs.keys())
-        self.cloud_server_ids_as_index=list(self.cloudServers.keys())
+        self.rsu_ids_as_index = list(self.RSUs.keys())
+        self.cloud_server_ids_as_index = list(self.cloudServers.keys())
 
     def _updateTraffics(self):
         """Update the vehicle traffics.
@@ -793,31 +799,31 @@ class AirFogSimEnv():
         uav_traffic_infos = self.traffic_manager.getUAVTrafficInfos()
         existing_vehicle_ids = list(self.vehicles.keys())
         certain_vehicle_ids = list(vehicle_traffic_infos.keys())
-        self.new_vehicle_id_list = list(set(certain_vehicle_ids) - set(existing_vehicle_ids))
         added_veh_nums = 0
 
         for vehicle_id, vehicle_traffic_info in vehicle_traffic_infos.items():
             if vehicle_id not in self.vehicles:
                 added_veh_nums += 1
-                self.vehicles[vehicle_id] = self._initVehicle(vehicle_traffic_info, 
-                                                              task_profile=self.config['task_profile'].get('vehicle', {}), 
+                self.vehicles[vehicle_id] = self._initVehicle(vehicle_traffic_info,
+                                                              task_profile=self.config['task_profile'].get('vehicle',
+                                                                                                           {}),
                                                               fog_profile=self.config['fog_profile'].get('vehicle', {}))
                 # check if the vehicle_id should be in the task_node_ids
-                if 'vehicle' in self.task_node_types and np.random.rand() < self.task_node_gen_poss and self.getTaskNodeNumByType('vehicle') < self.max_task_node_num['vehicle'] and vehicle_id not in self.task_node_ids:
+                if 'vehicle' in self.task_node_types and np.random.rand() < self.task_node_gen_poss and self.getTaskNodeNumByType(
+                        'vehicle') < self.max_task_node_num['vehicle'] and vehicle_id not in self.task_node_ids:
                     self.task_node_ids.append(vehicle_id)
 
             self.vehicles[vehicle_id].update(vehicle_traffic_info, self.simulation_time)
-        # print(self.simulation_time)
         for uav_id, uav_traffic_info in uav_traffic_infos.items():
-            # print(uav_id, uav_traffic_info['position'])
             if uav_id not in self.UAVs:
                 self.UAVs[uav_id] = UAV(uav_id, uav_traffic_info['position'], uav_traffic_info['speed'],
                                         uav_traffic_info['acceleration'], uav_traffic_info['angle'],
-                                        uav_traffic_info['phi'], 
+                                        uav_traffic_info['phi'],
                                         fog_profile=self.config['fog_profile'].get('uav', {}),
                                         task_profile=self.config['task_profile'].get('uav', {}))
                 # check if the uav_id should be in the task_node_ids
-                if 'UAV' in self.task_node_types and np.random.rand() < self.task_node_gen_poss and self.getTaskNodeNumByType('UAV') < self.max_task_node_num['UAV'] and uav_id not in self.task_node_ids:
+                if 'UAV' in self.task_node_types and np.random.rand() < self.task_node_gen_poss and self.getTaskNodeNumByType(
+                        'UAV') < self.max_task_node_num['UAV'] and uav_id not in self.task_node_ids:
                     self.task_node_ids.append(uav_id)
             self.UAVs[uav_id].update(uav_traffic_info, self.simulation_time)
 

@@ -6,7 +6,9 @@ class Task:
     """ Task is the class that represents the task. 
     """
 
-    def __init__(self, task_id, task_node_id, task_cpu, task_size, task_deadline, task_priority, task_arrival_time, farther_mission: Mission = None, required_returned_size=0, to_return_node_id = None, return_lazy_set=False):
+    def __init__(self, task_id, task_node_id, task_cpu, task_size, task_deadline, task_priority, task_arrival_time,
+                 farther_mission: Mission = None, required_returned_size=0, to_return_node_id=None,
+                 return_lazy_set=False):
         """The constructor of the Task class.
 
         Args:
@@ -74,19 +76,19 @@ class Task:
     @property
     def task_deadline(self):
         return self._task_deadline
-    
+
     @property
     def energy(self):
         return self._task_cpu * 0.01
-    
+
     @property
     def task_delay(self):
         return self.getLastOperationTime() - self._task_arrival_time
-    
+
     @property
     def task_priority(self):
         return self._task_priority
-    
+
     @property
     def task_lifecycle_state(self):
         # lifecycle includes to_generate, to_offload, to_return, computing, computed, returning, finished
@@ -110,20 +112,37 @@ class Task:
         Returns:
             dict: The dictionary of the task.
         """
+        # 使用 vars() 直接获取实例属性字典
         task_dict = {}
-        for key in dir(self):
-            if not key.startswith('__') and not callable(getattr(self, key)):
-                value = getattr(self, key)
-                if key == "farther_mission":
-                    if value is not None:
-                        task_dict[key] = value.to_dict()
-                    else:
-                        task_dict[key] = None
-                else:
-                    if key.startswith('_'):
-                        key = key[1:]
-                    task_dict[key] = value
+        for key, value in vars(self).items():
+            # 跳过私有或特殊方法/属性
+            if key.startswith('__'):
+                continue
+
+            # 特殊处理 "farther_mission"
+            if key == "_farther_mission":
+                task_dict["farther_mission"] = value.to_dict() if value is not None else None
+            else:
+                # 去掉私有前缀
+                task_dict[key.lstrip('_')] = value
+
         return task_dict
+
+        # task_dict = {}
+        # for key in dir(self):
+        #     if not key.startswith('__') and not callable(getattr(self, key)):
+        #         value = getattr(self, key)
+        #         if key == "farther_mission":
+        #             if value is not None:
+        #                 task_dict[key] = value.to_dict()
+        #             else:
+        #                 task_dict[key] = None
+        #         else:
+        #             if key.startswith('_'):
+        #                 key = key[1:]
+        #             task_dict[key] = value
+        # return task_dict
+
 
     def isStarted(self):
         return self._last_compute_time > 0
@@ -146,10 +165,12 @@ class Task:
         """
         self._start_to_return_time = current_time
         self._last_return_time = current_time
+        self._start_to_transmit_time = current_time
+        self._last_transmission_time = current_time
         if self._required_returned_size > 0:
             assert len(self._to_return_route) > 0
             # Attention, here is shallow copy!
-            self._to_offload_route = self._to_return_route  #the route to offload the task. If task is computed, i.e., _compute_size >= _task_cpu, the list denotes the route the returned data should be transmitted.
+            self._to_offload_route = self._to_return_route  # the route to offload the task. If task is computed, i.e., _compute_size >= _task_cpu, the list denotes the route the returned data should be transmitted.
         else:
             self._to_offload_route = []
 
@@ -207,7 +228,7 @@ class Task:
             bool: True if the task is computed, False otherwise.
         """
         return self._computed_size >= self._task_cpu
-    
+
     def isComputing(self):
         """Check if the task is computing.
 
@@ -271,6 +292,7 @@ class Task:
         self._transmitted_size += trans_data
         if isReturning:
             self._last_return_time = current_time
+            self._last_transmission_time = current_time
             require_transmit_size = self._required_returned_size
         else:
             self._last_transmission_time = current_time
@@ -297,7 +319,8 @@ class Task:
         Examples:
             task.offloadTo('node1', ['node2', 'node1'], 10)
         """
-        self._decided_route = [self._task_node_id] + route  # the decided route for offloading, starting from the task node
+        self._decided_route = [
+                                  self._task_node_id] + route  # the decided route for offloading, starting from the task node
         self._to_offload_route = route
         assert route[-1] == node_id, "The last node in the route should be the node ID."
         self._assigned_to = node_id
@@ -474,7 +497,7 @@ class Task:
         """Get the last transmission time if the task is transmitted.
         """
         return self._last_transmission_time
-    
+
     def getLastReturnTime(self):
         """Get the last return time if the task is returned.
         """
@@ -532,7 +555,7 @@ class Task:
             float: The task deadline.
         """
         return self._task_deadline
-    
+
     def getToReturnNodeId(self):
         """Get the node ID to return.
 
@@ -557,8 +580,8 @@ class Task:
             flag = True
         if self._to_return_node_id == node_id:
             flag = True
-        if self.getCurrentNodeId()==node_id:
-            flag=True
+        if self.getCurrentNodeId() == node_id:
+            flag = True
         if node_id in self._to_offload_route:
             flag = True
         if node_id in self._to_return_route:

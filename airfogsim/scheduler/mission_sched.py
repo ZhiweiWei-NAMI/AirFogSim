@@ -103,7 +103,7 @@ class MissionScheduler(BaseScheduler):
         # Find the nearest position in position_list to the given position
         position_array = np.array(position_list)
         position = np.array(position)
-        distances = np.linalg.norm(position_array - position, axis=1)  # Calculate distances
+        distances = np.linalg.norm(position_array - position)  # Calculate distances
         nearest_index = np.argmin(distances)  # Find the index of the nearest position
 
         return position_list[nearest_index]  # Return the nearest position as a list

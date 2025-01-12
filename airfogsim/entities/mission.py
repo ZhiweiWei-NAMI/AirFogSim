@@ -58,7 +58,7 @@ class Mission:
         Returns:
             bool: True if the mission is out of deadline, False otherwise.
         """
-        return self._mission_arrival_time + self._mission_deadline <= current_time
+        return self._mission_arrival_time + self._mission_deadline < current_time
     
     def updateMission(self, time_step, current_time, node):
         """Check the position of each waypoint and update the mission duration.
@@ -175,7 +175,7 @@ class Mission:
         left_size=0
         for taskset in self._mission_task_sets:
             for task in taskset:
-                required_return_size=task.getReturnedSize()
+                required_return_size=task.getRequiredReturnSize()
                 already_returned_size=task.getAlreadyReturnedSize()
                 left_size+=required_return_size-already_returned_size
         return left_size

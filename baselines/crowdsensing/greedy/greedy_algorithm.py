@@ -27,6 +27,7 @@ class GreedyAlgorithmModule(BaseAlgorithmModule):
 
     def __init__(self):
         super().__init__()
+        self.algorithm_module_tag="Greedy"
 
     def initialize(self, env: AirFogSimEnv, config={}):
         """Initialize the algorithm with the environment. Including setting the task generation model, setting the reward model, etc.
@@ -222,3 +223,6 @@ class GreedyAlgorithmModule(BaseAlgorithmModule):
 
     def getRewardByMission(self, env: AirFogSimEnv):
         return super().getRewardByMission(env)
+
+    def getAlgorithmTag(self):
+        return self.algorithm_module_tag

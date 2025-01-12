@@ -34,8 +34,9 @@ class DDQN_Env:
         self.max_q_value_list = []  # 保存所有最大的state_value
 
         # 模型文件路径
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        self.model_base_dir = os.path.join(current_dir, "model")
+        # current_dir = os.path.dirname(os.path.abspath(__file__))
+        # self.model_base_dir = os.path.join(current_dir, "model")
+        self.model_base_dir=train_args.model_base_dir
 
         # 实例化 Double-DQN
         self.agent = Double_DQN(dim_args, train_args)

@@ -59,8 +59,8 @@ class Actor(nn.Module):
         result = self.action_selector(obs)
         return result
 
-    def save_model(self, file_dir):
-        torch.save(self.state_dict(), file_dir, _use_new_zipfile_serialization=False)
+    def save_model(self, file_path):
+        torch.save(self.state_dict(), file_path, _use_new_zipfile_serialization=False)
 
-    def load_model(self, file_dir):
-        self.load_state_dict(torch.load(file_dir))
+    def load_model(self, file_path):
+        self.load_state_dict(torch.load(file_path))

@@ -186,7 +186,7 @@ class TkinterLayout(tk.Tk, BaseLayout):
         # simulation delay 只显示小数点后两位
         self.simulation_delay = time.time() - self.last_updated_time
         self.canvas_time_image = self.canvas.create_text(posx, posy,
-                                                         text="Time: {} Vehicle Num: {} UAV Num: {} \n Step-wise Simulation Delay: {} ms".format(
+                                                         text="Time: {:.2f} Vehicle Num: {} UAV Num: {} \n Step-wise Simulation Delay: {} ms".format(
                                                              self._env.simulation_time,
                                                              len(self._env.vehicle_ids_as_index),
                                                              len(self._env.uav_ids_as_index),
