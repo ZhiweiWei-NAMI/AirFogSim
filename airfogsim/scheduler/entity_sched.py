@@ -131,6 +131,22 @@ class EntityScheduler(BaseScheduler):
         elif type in ['cloud_server', 'c']:
             num = len(env.cloud_server_ids_as_index)
         return num
+    
+    @staticmethod
+    def getDistanceBetweenNodes(env, node1_id, node2_id):
+        """Get the distance between two nodes.
+
+        Args:
+            env (AirFogSimEnv): The environment.
+            node1_id (str): The node id.
+            node2_id (str): The node id.
+
+        Returns:
+            float: The distance between two nodes.
+        """
+        node1 = env._getNodeById(node1_id)
+        node2 = env._getNodeById(node2_id)
+        return env._getDistanceBetweenNodes(node1, node2)
 
     @staticmethod
     def getNeighborNodeInfosById(env, node_id: str, sorted_by = 'distance', reverse = False, max_num = 10):
@@ -218,6 +234,20 @@ class EntityScheduler(BaseScheduler):
         for task in all_tasks:
             task_states.append(env.node_state_manager.transformTaskToTaskState(task, env.simulation_time))
         return task_states
+    
+    @staticmethod
+    def getTaskStatesByInfo(env, all_task_infos):
+        """Get the task states numpy by the task infos.
+
+        Args:
+            env (AirFogSimEnv): The environment.
+            all_task_infos (list): The list of the task infos.
+
+        Returns:
+            list: The list of the task states.
+        """
+        all_tasks = [env.task_manager.getTaskByTaskNodeAndTaskId(task_info['task_node_id'], task_info['task_id']) for task_info in all_task_infos]
+        return EntityScheduler.getTaskStates(env, all_tasks)
 
     @staticmethod
     def getTaskNodeStates(env):

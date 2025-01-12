@@ -78,6 +78,7 @@ class TaskManager:
 
         self._task_generation_model = task_generation_model
         assert task_generation_model in TaskManager.SUPPORTED_TASK_GENERATION_MODELS, 'The task generation model is not supported. Only support {}'.format(TaskManager.SUPPORTED_TASK_GENERATION_MODELS)
+        self._generated_task_history = {} # key: node id, value: list of task info
         self._to_generate_task_infos = {} # use Node Id as the key, and the value is the task info list
         self._waiting_to_offload_tasks = {} # after generating, waiting to offload
         self._offloading_tasks = {}
@@ -103,6 +104,7 @@ class TaskManager:
         self._waiting_to_offload_tasks = {} # after generating, waiting to offload
         self._offloading_tasks = {}
         self._computing_tasks = {}
+        self._generated_task_history = {}
         self._waiting_to_return_tasks = {} # after computing, waiting to set return route
         self._returning_tasks = {}
         self._done_tasks = {}
@@ -148,16 +150,12 @@ class TaskManager:
             Task: The task.
 
         Examples:
-            task_manager.getDoneTaskByTaskNodeAndTaskId('vehicle1', 'Task_1')
+            task_manager.getTaskByTaskNodeAndTaskId('vehicle1', 'Task_1')
         """
-        if task_node_id in self._done_tasks:
-            for task_info in self._done_tasks[task_node_id]:
-                if task_info.getTaskId() == task_id:
-                    return task_info
-        if task_node_id in self._out_of_ddl_tasks:
-            for task_info in self._out_of_ddl_tasks[task_node_id]:
-                if task_info.getTaskId() == task_id:
-                    return task_info
+        all_task_by_task_node_id = self._generated_task_history.get(task_node_id, [])
+        for task in all_task_by_task_node_id:
+            if task.getTaskId() == task_id:
+                return task
         return None
 
     def setPredictableSeconds(self, predictable_seconds):
@@ -597,9 +595,12 @@ class TaskManager:
 
     def _generateTaskInfo(self, task_node_id, arrival_time):
         self._task_id += 1
-        return Task(task_id = f'Task_{self._task_id}', task_node_id = task_node_id, task_cpu = self._generateCPU(),
+        task = Task(task_id = f'Task_{self._task_id}', task_node_id = task_node_id, task_cpu = self._generateCPU(),
                     task_size = self._generateSize('offload'), task_deadline = self._generateDeadline(),
                     task_priority = self._generatePriority(), task_arrival_time = arrival_time, required_returned_size=self._generateSize('return'))
+        self._generated_task_history[task_node_id] = self._generated_task_history.get(task_node_id, [])
+        self._generated_task_history[task_node_id].append(task)
+        return task
 
     def generateTaskInfoOfMission(self,task_node_id,task_deadline,arrival_time,return_size, to_return_node_id=None, return_lazy_set=False):
         """Generate the tasks for mission by the node id.
@@ -623,29 +624,13 @@ class TaskManager:
     def _generateTasks(self, task_node_ids_kwardsDict, cur_time, simulation_interval):
         # 1. Move the tasks from the to_generate_task_infos to the todo_tasks according to the current time
         for task_node_id, task_infos in self._to_generate_task_infos.items():
-            done_task_id_for_node = [task_info.getTaskId() for task_info in self._done_tasks.get(task_node_id, [])]
-            failed_task_id_for_node = [task_info.getTaskId() for task_info in self._out_of_ddl_tasks.get(task_node_id, [])]
             for task_info in task_infos.copy():
                 if task_info.getTaskArrivalTime() <= cur_time: # if the task is arrived
-                    task_dag = self._task_dependencies[task_node_id] # nx.DiGraph
-                    parents = []
-                    if task_dag is not None and task_info.getTaskId() in task_dag:
-                        # if the parent tasks are done, then the task is generated
-                        parents = list(task_dag.predecessors(task_info.getTaskId()))
-                    if all([task_id in done_task_id_for_node for task_id in parents]) or len(parents) == 0:
-                        todo_task_list = self._waiting_to_offload_tasks.get(task_node_id, [])
-                        todo_task_list.append(task_info)
-                        self._waiting_to_offload_tasks[task_node_id] = todo_task_list
-                        self._to_generate_task_infos[task_node_id].remove(task_info)
-                        task_info.setGenerated()
-                    # if the parent tasks failed, then the task is failed
-                    elif any([task_id in failed_task_id_for_node for task_id in parents]) and len(parents) > 0:
-                        failed_task_list = self._out_of_ddl_tasks.get(task_node_id, [])
-                        failed_task_list.append(task_info)
-                        self._out_of_ddl_tasks[task_node_id] = failed_task_list
-                        self._to_generate_task_infos[task_node_id].remove(task_info)
-                        task_info.setGenerated()
-                        task_info.setTaskFailueCode(EnumerateConstants.TASK_FAIL_PARENT_FAILED)
+                    todo_task_list = self._waiting_to_offload_tasks.get(task_node_id, [])
+                    todo_task_list.append(task_info)
+                    self._waiting_to_offload_tasks[task_node_id] = todo_task_list
+                    self._to_generate_task_infos[task_node_id].remove(task_info)
+                    task_info.setGenerated()
 
         # 2. Generate new to_generate_task_infos, oblige to the task generation model, simulation_interval, and predictable_seconds
         todo_task_num = 0
@@ -653,25 +638,21 @@ class TaskManager:
             to_genernate_task_infos = self._to_generate_task_infos.get(task_node_id, [])
             todo_task_num += len(to_genernate_task_infos)
             last_generation_time = cur_time if len(to_genernate_task_infos) == 0 else to_genernate_task_infos[-1].getTaskArrivalTime()
+            # 每prediction_seconds生成一次任务
+            if last_generation_time > cur_time // self._predictable_seconds * self._predictable_seconds:
+                continue
+            last_generation_time = max(last_generation_time, cur_time)
             last_generation_time += simulation_interval
             while last_generation_time <= cur_time + self._predictable_seconds:
                 if self._task_generation_model == 'Poisson':
                     kwlambda = kwargsDict.get('lambda', self._task_generation_lambda)
                     task_num = np.random.poisson(kwlambda * simulation_interval)
-                    for i in range(task_num):
-                        task_info = self._generateTaskInfo(task_node_id, last_generation_time) # Task()
-                        to_genernate_task_infos.append(task_info)
-                        todo_task_num += 1
                         
                 elif self._task_generation_model == 'Uniform':
                     kwlow = kwargsDict.get('low', self._task_generation_low)
                     kwhigh = kwargsDict.get('high', self._task_generation_high)
                     task_num = np.random.randint(kwlow * simulation_interval, kwhigh * simulation_interval+1)
                     assert int(kwlow * simulation_interval) < int(kwhigh * simulation_interval), 'There is no task to generate.'
-                    for i in range(task_num):
-                        task_info = self._generateTaskInfo(task_node_id, last_generation_time)
-                        to_genernate_task_infos.append(task_info)
-                        todo_task_num += 1
 
                 elif self._task_generation_model == 'Normal':
                     kwmean = kwargsDict.get('mean', self._task_generation_mean)
@@ -680,26 +661,25 @@ class TaskManager:
                     assert kwmean * simulation_interval > 0, 'There is no task to generate.'
                     task_num = int(task_num)
                     task_num = task_num if task_num > 0 else 0
-                    for i in range(int(task_num)):
-                        task_info = self._generateTaskInfo(task_node_id, last_generation_time)
-                        to_genernate_task_infos.append(task_info)
-                        todo_task_num += 1
 
                 elif self._task_generation_model == 'Exponential':
                     kwbeta = kwargsDict.get('beta', self._task_generation_beta)
                     task_num = np.random.exponential(kwbeta * simulation_interval)
                     assert kwbeta * simulation_interval > 0, 'There is no task to generate.'
                     task_num = int(task_num)
-                    for i in range(int(task_num)):
-                        task_info = self._generateTaskInfo(task_node_id, last_generation_time)
-                        to_genernate_task_infos.append(task_info)
-                        todo_task_num += 1
 
                 elif self._task_generation_model == 'None':# 不生成任务
                     break 
 
                 else:
                     raise NotImplementedError('The task generation model is not implemented.')
+
+                if task_num == 0 and abs(cur_time + self._predictable_seconds - last_generation_time) < 1e-3:
+                    task_num = 1 # 保证最后一个时间点至少有一个任务
+                for i in range(int(task_num)):
+                    task_info = self._generateTaskInfo(task_node_id, last_generation_time)
+                    to_genernate_task_infos.append(task_info)
+                    todo_task_num += 1
                 last_generation_time += simulation_interval
             self._to_generate_task_infos[task_node_id] = to_genernate_task_infos
         return todo_task_num
@@ -783,15 +763,18 @@ class TaskManager:
         for node_id, task_infos in all_tasks:
             for task_info in task_infos.copy():
                 if cur_time - task_info.getTaskArrivalTime() > self._config_task.get('hard_ddl', 2):
+                    if task_info in self._to_generate_task_infos.get(task_info.getTaskNodeId(), []):
+                        pass
                     task_info.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_DDL)
                     task_infos.remove(task_info)
-                    self._out_of_ddl_tasks[node_id] = self._out_of_ddl_tasks.get(node_id, [])
-                    self._out_of_ddl_tasks[node_id].append(task_info)
+                    task_node_id = task_info.getTaskNodeId()
+                    self._out_of_ddl_tasks[task_node_id] = self._out_of_ddl_tasks.get(task_node_id, [])
+                    self._out_of_ddl_tasks[task_node_id].append(task_info)
                     self._recently_failed_100_tasks.append(task_info)
 
         # 5. Check the task DAG
         for task_node_id, task_dag in self._task_dependencies.items():
-            # 如果对于task_dag中后继为0的task，不在to_generate_task_infos中，则将其以及其前序task移除
+            # 如果对于task_dag中后继为0的task，已经完成/失败了，则将其以及其前序task移除
             not_finished_tasks = self._getNotFinishedTasksByNode(task_node_id)
             remove_flag = True
             removed_nodes = []
@@ -842,7 +825,8 @@ class TaskManager:
         assert route[-1] == target_node_id, 'The last node of the route should be the target node id.'
         if task_node_id in self._waiting_to_offload_tasks:
             for task_info in self._waiting_to_offload_tasks[task_node_id].copy():
-                if task_info.getTaskId() == task_id:
+                flag = self.checkTaskDependency(task_node_id, task_id)
+                if task_info.getTaskId() == task_id and flag == True:
                     task_info.offloadTo(target_node_id, route, current_time)
                     self._offloading_tasks[task_node_id] = self._offloading_tasks.get(task_node_id, [])
                     self._offloading_tasks[task_node_id].append(task_info)
@@ -853,6 +837,37 @@ class TaskManager:
                         self.addToComputeTask(task_info, task_node_id, current_time)
                         self._offloading_tasks[task_node_id].remove(task_info)
                     return True
+                elif flag is None: # None表示有parent task失败
+                    failed_task_list = self._out_of_ddl_tasks.get(task_node_id, [])
+                    failed_task_list.append(task_info)
+                    self._out_of_ddl_tasks[task_node_id] = failed_task_list
+                    self._waiting_to_offload_tasks[task_node_id].remove(task_info)
+                    task_info.setTaskFailueCode(EnumerateConstants.TASK_FAIL_PARENT_FAILED)
+        return False
+    
+    def checkTaskDependency(self, task_node_id, task_id):
+        """Check the task dependency by the task node id and the task id.
+
+        Args:
+            task_node_id (str): The task node id.
+            task_id (str): The task id.
+
+        Returns:
+            bool: True if the task is generated, False if the task is not generated, None if the parent tasks are failed.
+
+        """
+        done_task_id_for_node = [task_info.getTaskId() for task_info in self._done_tasks.get(task_node_id, [])]
+        failed_task_id_for_node = [task_info.getTaskId() for task_info in self._out_of_ddl_tasks.get(task_node_id, [])]
+        task_dag = self._task_dependencies[task_node_id] # nx.DiGraph
+        parents = []
+        if task_dag is not None and task_id in task_dag:
+            # if the parent tasks are done, then the task is generated
+            parents = list(task_dag.predecessors(task_id))
+        if all([task_id in done_task_id_for_node for task_id in parents]) or len(parents) == 0:
+            return True
+        # if the parent tasks failed, then the task is failed
+        elif any([task_id in failed_task_id_for_node for task_id in parents]) and len(parents) > 0:
+            return None
         return False
     
     def getToOffloadTasks(self, task_node_id):

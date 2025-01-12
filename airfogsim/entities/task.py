@@ -88,6 +88,10 @@ class Task:
         return self._task_priority
     
     @property
+    def current_node_id(self):
+        return self.getCurrentNodeId()
+    
+    @property
     def task_lifecycle_state(self):
         # lifecycle includes to_generate, to_offload, to_return, computing, computed, returning, finished
         if self.isFinished():

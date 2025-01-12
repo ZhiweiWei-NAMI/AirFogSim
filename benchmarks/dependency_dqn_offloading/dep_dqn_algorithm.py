@@ -1,50 +1,32 @@
 from airfogsim.airfogsim_env import AirFogSimEnv
 from airfogsim.airfogsim_algorithm import BaseAlgorithmModule
-from airfogsim.algorithm.DDPG.ddpg import DDPG_Agent
+from airfogsim.algorithm.TransDQN.dqn import DQN_Agent
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
-import argparse
-def parseDDPGArgs():
-    parser = argparse.ArgumentParser(description='DDPG arguments')
-    parser.add_argument('--d_node', type=int, default=6)
-    parser.add_argument('--d_task', type=int, default=7)
-    parser.add_argument('--max_tasks', type=int, default=3)
-    parser.add_argument('--m1', type=int, default=50)
-    parser.add_argument('--m2', type=int, default=50)
-    parser.add_argument('--d_model', type=int, default=512)
-    parser.add_argument('--nhead', type=int, default=2)
-    parser.add_argument('--num_layers', type=int, default=2)
-    parser.add_argument('--lr_actor', type=float, default=1e-4)
-    parser.add_argument('--lr_critic', type=float, default=1e-4)
-    parser.add_argument('--device', type=str, default='cuda:2')
-    # epsilon
-    parser.add_argument('--epsilon', type=float, default=0.1)
-    parser.add_argument('--gamma', type=float, default=0.9)
-    parser.add_argument('--tau', type=float, default=0.001)
-    # gumbel_tau
-    parser.add_argument('--gumbel_tau', type=float, default=1.0)
-    parser.add_argument('--replay_buffer_capacity', type=int, default=10000)
-    parser.add_argument('--replay_buffer_update_freq', type=int, default=10)
-    parser.add_argument('--batch_size', type=int, default=32)
-    # args.model_dir
-    parser.add_argument('--model_dir', type=str, default='models/meson/')
-    # args.model_path
-    parser.add_argument('--actor_model_path', type=str, default='models/meson/actor_model_499968.pth')
-    parser.add_argument('--critic_model_path', type=str, default='models/meson/critic_model_499968.pth')
-    parser.add_argument('--mode', type=str, default='train')
-    # save_model_freq
-    parser.add_argument('--save_model_freq', type=int, default=100000)
-    # mode: train or test
-    args = parser.parse_args()
-    return args
+from dqn_config import parseDQNArgs
 
-class DDPGOffloadingAlgorithm(BaseAlgorithmModule):
+class DQNOffloadingAlgorithm(BaseAlgorithmModule):
+    """
+    Use different schedulers to interact with the environment before calling env.step(). Manipulate different environments with the same algorithm design at the same time for learning sampling efficiency.\n
+    Any implementation of the algorithm should inherit this class and implement the algorithm logic in the `scheduleStep()` method.
+    """
+
+    '''
+    scheduleOffloading: BaseAlgorithm.
+    scheduleComputing: BaseAlgorithm.
+    scheduleCommunication: BaseAlgorithm.
+    scheduleReturning: Relay (only for task assigned to vehicle), select nearest UAV and nearest RSU, return_route=[UAV,RSU]
+                       Direct, select nearest RSU, return_route=[RSU]
+                       Relay or direct is controlled by probability.
+    scheduleTraffic: 
+        UAV: Fly to next position in route list and stay for a period of time.
+    '''
 
     def __init__(self):
         super().__init__()
     
     def saveModel(self):
-        self.DDPG_Agent.saveModel()
+        self.DQN_Agent.saveModel()
 
     def reset(self):
         self.state_dict = {
@@ -100,8 +82,8 @@ class DDPGOffloadingAlgorithm(BaseAlgorithmModule):
             'returning': 5,
             'finished': 6
         }
-        self.args = parseDDPGArgs()
-        self.DDPG_Agent = DDPG_Agent(self.args)
+        self.args = parseDQNArgs()
+        self.DQN_Agent = DQN_Agent(self.args)
         self.tensorboard_writer = SummaryWriter()
             
     def _encode_node_state(self, node_state, node_type):
@@ -125,6 +107,7 @@ class DDPGOffloadingAlgorithm(BaseAlgorithmModule):
         return np.asarray(state)
     
     def _encode_task_state(self, task_state):
+        # 使用预训练 GAE使得task_dependence，以及相邻车辆的状态，都能够被编码
         # ['task_id', 'time', 'task_node_id', 'task_size', 'task_cpu', 'required_returned_size', 'task_deadline', 'task_priority', 'task_arrival_time', 'task_lifecycle_state']
         # 选取 task_size, task_cpu, required_returned_size, task_deadline, task_priority, task_arrival_time, 6维
         # 注意，task_size, task_cpu, required_returned_size要normalize
@@ -145,12 +128,12 @@ class DDPGOffloadingAlgorithm(BaseAlgorithmModule):
             env (AirFogSimEnv): The environment object.
         """
         self.scheduleReturning(env)
-        # 这里使用DDPG
+        # 这里使用DQN
         self.scheduleOffloading(env) 
         self.scheduleCommunication(env)
         self.scheduleComputing(env)
         self.scheduleTraffic(env)
-        self.DDPG_Agent.update(self.tensorboard_writer)
+        self.DQN_Agent.update(self.tensorboard_writer)
 
     def scheduleMission(self, env: AirFogSimEnv):
         return
@@ -252,9 +235,7 @@ class DDPGOffloadingAlgorithm(BaseAlgorithmModule):
         compute_node = self.entityScheduler.getFogNodeStates(env)
         compute_node_np, compute_node_id_as_idx, compute_node_mask = self._reOrderComputeNode(compute_node)
         # action: [m1 * max_tasks]
-        pre_reward = self.getRewardByTask(env)
-        pre_reward = np.asarray([pre_reward], dtype=np.float32)
-        action, action_logits = self.DDPG_Agent.select_action(task_node_np, compute_node_np, compute_node_mask, pre_reward)
+        action = self.DQN_Agent.select_action(task_node_np, task_data_np, compute_node_np, task_mask, compute_node_mask)
         action = action.reshape((self.args.m1, self.args.max_tasks))
         # 遍历task_mask，仅当其为1，才进行offloading
         for i in range(self.args.m1):
@@ -276,8 +257,8 @@ class DDPGOffloadingAlgorithm(BaseAlgorithmModule):
         # 如果self.state_dict不是None，那么可以获得上一个时隙的状态和reward，结合本时隙的状态，存储到replay buffer中
         if self.state_dict['task_node'] is not None:
             self.state_dict['reward'] = self.getRewardByTask(env)
-            self.DDPG_Agent.add_experience(self.state_dict['task_node'],
-                                          pre_reward,
+            self.DQN_Agent.add_experience(self.state_dict['task_node'], 
+                                          self.state_dict['task_data'], 
                                           self.state_dict['compute_node'], 
                                           self.state_dict['task_mask'], 
                                           self.state_dict['compute_node_mask'], 
@@ -286,10 +267,11 @@ class DDPGOffloadingAlgorithm(BaseAlgorithmModule):
                                           task_node_np, task_data_np, compute_node_np, task_mask, compute_node_mask, 
                                           self.state_dict['done'])
         self.state_dict['task_node'] = task_node_np
+        self.state_dict['task_data'] = task_data_np
         self.state_dict['compute_node'] = compute_node_np
         self.state_dict['task_mask'] = task_mask
         self.state_dict['compute_node_mask'] = compute_node_mask
-        self.state_dict['action'] = action_logits
+        self.state_dict['action'] = action
         self.state_dict['done'] = env.simulation_time >= env.config['simulation']['max_simulation_time'] - env.traffic_interval
 
     def scheduleCommunication(self, env: AirFogSimEnv):

@@ -382,7 +382,7 @@ class ChannelManagerCP:
                 subMatrix(interference_power_matrix_utx_x2u, self.U2U_power_dB, self.U2UChannel_with_fastfading, rb_nos, txidx, rxidx)
                 power_db = self.U2U_power_dB
             elif channel_type == 'U2V':
-                addMatrix(U2V_Signal, self.U2V_power_dB, self.V2UChannel_with_fastfading, rb_nos, txidx, rxidx)
+                addMatrix(U2V_Signal, self.U2V_power_dB, self.V2UChannel_with_fastfading, rb_nos, txidx, rxidx, inverse=True)
                 subMatrix(interference_power_matrix_utx_x2v, self.U2V_power_dB, self.V2UChannel_with_fastfading, rb_nos, txidx, rxidx, inverse=True)
                 power_db = self.U2V_power_dB
             elif channel_type == 'U2I':

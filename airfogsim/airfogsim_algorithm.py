@@ -199,6 +199,7 @@ class BaseAlgorithmModule:
         """
         n_RB = self.commScheduler.getNumberOfRB(env)
         all_offloading_task_infos = self.taskScheduler.getAllOffloadingTaskInfos(env)
+        all_offloading_task_infos = all_offloading_task_infos[:min(n_RB*2, len(all_offloading_task_infos))]
         for task_dict in all_offloading_task_infos:
             allocated_RB_nos = np.random.choice(n_RB, 3, replace=False)
             self.commScheduler.setCommunicationWithRB(env, task_dict['task_id'], allocated_RB_nos)

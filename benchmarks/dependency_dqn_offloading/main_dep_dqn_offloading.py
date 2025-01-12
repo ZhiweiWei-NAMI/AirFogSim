@@ -20,10 +20,10 @@ random.seed(42)
 torch.manual_seed(42)
 torch.cuda.manual_seed(42)
 torch.cuda.manual_seed_all(42)
-from airfogsim import AirFogSimEnv, BaseAlgorithmModule
+from airfogsim import AirFogSimEnv
 import yaml
 from airfogsim.scheduler import RewardScheduler, TaskScheduler, EntityScheduler
-from benchmarks.dqn_offloading.dqn_algorithm import DQNOffloadingAlgorithm
+from benchmarks.dependency_dqn_offloading.dep_dqn_algorithm import DQNOffloadingAlgorithm
 
 def load_config(path):
     with open(path, 'r') as file:
@@ -32,7 +32,7 @@ def load_config(path):
 
 # 1. Load the configuration file
     
-config_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), 'dqn_airfogsim_config.yaml')
+config_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), 'dep_dqn_airfogsim_config.yaml')
 config = load_config(config_path)
 
 # 2. Create the environment
@@ -41,7 +41,6 @@ env = AirFogSimEnv(config, interactive_mode=None)
 # 3. Get algorithm module
 algorithm_module = DQNOffloadingAlgorithm()
 algorithm_module.initialize(env, config)
-# RewardScheduler.setModel(env, 'REWARD', 'Piecewise((task_priority * log(1 + task_deadline - task_delay) + 1, task_delay < task_deadline), (exp(task_priority * (task_deadline - task_delay)), True))')
 RewardScheduler.setModel(env, 'REWARD', '1/max(1e-1, task_delay)')
 EPOCH_NUM = 2000
 for epoch in range(EPOCH_NUM):

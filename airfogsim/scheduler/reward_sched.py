@@ -72,6 +72,8 @@ class RewardScheduler(BaseScheduler):
         task = env.task_manager.getTaskByTaskNodeAndTaskId(task_info['task_node_id'], task_info['task_id'])
         if task is None:
             raise ValueError(f"Task not found: {task_info}")
+        if not task.isFinished():
+            return 0
         # 调用task.getXXX()获取任务信息
         kwargs = {}
         for key in RewardScheduler.REWARD_SYMOBOLS[env]:

@@ -74,10 +74,10 @@ task_profile: # task profile for each node type
   task_node_profiles: [{'type':'UAV', 'max_node_num': 10}, {'type':'vehicle', 'max_node_num': 40}] # The types of task nodes and the maximum number of nodes of each type
   vehicle: # The profile of vehicles
     lambda: 0.5
-    dag_edge_prob: 0.3 # The probability of generating an edge in the DAG of task graph
+    dag_edge_prob: 0.2 # The probability of generating an edge in the DAG of task graph
   uav: # The profile of UAVs
     lambda: 0.5
-    dag_edge_prob: 0.3
+    dag_edge_prob: 0.2
 
 fog_profile:
   vehicle:
@@ -106,7 +106,7 @@ state_attribute:
 
 channel:
   outage_model: 'Rayleigh' # supported model:['Rayleigh'], further implementation can be added in airfogsim/channel_callback/*_callback.py
-  outage_snr_threshold: 0 # The SNR threshold for outage detection
+  outage_snr_threshold: 5 # The SNR threshold for outage detection
   V2V:
     pathloss_model: 'V2V_urban_tr37885'
     shadowing_model: '3GPP_LogNormal'

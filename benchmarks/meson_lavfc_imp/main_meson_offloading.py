@@ -1,6 +1,8 @@
 import sys
 import os
 import torch
+import numpy as np
+import random
 # 直到airfogsim的根目录
 isAirFogSim = False
 root_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
@@ -13,9 +15,12 @@ while not isAirFogSim:
         root_path = os.path.abspath(os.path.join(root_path, os.path.pardir))
 sys.path.append(root_path)
 dir_name = os.path.dirname(__file__)
+np.random.seed(42)
+random.seed(42)
+torch.manual_seed(42)
+torch.cuda.manual_seed(42)
+torch.cuda.manual_seed_all(42)
 from airfogsim import AirFogSimEnv
-import numpy as np
-import random
 import yaml
 from airfogsim.scheduler import RewardScheduler, TaskScheduler
 from benchmarks.meson_lavfc_imp.ddpg_algorithm import DDPGOffloadingAlgorithm
@@ -37,10 +42,7 @@ env = AirFogSimEnv(config, interactive_mode=None)
 algorithm_module = DDPGOffloadingAlgorithm()
 algorithm_module.initialize(env, config)
 # RewardScheduler.setModel(env, 'REWARD', 'Piecewise((task_priority * log(1 + task_deadline - task_delay) + 1, task_delay < task_deadline), (exp(task_priority * (task_deadline - task_delay)), True))')
-RewardScheduler.setModel(env, 'REWARD', '1/max(1e-3, task_delay)')
-np.random.seed(0)
-random.seed(0)
-torch.manual_seed(0)
+RewardScheduler.setModel(env, 'REWARD', '1/max(1e-1, task_delay)')
 EPOCH_NUM = 2000
 for epoch in range(EPOCH_NUM):
     accumulated_reward = 0

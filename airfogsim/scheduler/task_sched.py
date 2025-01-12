@@ -74,6 +74,23 @@ class TaskScheduler(BaseScheduler):
         for task_node_id, tasks in task_dict.items():
             task_info_list.extend(tasks)
         return task_info_list
+    
+    @staticmethod
+    def getAllTaskDAGs(env):
+        """Get the task DAGs for the environment.
+
+        Args:
+            env (AirFogSimEnv): The AirFogSim environment.
+
+        Returns:
+            dict: The task DAGs. The key is the task node id, and the value is the task DAG (nx.DiGraph) for the task ID.
+
+        Examples:
+            taskSched.getAllTaskDAGs(env)
+        """
+        task_dags = env.task_manager._task_dependencies
+        # 以 task_node为key，value为None或nx.DiGraph()
+        return task_dags
 
     @staticmethod
     def getAllOffloadingTaskInfos(env):

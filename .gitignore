@@ -6,3 +6,5 @@
 **/runs/**
 tripinfo.xml
 tripinfo.csv
+pyg_wheel/*
+data/*
