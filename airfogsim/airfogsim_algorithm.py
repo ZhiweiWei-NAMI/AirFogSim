@@ -199,9 +199,13 @@ class BaseAlgorithmModule:
         """
         n_RB = self.commScheduler.getNumberOfRB(env)
         all_offloading_task_infos = self.taskScheduler.getAllOffloadingTaskInfos(env)
-        all_offloading_task_infos = all_offloading_task_infos[:min(n_RB*2, len(all_offloading_task_infos))]
+        all_offloading_task_infos = all_offloading_task_infos[:10]
+        avg_RB_nos = max(1, n_RB // max(1, len(all_offloading_task_infos)))
+        RB_ctr = 0
         for task_dict in all_offloading_task_infos:
-            allocated_RB_nos = np.random.choice(n_RB, 3, replace=False)
+            # 从RB_ctr到RB_ctr+avg_RB_nos-1分配给task；多出的部分mod n_RB，allocated_RB_nos是RB编号的列表
+            allocated_RB_nos = [(RB_ctr + i) % n_RB for i in range(avg_RB_nos)]
+            RB_ctr = (RB_ctr + avg_RB_nos) % n_RB
             self.commScheduler.setCommunicationWithRB(env, task_dict['task_id'], allocated_RB_nos)
 
     def scheduleComputing(self, env: AirFogSimEnv):
