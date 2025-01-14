@@ -36,8 +36,10 @@ class DDPG_Agent:
         self.target_actor_network.load_state_dict(self.actor_network.state_dict())
         self.target_critic_network.load_state_dict(self.critic_network.state_dict())
         self.gamma = args.gamma
-        self.optimizer_actor = torch.optim.SGD(self.actor_network.parameters(), lr=args.lr_actor, momentum=0.9)
-        self.optimizer_critic = torch.optim.SGD(self.critic_network.parameters(), lr=args.lr_critic, momentum=0.9)
+        # self.optimizer_actor = torch.optim.SGD(self.actor_network.parameters(), lr=args.lr_actor, momentum=0.9)
+        # self.optimizer_critic = torch.optim.SGD(self.critic_network.parameters(), lr=args.lr_critic, momentum=0.9)
+        self.optimizer_actor = torch.optim.Adam(self.actor_network.parameters(), lr=args.lr_actor)
+        self.optimizer_critic = torch.optim.Adam(self.critic_network.parameters(), lr=args.lr_critic)
         self.criterion = nn.HuberLoss()
         self.replay_buffer = ReplayBuffer(args.replay_buffer_capacity)
         self.update_cnt = 0
@@ -57,7 +59,6 @@ class DDPG_Agent:
         # add noise
         q_values += torch.randn_like(q_values) * self.args.epsilon 
 
-        # Gumbel-Softmax (for categorical actions)
         # action_probs = F.gumbel_softmax(q_values, tau=self.args.gumbel_tau, hard=False) # tau is a temperature parameter
         action_probs = F.softmax(q_values, dim=1)
         compute_node_mask = torch.FloatTensor(compute_node_mask).to(self.device)
@@ -66,11 +67,6 @@ class DDPG_Agent:
         action_probs_1col = action_probs_1col * compute_node_mask.view(1, -1)
         action_probs = torch.cat([action_probs[:, 0].view(-1, 1), action_probs_1col], dim=1)
 
-        # Choose action based on sampled probabilities (e.g., sampling or argmax)
-        # Example: Sampling
-        # if self.args.mode == 'train':
-        #     actions = torch.distributions.Categorical(probs=action_probs).sample()
-        # else:
         actions = torch.argmax(action_probs, dim=1)
         # turn to np
         actions = actions.cpu().numpy()
@@ -109,7 +105,7 @@ class DDPG_Agent:
         next_compute_node_mask = torch.FloatTensor(np.asarray(next_compute_node_mask)).to(self.device)
         done = torch.FloatTensor(np.asarray(done, dtype=np.float32)).to(self.device)
 
-        certain_reward = (reward-pre_reward).squeeze()
+        certain_reward = (reward).squeeze()
 
         # Reshape state and action for Critic
         state = torch.cat([task_node.view(batch_size, -1), compute_node.view(batch_size, -1), pre_reward.view(batch_size, -1)], dim=1)

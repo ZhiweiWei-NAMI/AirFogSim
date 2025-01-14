@@ -123,7 +123,7 @@ class AirFogSimEnv():
         self.traffic_manager = TrafficManager(config['traffic'], self.traci_connection, config['sumo']['sumo_net'])
         self._initRSUsAndCloudServers()
         # 2. Config the task manager
-        self.task_manager = TaskManager(config['task'], predictable_seconds=5)  # suppose tasks are generated every traffic interval
+        self.task_manager = TaskManager(config['task'], predictable_seconds=2)  # suppose tasks are generated every traffic interval
         self.channel_manager = ChannelManagerCP(config['channel'], 
                                               n_RSU=self.traffic_manager.getNumberOfRSUs(),
                                               n_UAV=self.traffic_manager.getNumberOfUAVs(),
@@ -371,17 +371,17 @@ class AirFogSimEnv():
             if trans_flag:
                 tmp_succeed_tasks.append(task_profile)
 
-            self.channel['time'] += self.simulation_interval
             self.channel['data_size'] += trans_data
             if channel_type == 'V2I':
-                self.V2I_channel['time'] += self.simulation_interval
                 self.V2I_channel['data_size'] += trans_data
             elif channel_type == 'V2U':
-                self.V2U_channel['time'] += self.simulation_interval
                 self.V2U_channel['data_size'] += trans_data
             elif channel_type == 'U2I':
-                self.U2I_channel['time'] += self.simulation_interval
                 self.U2I_channel['data_size'] += trans_data
+        self.channel['time'] += self.simulation_interval
+        self.V2I_channel['time'] += self.simulation_interval
+        self.V2U_channel['time'] += self.simulation_interval
+        self.U2I_channel['time'] += self.simulation_interval
 
         self.channel_manager.setThisTimeslotTransSize(tx_size_dict, rx_size_dict)  # used for update energy in self._updateEnergy()
 

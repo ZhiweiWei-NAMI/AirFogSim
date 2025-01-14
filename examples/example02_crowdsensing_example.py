@@ -22,7 +22,7 @@ profiler=Profiler()
 profiler.start()
 
 # 1. Load the configuration file
-config_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), 'config.yaml')
+config_path = os.path.join(os.path.dirname(__file__), 'config.yaml')
 config = load_config(config_path)
 
 # 2. Create the environment

@@ -3,7 +3,7 @@ from airfogsim.airfogsim_algorithm import BaseAlgorithmModule
 from airfogsim.algorithm.TransDQN.dqn import DQN_Agent
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
-from dqn_config import parseDQNArgs
+from benchmarks.configs.parse_dqn_args import parseDQNArgs
 
 class DQNOffloadingAlgorithm(BaseAlgorithmModule):
     """
@@ -107,7 +107,6 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
         return np.asarray(state)
     
     def _encode_task_state(self, task_state):
-        # 使用预训练 GAE使得task_dependence，以及相邻车辆的状态，都能够被编码
         # ['task_id', 'time', 'task_node_id', 'task_size', 'task_cpu', 'required_returned_size', 'task_deadline', 'task_priority', 'task_arrival_time', 'task_lifecycle_state']
         # 选取 task_size, task_cpu, required_returned_size, task_deadline, task_priority, task_arrival_time, 6维
         # 注意，task_size, task_cpu, required_returned_size要normalize
@@ -226,7 +225,8 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
         return compute_node_np, compute_node_id_as_idx, compute_node_mask
 
     def scheduleOffloading(self, env: AirFogSimEnv):
-        all_tasks = self.taskScheduler.getAllToOffloadTasks(env)
+        # super().scheduleOffloading(env)
+        all_tasks = self.taskScheduler.getAllToOffloadTasks(env, check_dependency=True)
         task_node = self.entityScheduler.getTaskNodeStates(env)
         task_data = self.entityScheduler.getTaskStates(env, all_tasks)
         # 需要维护一个list，存储每个task_node_np对应的task_node_id
@@ -304,9 +304,9 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
 
     def getRewardByTask(self, env: AirFogSimEnv):
         last_step_succ_task_infos = self.taskScheduler.getLastStepSuccTaskInfos(env)
-        last_step_fail_task_infos = self.taskScheduler.getLastStepFailTaskInfos(env)
+        # last_step_fail_task_infos = self.taskScheduler.getLastStepFailTaskInfos(env)
         reward = 0
-        for task_info in last_step_succ_task_infos+last_step_fail_task_infos:
+        for task_info in last_step_succ_task_infos:
             reward += self.rewardScheduler.getRewardByTask(env, task_info)
             # if task_info['task_delay'] <= task_info['task_deadline']:
             #     reward += 1

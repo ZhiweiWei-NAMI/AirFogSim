@@ -20,9 +20,9 @@ random.seed(42)
 torch.manual_seed(42)
 torch.cuda.manual_seed(42)
 torch.cuda.manual_seed_all(42)
-from airfogsim import AirFogSimEnv, BaseAlgorithmModule
+from airfogsim import AirFogSimEnv
 import yaml
-from airfogsim.scheduler import RewardScheduler, TaskScheduler, EntityScheduler
+from airfogsim.scheduler import RewardScheduler, TaskScheduler
 from benchmarks.dqn_offloading.dqn_algorithm import DQNOffloadingAlgorithm
 
 def load_config(path):
@@ -32,7 +32,7 @@ def load_config(path):
 
 # 1. Load the configuration file
     
-config_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), 'dqn_airfogsim_config.yaml')
+config_path = os.path.join(os.path.dirname(__file__), '../configs/DAG_offloading_config.yaml')
 config = load_config(config_path)
 
 # 2. Create the environment
@@ -51,6 +51,7 @@ for epoch in range(EPOCH_NUM):
         env.step()
         accumulated_reward += algorithm_module.getRewardByTask(env)
         task_num = TaskScheduler.getDoneTaskNum(env)
+        # task_num = TaskScheduler.getDoneTaskNumLessThanSeconds(env, 2)
         total_task_num = TaskScheduler.getTotalTaskNum(env)
         succ_ratio = task_num / max(1,total_task_num)
         # env.render()

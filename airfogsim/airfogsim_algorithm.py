@@ -180,7 +180,7 @@ class BaseAlgorithmModule:
         Args:
             env (AirFogSimEnv): The environment object.
         """
-        all_task_infos = self.taskScheduler.getAllToOffloadTaskInfos(env)
+        all_task_infos = self.taskScheduler.getAllToOffloadTaskInfos(env, check_dependency=True)
         for task_dict in all_task_infos:
             task_node_id = task_dict['task_node_id']
             task_id = task_dict['task_id']
@@ -199,7 +199,7 @@ class BaseAlgorithmModule:
         """
         n_RB = self.commScheduler.getNumberOfRB(env)
         all_offloading_task_infos = self.taskScheduler.getAllOffloadingTaskInfos(env)
-        all_offloading_task_infos = all_offloading_task_infos[:10]
+        all_offloading_task_infos = all_offloading_task_infos[:n_RB]
         avg_RB_nos = max(1, n_RB // max(1, len(all_offloading_task_infos)))
         RB_ctr = 0
         for task_dict in all_offloading_task_infos:

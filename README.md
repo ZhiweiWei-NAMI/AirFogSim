@@ -68,7 +68,7 @@ pip install -r requirements.txt
 3. Run `example01_offloading_example.py`. Here is the main code:
 ```python
 # 1. Load the configuration file
-config_path = sys.argv[1] if len(sys.argv) > 1 else 'config.yaml'
+config_path = 'config.yaml'
 config = load_config(config_path)
 
 # 2. Create the environment
@@ -101,6 +101,8 @@ https://github.com/user-attachments/assets/f6d1b1ce-dfa7-4bef-b2ad-a0e1ccce91b1
 5. For more personalized developing guidance, we attempt to build [AirFogSim Assistant-GPTs](https://chatgpt.com/g/g-uTOZnSsOr-airfogsim-assistant). However, GPT may make mistakes, remember to check the code.
 
 
-## Benchmarks:
-### DQN for Task Offloading
-This is an implementation of the DQN algorithm for task offloading in a multi-agent system. The algorithm is implemented in the `dqn_offloading` directory. Please refer to the [README](./benchmarks/dqn_offloading/README.md) for more details. 
+## Benchmarks
+Refer to the `benchmarks` directory for more details.
+
+## Paper Code
+Refer to the `paper_code` directory for more details.

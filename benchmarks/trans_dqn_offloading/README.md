@@ -1,14 +1,14 @@
 
 <!-- dqn for task offloading benchmark -->
-# Simple DQN for Task Offloading
+# Transformer-based DQN for Task Offloading
 
-This is an implementation of the DQN algorithm for task offloading in a multi-agent system. The algorithm is implemented in the `dqn_offloading` directory.
+This is an implementation of the DQN algorithm for task offloading in a multi-agent system. The algorithm is implemented in the `trans_dqn_offloading` directory.
 
 Run the following command to train the DQN model:
 
 ```bash
 cd airfogsim_code
-python benchmarks/dqn_offloading/main_dqn_offloading.py
+python benchmarks/trans_dqn_offloading/main_dqn_offloading.py
 ```
 
 For testing the DQN model, modify `parseDQNArgs()` in `dqn_algorithm.py` to load the trained model:

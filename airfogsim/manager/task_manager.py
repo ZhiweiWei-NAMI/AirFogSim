@@ -60,7 +60,7 @@ class TaskManager:
     """
     SUPPORTED_TASK_GENERATION_MODELS = ['Poisson', 'Uniform', 'Normal', 'Exponential', 'None']
     ATTRIBUTE_MODELS = ['Uniform', 'Normal']
-    def __init__(self, config_task, predictable_seconds=5):
+    def __init__(self, config_task, predictable_seconds=2):
         task_generation_model = config_task.get('task_generation_model', 'Poisson')
         task_generation_kwargs = config_task.get('task_generation_kwargs', {})
         cpu_model = config_task.get('cpu_model', 'Uniform')
@@ -259,7 +259,7 @@ class TaskManager:
                     failed_task_list.append(task_info)
                     self._out_of_ddl_tasks[task_node_id] = failed_task_list
                     return True
-        elif task.isReturning():
+        else:
             for task_info in self._returning_tasks.get(node_id, []):
                 if task_info.getTaskId() == task_id:
                     self._returning_tasks[node_id].remove(task_info)
@@ -741,7 +741,7 @@ class TaskManager:
                     # 直接跳到下一个阶段
                     task_node_id = task_info.getTaskNodeId()
                     task_info.transmit_to_Node(task_info.getToReturnNodeId(), 1, cur_time, fast_return=True)
-                    if task_info.task_delay <= task_info.task_deadline:
+                    if task_info.task_delay <= task_info.task_deadline + 1e-5:
                         self._done_tasks[task_node_id] = self._done_tasks.get(task_node_id, [])
                         self._done_tasks[task_node_id].append(task_info)
                         self._recently_done_100_tasks.append(task_info)
@@ -762,7 +762,8 @@ class TaskManager:
         all_tasks = itertools.chain(self._waiting_to_offload_tasks.items(), self._offloading_tasks.items(), self._computing_tasks.items(), self._waiting_to_return_tasks.items(), self._returning_tasks.items(), self._to_generate_task_infos.items())
         for node_id, task_infos in all_tasks:
             for task_info in task_infos.copy():
-                if cur_time - task_info.getTaskArrivalTime() > self._config_task.get('hard_ddl', 2):
+                if cur_time - task_info.getTaskArrivalTime() > task_info.getTaskDeadline():
+                # self._config_task.get('hard_ddl', 2):
                     if task_info in self._to_generate_task_infos.get(task_info.getTaskNodeId(), []):
                         pass
                     task_info.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_DDL)

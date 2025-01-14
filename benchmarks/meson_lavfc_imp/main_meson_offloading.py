@@ -32,7 +32,7 @@ def load_config(path):
 
 # 1. Load the configuration file
     
-config_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), 'meson_airfogsim_config.yaml')
+config_path = os.path.join(os.path.dirname(__file__), '../configs/DAG_offloading_config.yaml')
 config = load_config(config_path)
 
 # 2. Create the environment
@@ -41,7 +41,6 @@ env = AirFogSimEnv(config, interactive_mode=None)
 # 3. Get algorithm module
 algorithm_module = DDPGOffloadingAlgorithm()
 algorithm_module.initialize(env, config)
-# RewardScheduler.setModel(env, 'REWARD', 'Piecewise((task_priority * log(1 + task_deadline - task_delay) + 1, task_delay < task_deadline), (exp(task_priority * (task_deadline - task_delay)), True))')
 RewardScheduler.setModel(env, 'REWARD', '1/max(1e-1, task_delay)')
 EPOCH_NUM = 2000
 for epoch in range(EPOCH_NUM):
@@ -51,10 +50,9 @@ for epoch in range(EPOCH_NUM):
         env.step()
         accumulated_reward += algorithm_module.getRewardByTask(env)
         task_num = TaskScheduler.getDoneTaskNum(env)
+        # task_num = TaskScheduler.getDoneTaskNumLessThanSeconds(env, 2)
         total_task_num = TaskScheduler.getTotalTaskNum(env)
         succ_ratio = task_num / max(1,total_task_num)
-        # veh_num = EntityScheduler.getNodeNumByType(env, 'vehicle')
-        # uav_num = EntityScheduler.getNodeNumByType(env, 'uav')
         env.render()
         print(f'Epoch: {epoch}, Simulation time: {env.simulation_time:.2f}, Ratio: {succ_ratio} = {task_num}/{total_task_num}, Reward: {accumulated_reward}', end='\r')
     algorithm_module.tensorboard_writer.add_scalar('Reward', accumulated_reward, env.simulation_time + epoch * env.max_simulation_time)

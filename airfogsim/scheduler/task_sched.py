@@ -21,7 +21,7 @@ class TaskScheduler(BaseScheduler):
         env.task_manager.setPredictableSeconds(predictable_seconds)
 
     @staticmethod
-    def getAllToOffloadTaskInfos(env):
+    def getAllToOffloadTaskInfos(env, check_dependency=False):
         """Get the task infos for the environment to offload.
 
         Args:
@@ -37,7 +37,11 @@ class TaskScheduler(BaseScheduler):
         task_info_list = []
         for task_node_id, tasks in task_dict.items():
             for task in tasks:
-                task_info_list.append(task.to_dict())
+                flag = True
+                if check_dependency:
+                    flag = env.task_manager.checkTaskDependency(task_node_id, task.getTaskId())
+                if flag == True:
+                    task_info_list.append(task.to_dict())
         return task_info_list
     
     @staticmethod
@@ -57,7 +61,7 @@ class TaskScheduler(BaseScheduler):
         return len(env.task_manager.getToOffloadTasks(task_node_id))
 
     @staticmethod
-    def getAllToOffloadTasks(env):
+    def getAllToOffloadTasks(env, check_dependency=False):
         """Get the tasks for the environment to offload.
 
         Args:
@@ -72,7 +76,12 @@ class TaskScheduler(BaseScheduler):
         task_dict = env.task_manager.getWaitingToOffloadTasks()
         task_info_list = []
         for task_node_id, tasks in task_dict.items():
-            task_info_list.extend(tasks)
+            for task in tasks:
+                flag = True
+                if check_dependency:
+                    flag = env.task_manager.checkTaskDependency(task_node_id, task.getTaskId())
+                if flag:
+                    task_info_list.append(task)
         return task_info_list
     
     @staticmethod
@@ -246,6 +255,28 @@ class TaskScheduler(BaseScheduler):
         """
         return len(env.task_manager.getDoneTasks())
     
+    @staticmethod
+    def getDoneTaskNumLessThanSeconds(env, seconds):
+        """Get the number of the tasks finished in the last seconds.
+
+        Args:
+            env (AirFogSimEnv): The AirFogSim environment.
+            seconds (float): The seconds.
+
+        Returns:
+            int: The number of the tasks finished in the last seconds.
+
+        Examples:
+            taskSched.getTaskNumLessThanSeconds(env, 10)
+        """
+        done_task_num = TaskScheduler.getDoneTaskNum(env)
+        out_of_ddl_tasks = env.task_manager.getOutOfDDLTasks()
+        for task in out_of_ddl_tasks:
+            if task.task_delay < seconds:
+                done_task_num += 1
+        return done_task_num
+
+    @staticmethod
     def getTotalTaskNum(env):
         """Get the number of the total tasks.
 

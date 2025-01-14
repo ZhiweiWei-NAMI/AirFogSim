@@ -1,4 +1,4 @@
-from .trans_network import TransformerDQN
+from .dqn_network import SimpleDQN
 import torch
 import torch.nn as nn
 import numpy as np
@@ -20,18 +20,15 @@ class DQN_Agent:
         self.num_layers = args.num_layers
         self.device = args.device
         self.tau = args.tau
-        if args.mode == 'train':
-            self.q_network = TransformerDQN(self.d_node, self.d_task, self.max_tasks, self.m1, self.m2, self.d_model, self.nhead, self.num_layers)
-            self.q_network.to(self.device)
-        elif args.mode == 'test':
-            self.q_network = TransformerDQN(self.d_node, self.d_task, self.max_tasks, self.m1, self.m2, self.d_model, self.nhead, self.num_layers)
-            self.q_network.to(self.device)
+        self.q_network = SimpleDQN(self.d_node, self.d_task, self.max_tasks, self.m1, self.m2, self.d_model)
+        self.q_network.to(self.device)
+        if args.mode == 'test':
             if os.path.exists(args.model_path):
                 self.q_network.load_state_dict(torch.load(args.model_path))
             else:
                 print(f'Model path {args.model_path} does not exist!')
 
-        self.target_network = TransformerDQN(self.d_node, self.d_task, self.max_tasks, self.m1, self.m2, self.d_model, self.nhead, self.num_layers)
+        self.target_network = SimpleDQN(self.d_node, self.d_task, self.max_tasks, self.m1, self.m2, self.d_model)
         self.target_network.to(self.device)
         self.target_network.load_state_dict(self.q_network.state_dict())
         self.gamma = args.gamma
