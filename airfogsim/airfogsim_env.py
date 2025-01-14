@@ -590,6 +590,13 @@ class AirFogSimEnv():
             self.blockchain_manager.addTransaction(f"({node_id}, {task_id}, {amount})")
 
     def getTaskNodeNumByType(self, node_type):
+        node_type = node_type.lower()
+        if node_type == 'uav': node_type = 'U'
+        if node_type == 'vehicle': node_type = 'V'
+        if node_type == 'rsu': node_type = 'I'
+        if node_type == 'cloud_server': node_type = 'C'
+        node_type = node_type.upper()
+        assert node_type in ['U', 'V', 'I', 'C'], 'node_type should be in ["UAV", "Vehicle", "RSU", "Cloud Server"]'
         # 从 self.task_node_ids 中获取 node_type 类型的节点数量
         return len([node_id for node_id in self.task_node_ids if self._getNodeTypeById(node_id) == node_type])
 
@@ -741,7 +748,7 @@ class AirFogSimEnv():
                                                               task_profile=self.config['task_profile'].get('vehicle', {}), 
                                                               fog_profile=self.config['fog_profile'].get('vehicle', {}))
                 # check if the vehicle_id should be in the task_node_ids
-                if 'vehicle' in self.task_node_types and np.random.rand() < self.task_node_gen_poss and self.getTaskNodeNumByType('vehicle') < self.max_task_node_num['vehicle'] and vehicle_id not in self.task_node_ids:
+                if 'vehicle' in self.task_node_types and np.random.rand() < self.task_node_gen_poss and self.getTaskNodeNumByType('V') < self.max_task_node_num['vehicle'] and vehicle_id not in self.task_node_ids:
                     self.task_node_ids.append(vehicle_id)
 
             self.vehicles[vehicle_id].update(vehicle_traffic_info, self.simulation_time)
@@ -755,7 +762,7 @@ class AirFogSimEnv():
                                         fog_profile=self.config['fog_profile'].get('uav', {}),
                                         task_profile=self.config['task_profile'].get('uav', {}))
                 # check if the uav_id should be in the task_node_ids
-                if 'UAV' in self.task_node_types and np.random.rand() < self.task_node_gen_poss and self.getTaskNodeNumByType('UAV') < self.max_task_node_num['UAV'] and uav_id not in self.task_node_ids:
+                if 'UAV' in self.task_node_types and np.random.rand() < self.task_node_gen_poss and self.getTaskNodeNumByType('U') < self.max_task_node_num['UAV'] and uav_id not in self.task_node_ids:
                     self.task_node_ids.append(uav_id)
             self.UAVs[uav_id].update(uav_traffic_info, self.simulation_time)
 
