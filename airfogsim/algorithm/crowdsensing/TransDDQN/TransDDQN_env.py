@@ -57,4 +57,7 @@ class TransDDQN_Env:
     def loadModel(self,episode):
         self.agent.load_models(episode,self.model_base_dir)
 
+    def cleanGPU(self):
+        torch.cuda.empty_cache()  # 清理缓存
+
 

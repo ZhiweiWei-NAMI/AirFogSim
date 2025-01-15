@@ -12,25 +12,33 @@ from .ReplayBuffer import BaseReplayBuffer
 import numpy as np
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
+cuda_num = torch.cuda.device_count()
 # device = "cpu"
 print('device: ',device)
 print('torch_version: ',torch.__version__)
+print('cuda_num: ',cuda_num)
+if cuda_num > 0:
+    cuda_list = list(range(cuda_num))
+    TransDDQN_device = f"cuda:{cuda_list[cuda_num-1]}"
+    MADDPG_device = f"cuda:{cuda_list[cuda_num - 2]}"
+    transformer_device = f"cuda:{cuda_list[1]}"
+
 
 def parseTransDDQNTrainArgs():
     parser = argparse.ArgumentParser(description='TransDDQN train arguments')
-    parser.add_argument('--buffer_size', type=int, default=500)  # 经验池容量
+    parser.add_argument('--buffer_size', type=int, default=5000)  # 经验池容量
     parser.add_argument('--learning_rate', type=float, default=2e-3)  # 学习率
     parser.add_argument('--gamma', type=float, default=0.9)  # 折扣因子
     parser.add_argument('--epsilon', type=float, default=0.9)  # 探索系数
     parser.add_argument('--eps_end', type=float, default=0.01)  # 最低探索系数
     parser.add_argument('--eps_dec', type=float, default=5e-7)  # 探索系数衰减率
     parser.add_argument('--target_update', type=int, default=200)  # 目标网络的参数的更新频率
-    parser.add_argument('--batch_size', type=int, default=64)  # 每次训练选取的经验数量
+    parser.add_argument('--batch_size', type=int, default=1)  # 每次训练选取的经验数量32
     parser.add_argument('--dim_hidden', type=int, default=128)  # 隐含层神经元个数
-    parser.add_argument('--train_min_size', type=int, default=200)  # 经验池超过200后再训练(train_min_size>batch_size)
+    parser.add_argument('--train_min_size', type=int, default=1)  # 经验池超过200后再训练(train_min_size>batch_size)
     parser.add_argument('--tau', type=float, default=0.995)  # 目标网络软更新平滑因子(策略网络权重)
     parser.add_argument('--smooth_factor', type=float, default=0.995)  # 最大q值平滑因子（旧值权重）
-    parser.add_argument('--device', type=str, default=device)  # 训练设备(GPU/CPU)
+    parser.add_argument('--device', type=str, default=TransDDQN_device)  # 训练设备(GPU/CPU)
     parser.add_argument('--model_base_dir', type=str, default="models/TransDDQN/")  # 模型文件路径
 
     args = parser.parse_args()
@@ -59,18 +67,18 @@ def parseTransDDQNDimArgs():
 
 def parseMADDPGTrainArgs():
     parser = argparse.ArgumentParser(description='MADDPG train arguments')
-    parser.add_argument('--buffer_size', type=int, default=1000)  # 经验池容量
+    parser.add_argument('--buffer_size', type=int, default=5000)  # 经验池容量
     parser.add_argument('--learning_rate', type=float, default=2e-3)  # 学习率
     parser.add_argument('--gamma', type=float, default=0.9)  # 折扣因子
     parser.add_argument('--var', type=float, default=1.0)  # 动作探索随机噪声
     parser.add_argument('--var_end', type=float, default=0.01)  # 最低噪声
     parser.add_argument('--var_dec', type=float, default=2e-5)  # 噪声衰减率
     parser.add_argument('--target_update', type=int, default=200)  # 目标网络的参数的更新频率
-    parser.add_argument('--batch_size', type=int, default=64)  # 每次训练选取的经验数量
+    parser.add_argument('--batch_size', type=int, default=32)  # 每次训练选取的经验数量
     parser.add_argument('--dim_hidden', type=int, default=128)  # 隐含层神经元个数
     parser.add_argument('--train_min_size', type=int, default=200)  # 经验池超过200后再训练(train_min_size>batch_size)
     parser.add_argument('--tau', type=float, default=0.995)  # 目标网络软更新平滑因子(策略网络权重)
-    parser.add_argument('--device', type=str, default=device)  # 训练设备(GPU/CPU)
+    parser.add_argument('--device', type=str, default=MADDPG_device)  # 训练设备(GPU/CPU)
     parser.add_argument('--model_base_dir', type=str, default="models/MADDPG/")  # 模型文件路径
     args = parser.parse_args()
     return args
@@ -147,8 +155,8 @@ class TransDDQN_MADDPG_AlgorithmModule(BaseAlgorithmModule):
             next_sensor_mask = exp['next_sensor_mask']
             done = exp['done']
             return np.array(node_state), np.array(mission_state), np.array(sensor_state), np.array(
-                sensor_mask), action, reward, np.array(next_node_state), np.array(next_mission_state), np.array(
-                next_sensor_state), np.array(next_sensor_mask), done
+                sensor_mask), np.array(action), np.array(reward), np.array(next_node_state), np.array(next_mission_state), np.array(
+                next_sensor_state), np.array(next_sensor_mask), np.array(done)
 
         def add(self, exp_id, node_state, mission_state, sensor_state, sensor_mask, action, reward=None,
                 next_node_state=None, next_mission_state=None, next_sensor_state=None, next_sensor_mask=None,
@@ -220,6 +228,7 @@ class TransDDQN_MADDPG_AlgorithmModule(BaseAlgorithmModule):
     def __init__(self):
         super().__init__()
         self.algorithm_module_tag = "TDDQN_MADDPG"
+        print('algorithm: ', self.algorithm_module_tag)
 
     def initialize(self, env: AirFogSimEnv, config={}, last_episode=None):
         """Initialize the algorithm with the environment. Including setting the task generation model, setting the reward model, etc.
@@ -256,13 +265,13 @@ class TransDDQN_MADDPG_AlgorithmModule(BaseAlgorithmModule):
         self.TransDDQN_dim_args = parseTransDDQNDimArgs()
         self.TransDDQN_train_args = parseTransDDQNTrainArgs()
         self.TransDDQN_env = TransDDQN_Env(self.TransDDQN_dim_args, self.TransDDQN_train_args)
-        if last_episode is not None:
+        if last_episode is not None and last_episode > 0:
             self.TransDDQN_env.loadModel(last_episode)
 
         self.MADDPG_dim_args = parseMADDPGDimArgs()
         self.MADDPG_train_args = parseMADDPGTrainArgs()
         self.MADDPG_env = MADDPG_Env(self.MADDPG_dim_args, self.MADDPG_train_args)
-        if last_episode is not None:
+        if last_episode is not None and last_episode > 0:
             self.MADDPG_env.loadModel(last_episode)
 
         self.last_mission_id = None  # Last allocated mission id,used in next state update
@@ -284,8 +293,16 @@ class TransDDQN_MADDPG_AlgorithmModule(BaseAlgorithmModule):
 
         encode_states = []
 
-        for node_state in node_states:
+        # 删除可能超出最大节点数的节点（一般是因为车辆超出）
+        if len(node_states) > max_node_num:
+            to_delete_num = max_node_num - len(node_states)
+            for i in range(len(node_states) - 1, -1, -1):
+                if node_states[i][1] == 'V':
+                    del node_states[i]
+                if to_delete_num == 0:
+                    break
 
+        for node_state in node_states:
             node_type = self.node_type_dict.get(node_state[1], -1)
             is_mission_node = int(node_state[2])
             is_schedulable = int(node_state[3])
@@ -341,6 +358,16 @@ class TransDDQN_MADDPG_AlgorithmModule(BaseAlgorithmModule):
 
         encode_states = []
         encode_mask = []
+
+        # 删除可能超出最大节点数的节点（一般是因为车辆超出）
+        if len(sensor_states) > max_sensor_node_num:
+            to_delete_num = len(sensor_states) - max_sensor_node_num
+            for i in range(len(sensor_states) - 1, -1, -1):
+                if sensor_states[i][0][1] == 'V':
+                    del sensor_states[i]
+                    to_delete_num -= 1
+                if to_delete_num == 0:
+                    break
 
         # 1. 删除不需要的属性
         for node_group in sensor_states:
@@ -716,11 +743,13 @@ class TransDDQN_MADDPG_AlgorithmModule(BaseAlgorithmModule):
         last_step_fail_mission_infos = self.missionScheduler.getLastStepFailMissionInfos(env)
         for mission_info in last_step_succ_mission_infos:
             reward = self.rewardScheduler.getRewardByMission(env, mission_info)
-            exp = self.replay_buffer.completeAndPopExperience(mission_info['mission_id'], reward)
+            # reward要转成标准float型，否则以Float对象存入会出问题
+            exp = self.ta_buffer.completeAndPopExperience(mission_info['mission_id'], float(reward))
             self.TransDDQN_env.addExperience(*exp)
         for mission_info in last_step_fail_mission_infos:
             reward = self.rewardScheduler.getPunishByMission(env, mission_info)
-            exp = self.replay_buffer.completeAndPopExperience(mission_info['mission_id'], reward)
+            # reward要转成标准float型，否则以Float对象存入会出问题
+            exp = self.ta_buffer.completeAndPopExperience(mission_info['mission_id'], float(reward))
             self.TransDDQN_env.addExperience(*exp)
 
     def updatePPExperience(self, env: AirFogSimEnv):

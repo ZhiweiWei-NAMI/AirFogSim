@@ -62,15 +62,14 @@ class MADDPG:
         # 经验池
         self.memory = ReplayBuffer(buffer_size=self.buffer_size, train_min_size=self.train_min_size)
 
-        if self.device == 'cuda':
-            for x in self.actors:
-                x.cuda()
-            for x in self.critics:
-                x.cuda()
-            for x in self.actors_target:
-                x.cuda()
-            for x in self.critics_target:
-                x.cuda()
+        for x in self.actors:
+            x.to(self.device)
+        for x in self.critics:
+            x.to(self.device)
+        for x in self.actors_target:
+            x.to(self.device)
+        for x in self.critics_target:
+            x.to(self.device)
 
         # 记录迭代次数
         self.steps_done = 0

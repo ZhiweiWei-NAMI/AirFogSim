@@ -364,7 +364,9 @@ class MissionManager:
         total_count = 0
         for node_id in self._success_missions:
             success_count += len(self._success_missions[node_id])
-            total_count += len(self._success_missions[node_id]) + len(self._failed_missions.get(node_id, []))
+            total_count += len(self._success_missions[node_id])
+        for node_id in self._failed_missions:
+            total_count += len(self._failed_missions.get(node_id, []))
         total_count+= len(self._early_failed_missions)
         ratio = success_count / total_count if total_count > 0 else 0.0
         return ratio, total_count

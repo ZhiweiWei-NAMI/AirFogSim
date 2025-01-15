@@ -26,7 +26,7 @@ def load_config(path):
         return config
 
 
-last_episode = 74
+last_episode = 172
 max_episode = 200
 
 # 启动性能监控
@@ -47,7 +47,7 @@ env = AirFogSimEnv(config, interactive_mode=None)
 # env = AirFogSimEnv(config, interactive_mode='graphic')
 
 # 4. Initialize the algorithm module (initialize in every episode)
-algorithm_module.initialize(env)
+algorithm_module.initialize(env,last_episode=last_episode)
 
 # 5. Create the evaluation module
 evaluation_module = AirFogSimEvaluation(algorithm_module.getAlgorithmTag())

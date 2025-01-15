@@ -28,12 +28,15 @@ class GreedyAlgorithmModule(BaseAlgorithmModule):
     def __init__(self):
         super().__init__()
         self.algorithm_module_tag="Greedy"
+        print('algorithm: ',self.algorithm_module_tag)
 
-    def initialize(self, env: AirFogSimEnv, config={}):
+    def initialize(self, env: AirFogSimEnv, config={}, last_episode=None):
         """Initialize the algorithm with the environment. Including setting the task generation model, setting the reward model, etc.
 
         Args:
             env (AirFogSimEnv): The environment object.
+            config (dict): The configuration dictionary.
+            last_episode (int): The last episode number.
         """
         self.rewardScheduler.setModel(env, 'REWARD',
                                       '5 * log(10, 1 + (_mission_deadline-_mission_duration_sum)) * (1 / (1 + exp(-(_mission_deadline-_mission_duration_sum) / (_mission_finish_time - _mission_arrival_time-_mission_duration_sum))) - 1 / (1 + exp(-1)))')

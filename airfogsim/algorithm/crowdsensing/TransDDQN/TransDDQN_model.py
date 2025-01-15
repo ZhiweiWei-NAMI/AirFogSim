@@ -73,8 +73,11 @@ class TransDDQN:
         sensor_state = torch.tensor(sensor_state[np.newaxis, :], dtype=torch.float).to(self.device)
         # numpy[m_uv, max_sensors]-->[1, m_uv, max_sensors]-->Tensor
         sensor_mask = torch.tensor(sensor_mask[np.newaxis, :], dtype=torch.bool).to(self.device)
-        # 获取当前状态下采取各动作的q值
-        q_values = self.q_net(node_state, mission_state, sensor_state, sensor_mask)
+
+        with torch.no_grad():
+            # 获取当前状态下采取各动作的q值
+            q_values = self.q_net(node_state, mission_state, sensor_state, sensor_mask)
+
         # 非法动作置为最小值
         flatten_mask=sensor_mask.flatten()
         flatten_q_values=q_values.flatten()
@@ -116,35 +119,35 @@ class TransDDQN:
 
         # 当前状态
         # numpy[batch_size, m1, dim_node]-->Tensor[batch_size, m1, dim_node]
-        node_states = torch.tensor(node_states, dtype=torch.float)
+        node_states = torch.tensor(node_states, dtype=torch.float).to(self.device)
         # numpy[batch_size, dim_mission]-->Tensor[batch_size, dim_mission]
-        mission_states = torch.tensor(mission_states, dtype=torch.float)
+        mission_states = torch.tensor(mission_states, dtype=torch.float).to(self.device)
         # numpy[batch_size, m_uv, max_sensors, dim_sensor]-->Tensor[batch_size, m_uv, max_sensors, dim_sensor]
-        sensor_states = torch.tensor(sensor_states, dtype=torch.float)
+        sensor_states = torch.tensor(sensor_states, dtype=torch.float).to(self.device)
         # numpy[batch_size, m_uv, max_sensors]-->Tensor[batch_size, m_uv, max_sensors]
-        sensor_masks = torch.tensor(sensor_masks, dtype=torch.bool)
+        sensor_masks = torch.tensor(sensor_masks, dtype=torch.bool).to(self.device)
 
         # 当前动作索引
         # numpy[batch_size]-->Tensor[batch_size]
-        actions = torch.tensor(actions, dtype=torch.int64)
+        actions = torch.tensor(actions, dtype=torch.int64).to(self.device)
 
         # 当前动作的奖励
-        # numpy[batch_size]-->Tensor[batch_size]
-        rewards = torch.tensor(rewards, dtype=torch.float).view(-1, 1)
+        # numpy[batch_size]-->Tensor[batch_size
+        rewards = torch.tensor(rewards, dtype=torch.float).to(self.device)
 
         # 下一状态
         # numpy[batch_size, m1, dim_node]-->Tensor[batch_size, m1, dim_node]
-        next_node_states = torch.tensor(next_node_states, dtype=torch.float)
+        next_node_states = torch.tensor(next_node_states, dtype=torch.float).to(self.device)
         # numpy[batch_size, dim_mission]-->Tensor[batch_size, dim_mission]
-        next_mission_states = torch.tensor(next_mission_states, dtype=torch.float)
+        next_mission_states = torch.tensor(next_mission_states, dtype=torch.float).to(self.device)
         # numpy[batch_size, m_uv, max_sensors, dim_sensor]-->Tensor[batch_size, m_uv, max_sensors, dim_sensor]
-        next_sensor_states = torch.tensor(next_sensor_states, dtype=torch.float)
+        next_sensor_states = torch.tensor(next_sensor_states, dtype=torch.float).to(self.device)
         # numpy[batch_size, m_uv, max_sensors]-->Tensor[batch_size, m_uv, max_sensors]
-        next_sensor_masks = torch.tensor(next_sensor_masks, dtype=torch.bool)
+        next_sensor_masks = torch.tensor(next_sensor_masks, dtype=torch.bool).to(self.device)
 
         # 是否到达目标
         # numpy[batch_size]-->Tensor[batch_size]
-        dones = torch.tensor(dones, dtype=torch.bool)
+        dones = torch.tensor(dones, dtype=torch.bool).to(self.device)
 
         # # 当前状态，array_shape=[b,4]
         # states = torch.tensor(states, dtype=torch.float)
