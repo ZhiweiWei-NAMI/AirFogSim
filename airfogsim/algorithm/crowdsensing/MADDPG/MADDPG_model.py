@@ -9,18 +9,16 @@ from torch.optim import Adam
 from torch.nn import functional as F
 import torch.nn as nn
 import numpy as np
+import logging
 
 
-def soft_update(target, source, t):
-    for target_param, source_param in zip(target.parameters(),
-                                          source.parameters()):
-        target_param.data.copy_(
-            (1 - t) * target_param.data + t * source_param.data)
+def soft_update(target, source, tau):
+    for target_param, source_param in zip(target.parameters(),source.parameters()):
+        target_param.data.copy_((1 - tau) * target_param.data + tau * source_param.data)
 
 
 def hard_update(target, source):
-    for target_param, source_param in zip(target.parameters(),
-                                          source.parameters()):
+    for target_param, source_param in zip(target.parameters(),source.parameters()):
         target_param.data.copy_(source_param.data)
 
 
@@ -30,6 +28,7 @@ class MADDPG:
         self.n_agents = dim_args.n_agents
         self.dim_obs = dim_args.dim_observation
         self.dim_act = dim_args.dim_action
+        self.dim_hiddens = dim_args.dim_hiddens
 
         # 训练超参数
         self.buffer_size = train_args.buffer_size
@@ -40,15 +39,14 @@ class MADDPG:
         self.var_dec = train_args.var_dec
         self.target_update = train_args.target_update
         self.batch_size = train_args.batch_size
-        self.dim_hidden = train_args.dim_hidden
         self.train_min_size = train_args.train_min_size
         self.tau = train_args.tau
         self.device = train_args.device
 
         # 实例化策略训练网络*n
-        self.actors = [Actor(self.dim_obs, self.dim_act, self.dim_hidden) for i in range(self.n_agents)]
+        self.actors = [Actor(self.dim_obs, self.dim_act, self.dim_hiddens) for i in range(self.n_agents)]
         # 实例化价值训练网络*n
-        self.critics = [Critic(self.n_agents, self.dim_obs, self.dim_act, self.dim_hidden) for i in
+        self.critics = [Critic(self.n_agents, self.dim_obs, self.dim_act, self.dim_hiddens) for i in
                         range(self.n_agents)]
         # 实例化目标策略网络*n
         self.actors_target = deepcopy(self.actors)
@@ -74,12 +72,35 @@ class MADDPG:
         # 记录迭代次数
         self.steps_done = 0
 
+    def remember(self, state, action, reward, next_state):
+        self.memory.add(state, action, reward, next_state)
+
+    def take_action(self, agents_state):
+        # agents_state: [n_agents, state_dim]
+        agents_state=torch.tensor(agents_state,dtype=torch.float).to(self.device)
+        actions=[]
+        with torch.no_grad():
+            for i in range(self.n_agents):
+                self.actors[i].eval()
+                state = agents_state[i, :]
+                action = self.actors[i](state.unsqueeze(0)).squeeze(0) # 只压缩batch维度
+                noise=(torch.from_numpy((np.random.rand(self.dim_act) * 2 - 1) )* self.var[i]).to(self.device)
+                action +=noise   # 添加[-1,1]随机噪声
+                action = torch.clamp(action, 0, 1)  # 限制动作范围在[0,1]
+                actions.append(action)
+                if self.var[i] > self.var_end:
+                    self.var[i] *= self.var_dec # 噪声衰减
+        self.steps_done += 1
+
+
+        return actions
+
     def update(self):
         if not self.memory.ready():
-            return
+            return  None, None
 
-        c_loss = []
-        a_loss = []
+        c_loss=[]
+        a_loss=[]
         for agent in range(self.n_agents):
             # 同一时间的全局state,action,next_state,reward
             states, actions, rewards, next_states= self.memory.sample(self.batch_size)
@@ -108,12 +129,7 @@ class MADDPG:
                 q_targets_i = self.critics_target[agent](next_whole_states, next_whole_actions)
                 td_targets_i = rewards[:, agent].unsqueeze(-1) + self.gamma * q_targets_i
 
-            # print(rewards.shape)
-            # print(rewards[:, agent].shape)
-            # print(q_targets_i.shape)
-            #
-            # print(q_values_i.shape)
-            # print(td_targets_i.shape)
+
             critic_loss = F.mse_loss(q_values_i, td_targets_i.detach())
             self.critic_optimizer[agent].zero_grad()
             critic_loss.backward()
@@ -132,65 +148,79 @@ class MADDPG:
             actor_loss.backward()
             self.actor_optimizer[agent].step()
 
-            c_loss.append(critic_loss.item())
-            a_loss.append(actor_loss.item())
+            c_loss.append(critic_loss.detach().item())
+            a_loss.append(actor_loss.detach().item())
 
         if self.steps_done % self.target_update == 0 and self.steps_done > 0:
             for i in range(self.n_agents):
                 soft_update(self.critics_target[i], self.critics[i], self.tau)
                 soft_update(self.actors_target[i], self.actors[i], self.tau)
 
-        return c_loss, a_loss
+        return a_loss,c_loss
 
-    def remember(self, state, action, reward, next_state):
-        self.memory.add(state, action, reward, next_state)
 
-    def take_action(self, agents_state):
-        # agents_state: [n_agents, state_dim]
-        agents_state=torch.tensor(agents_state,dtype=torch.float).to(self.device)
-        actions=[]
-        for i in range(self.n_agents):
-            state = agents_state[i, :].detach()
-            action = self.actors[i](state.unsqueeze(0)).squeeze()
-            action += torch.from_numpy(np.random.rand(self.dim_act) * 2 - 1 * self.var[i]).to(self.device)  # 添加[-1,1]随机噪声
-            action = torch.clamp(action, 0, 1)  # 限制动作范围在[0,1]
-            actions.append(action)
-            if self.var[i] > self.var_end:
-                self.var[i] *= self.var_dec # 噪声衰减
-        self.steps_done += 1
-
-        return actions
-
-    def save_models(self, episode, base_dir):
-        file_dir = f"{base_dir}/episode_{episode}/"
+    def save_models(self, episode, base_dir,final):
+        if final is True:
+            file_dir = f"{base_dir}/final"
+        else:
+            file_dir=f"{base_dir}/episode_{episode}"
         if not os.path.exists(file_dir):
             os.makedirs(file_dir)
+        logging.basicConfig(
+            level=logging.INFO,  # 日志级别
+            format='%(asctime)s [%(levelname)s] %(message)s',  # 日志格式
+            datefmt='%Y-%m-%d %H:%M:%S',  # 时间格式
+            filename=f'{file_dir}/model.log',  # 日志文件名
+            filemode='a'  # 追加模式写入日志文件
+        )
 
         for i in range(self.n_agents):
-            self.critics_target[i].save_model(file_dir + f'MADDPG_critics_target_{i}.pth')
+            self.critics_target[i].save_model(file_dir + f'/MADDPG_critics_target_{i}.pth')
             print(f'Saving MADDPG_critics_target_{i} network successfully!')
-            self.actors_target[i].save_model(file_dir + f'MADDPG_actors_target_{i}.pth')
+            logging.info(f'Saving MADDPG_critics_target_{i} network successfully!')
+            self.actors_target[i].save_model(file_dir + f'/MADDPG_actors_target_{i}.pth')
             print(f'Saving MADDPG_actors_target_{i} network successfully!')
-            self.critics[i].save_model(file_dir + f'MADDPG_critics_{i}.pth')
+            logging.info(f'Saving MADDPG_actors_target_{i} network successfully!')
+            self.critics[i].save_model(file_dir + f'/MADDPG_critics_{i}.pth')
             print(f'Saving MADDPG_critics_{i} network successfully!')
-            self.actors[i].save_model(file_dir + f'MADDPG_actorst_{i}.pth')
-            print(f'Saving MADDPG_actorst_{i} network successfully!')
+            logging.info(f'Saving MADDPG_critics_{i} network successfully!')
+            self.actors[i].save_model(file_dir + f'/MADDPG_actors_{i}.pth')
+            print(f'Saving MADDPG_actors_{i} network successfully!')
+            logging.info(f'Saving MADDPG_actors_{i} network successfully!')
 
-        self.memory.save(file_dir+f'MADDPG_memory.pkl')
+        self.memory.save(file_dir+f'/MADDPG_memory.pkl')
         print('Saving MADDPG memory successfully!')
+        logging.info('Saving MADDPG memory successfully!')
 
-    def load_models(self, episode, base_dir):
-        file_dir = f"{base_dir}/episode_{episode}/"
+
+    def load_models(self, episode, base_dir,final):
+        if final is True:
+            file_dir = f"{base_dir}/final"
+        else:
+            file_dir=f"{base_dir}/episode_{episode}"
+
+        logging.basicConfig(
+            level=logging.INFO,  # 日志级别
+            format='%(asctime)s [%(levelname)s] %(message)s',  # 日志格式
+            datefmt='%Y-%m-%d %H:%M:%S',  # 时间格式
+            filename=f'{file_dir}/model.log',  # 日志文件名
+            filemode='a'  # 追加模式写入日志文件
+        )
 
         for i in range(self.n_agents):
-            self.critics_target[i].load_model(file_dir + f'MADDPG_critics_target_{i}.pth')
+            self.critics_target[i].load_model(file_dir + f'/MADDPG_critics_target_{i}.pth')
             print(f'Loading MADDPG_critics_target_{i} network successfully!')
-            self.actors_target[i].load_model(file_dir + f'MADDPG_actors_target_{i}.pth')
+            logging.info(f'Loading MADDPG_critics_target_{i} network successfully!')
+            self.actors_target[i].load_model(file_dir + f'/MADDPG_actors_target_{i}.pth')
             print(f'Loading MADDPG_actors_target_{i} network successfully!')
-            self.critics[i].load_model(file_dir + f'MADDPG_critics_{i}.pth')
+            logging.info(f'Loading MADDPG_actors_target_{i} network successfully!')
+            self.critics[i].load_model(file_dir + f'/MADDPG_critics_{i}.pth')
             print(f'Loading MADDPG_critics_{i} network successfully!')
-            self.actors[i].load_model(file_dir + f'MADDPG_actorst_{i}.pth')
-            print(f'Loading MADDPG_actorst_{i} network successfully!')
+            logging.info(f'Loading MADDPG_critics_{i} network successfully!')
+            self.actors[i].load_model(file_dir + f'/MADDPG_actors_{i}.pth')
+            print(f'Loading MADDPG_actors_{i} network successfully!')
+            logging.info(f'Loading MADDPG_actors_{i} network successfully!')
 
-        self.memory.load(file_dir+f'MADDPG_memory.pkl')
+        self.memory.load(file_dir+f'/MADDPG_memory.pkl')
         print('Loading MADDPG memory successfully!')
+        logging.info('Loading MADDPG memory successfully!')

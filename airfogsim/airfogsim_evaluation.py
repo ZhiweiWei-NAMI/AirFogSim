@@ -9,13 +9,13 @@ import matplotlib.pyplot as plt
 
 
 class AirFogSimEvaluation:
-    def __init__(self,tag):
+    def __init__(self, tag):
         self.initOrResetStepIndicators()
         self.initOrResetStepRecords()
         self.initOrResetEpisodeRecords()
         # Path to save image
-        self.base_path = f"../evaluation/{tag}/"
-        self.tag=tag
+        self.base_path = f"./evaluation/" # 和main在同一文件夹下
+        self.tag = tag
         if not os.path.exists(self.base_path):
             os.makedirs(self.base_path)
 
@@ -37,18 +37,29 @@ class AirFogSimEvaluation:
         self.traffic_step_fail_num = 0
         self.traffic_step_early_fail_num = 0
 
+        self.finish_mission_num = 0
+
+        self.finish_mission_num_on_vehicle = 0
+        self.fail_mission_num_on_vehicle = 0
+        self.success_mission_num_on_vehicle = 0
+        self.completion_ratio_on_vehicle = 0
+
+        self.finish_mission_num_on_UAV = 0
+        self.fail_mission_num_on_UAV = 0
+        self.success_mission_num_on_UAV = 0
+        self.completion_ratio_on_UAV = 0
+
         # 3.信道速率指标
         self.avg_trans_rate = 0
         self.avg_V2U_trans_rate = 0
         self.avg_V2I_trans_rate = 0
         self.avg_U2I_trans_rate = 0
-        self.V2U_data_trans_list= []
+        self.V2U_data_trans_list = []
         self.V2I_data_trans_list = []
         self.U2I_data_trans_list = []
         self.V2U_link_using = []
         self.V2I_link_using = []
         self.U2I_link_using = []
-
 
         # 4.reward
         self.sum_reward = 0
@@ -58,16 +69,7 @@ class AirFogSimEvaluation:
 
         # 5.ratio
         # 5.1 completion ratio
-        self.finish_mission_num = 0
         self.completion_ratio = 0
-
-        self.finish_mission_num_on_vehicle=0
-        self.success_mission_num_on_vehicle=0
-        self.completion_ratio_on_vehicle=0
-
-        self.finish_mission_num_on_UAV=0
-        self.success_mission_num_on_UAV = 0
-        self.completion_ratio_on_UAV = 0
 
         # 5.2 weighted acceleration ratio
         self.sum_weight = 0
@@ -84,8 +86,24 @@ class AirFogSimEvaluation:
         self.avg_floating_time = 0
         self.avg_executing_time = 0
 
+        # move time before arrive PoI
+        self.sum_move_time = 0
+        self.avg_move_time = 0
+        self.sum_move_time_on_UAV = 0
+        self.avg_move_time_on_UAV = 0
+        self.sum_move_time_on_vehicle = 0
+        self.avg_move_time_on_vehicle = 0
+
+        # tramsmission time after sensing
+        self.sum_trans_time = 0
+        self.avg_trans_time = 0
+        self.sum_trans_time_on_UAV = 0
+        self.avg_trans_time_on_UAV = 0
+        self.sum_trans_time_on_vehicle = 0
+        self.avg_trans_time_on_vehicle = 0
+
     def initOrResetStepRecords(self):
-        self.step_num=0
+        self.step_num = 0
         # 2.过程监控
         self.step_to_generate_missions_num = []
         self.step_executing_missions_num = []
@@ -98,6 +116,11 @@ class AirFogSimEvaluation:
         self.step_success_num = []
         self.step_fail_num = []
         self.step_early_fail_num = []
+
+        self.step_sum_success_num_on_UAV = []
+        self.step_sum_fail_num_on_UAV = []
+        self.step_sum_success_num_on_vehicle = []
+        self.step_sum_fail_num_on_vehicle = []
 
         # 3.信道速率指标
         self.step_avg_trans_rate = []
@@ -125,14 +148,32 @@ class AirFogSimEvaluation:
         self.step_avg_floating_time = []
         self.step_avg_executing_time = []
 
+        self.step_avg_move_time = []
+        self.step_avg_move_time_on_UAV = []
+        self.step_avg_move_time_on_vehicle = []
+
+        self.step_avg_trans_time = []
+        self.step_avg_trans_time_on_UAV = []
+        self.step_avg_trans_time_on_vehicle = []
+
     def initOrResetEpisodeRecords(self):
-        self.episode_num=0
+        self.episode_num = 0
         # 2.过程监控
         self.episode_to_generate_missions_num = []
         self.episode_executing_missions_num = []
         self.episode_success_missions_num = []
         self.episode_failed_missions_num = []
         self.episode_early_failed_missions_num = []
+
+        self.episode_sum_success_num_on_UAV = []
+        self.episode_sum_fail_num_on_UAV = []
+        self.episode_sum_success_num_on_vehicle = []
+        self.episode_sum_fail_num_on_vehile = []
+
+        self.episode_sum_success_num_on_UAV = []
+        self.episode_sum_fail_num_on_UAV = []
+        self.episode_sum_success_num_on_vehicle = []
+        self.episode_sum_fail_num_on_vehicle = []
 
         # 3.信道速率指标
         self.episode_avg_trans_rate = []
@@ -160,6 +201,26 @@ class AirFogSimEvaluation:
         self.episode_avg_floating_time = []
         self.episode_avg_executing_time = []
 
+        self.episode_avg_move_time = []
+        self.episode_avg_move_time_on_UAV = []
+        self.episode_avg_move_time_on_vehicle = []
+
+        self.episode_avg_trans_time = []
+        self.episode_avg_trans_time_on_UAV = []
+        self.episode_avg_trans_time_on_vehicle = []
+
+    def updateAndSaveStepRecords(self, env, algorithm_module):
+        self.updateEvaluationIndicators(env, algorithm_module) # 更新step信息
+        self.addToStepRecord() # step record添加一条记录
+
+    def updateAndSaveEpisodeRecords(self, episode):
+        self.addToEpisodeRecord()  # episode record 添加一条记录
+        self.stepRecordToFile(episode) # 将本轮episode所有step记录保存为json（一组记录）
+        self.episodeRecordToFile(episode) # 将本episode记录添加到file（一条记录）
+        self.drawStepRecordsByFile(episode) # 可视化本episode记录（一组记录，所有step）
+        self.initOrResetStepRecords() # 重新初始化记录一个episode每step情况的数组
+        self.initOrResetStepIndicators() # 重新初始化记录step实时信息的指标
+
     def updateEvaluationIndicators(self, env, algorithm_module):
         step_reward, step_punish, step_sum_reward = algorithm_module.getRewardByMission(
             env)  # success reward, fail punish, sum of reward and punish
@@ -186,17 +247,40 @@ class AirFogSimEvaluation:
 
         self.finish_mission_num = sum_over_missions
 
-
-        self.traffic_step_generate_num,self.traffic_step_allocate_num = env.getMissionEvaluationIndicators()
+        self.traffic_step_generate_num, self.traffic_step_allocate_num = env.getMissionEvaluationIndicators()
         self.traffic_step_success_num = len(last_step_succ_mission_infos)
         self.traffic_step_fail_num = len(last_step_fail_mission_infos)
         self.traffic_step_early_fail_num = len(last_step_early_fail_mission_infos)
 
+        for mission_info in last_step_succ_mission_infos:
+            appointed_node_id = mission_info['appointed_node_id']
+            node_type = self.__getNodeTypeById(appointed_node_id)
+            if node_type == 'V':
+                self.finish_mission_num_on_vehicle += 1
+                self.success_mission_num_on_vehicle += 1
+            elif node_type == 'U':
+                self.finish_mission_num_on_UAV += 1
+                self.success_mission_num_on_UAV += 1
+            else:
+                raise TypeError('Node type is invalid')
+
+        for mission_info in last_step_fail_mission_infos:
+            appointed_node_id = mission_info['appointed_node_id']
+            node_type = self.__getNodeTypeById(appointed_node_id)
+            if node_type == 'V':
+                self.finish_mission_num_on_vehicle += 1
+                self.fail_mission_num_on_vehicle += 1
+            elif node_type == 'U':
+                self.finish_mission_num_on_UAV += 1
+                self.fail_mission_num_on_UAV += 1
+            else:
+                raise TypeError('Node type is invalid')
+
         # 3.信道速率指标
-        self.avg_trans_rate = env.getChannelAvgRate()
-        self.avg_V2U_trans_rate = env.getChannelAvgRate('V2U')
-        self.avg_V2I_trans_rate = env.getChannelAvgRate('V2I')
-        self.avg_U2I_trans_rate = env.getChannelAvgRate('U2I')
+        self.avg_trans_rate = float(env.getChannelAvgRate())
+        self.avg_V2U_trans_rate = float(env.getChannelAvgRate('V2U'))
+        self.avg_V2I_trans_rate = float(env.getChannelAvgRate('V2I'))
+        self.avg_U2I_trans_rate = float(env.getChannelAvgRate('U2I'))
         self.V2U_data_trans_list = env.getChannelTransDataHistory('V2U')
         self.V2I_data_trans_list = env.getChannelTransDataHistory('V2I')
         self.U2I_data_trans_list = env.getChannelTransDataHistory('U2I')
@@ -207,9 +291,8 @@ class AirFogSimEvaluation:
         # 4.reward
         self.sum_reward += step_sum_reward
         self.sum_success_reward += step_reward
-        self.avg_reward = self.sum_reward / self.finish_mission_num if self.finish_mission_num != 0 else 0
-        self.avg_success_reward = self.sum_success_reward / self.success_missions_num if self.success_missions_num != 0 else 0
-
+        self.avg_reward = float(self.sum_reward / self.finish_mission_num) if self.finish_mission_num != 0 else 0
+        self.avg_success_reward = float(self.sum_success_reward / self.success_missions_num) if self.success_missions_num != 0 else 0
 
         # 5.ratio
         # 5.1 completion ratio (all)
@@ -227,46 +310,48 @@ class AirFogSimEvaluation:
             self.sum_weighted_acceleration_ratio += weight * ratio
             self.sum_acceleration_ratio += ratio
 
-        self.weighted_acceleration_ratio = self.sum_weighted_acceleration_ratio / self.sum_weight if self.sum_weight > 0.0 else 0
-        self.acceleration_ratio = self.sum_acceleration_ratio / self.success_missions_num if self.success_missions_num > 0 else 0
+        self.weighted_acceleration_ratio = float(self.sum_weighted_acceleration_ratio / self.sum_weight) if self.sum_weight > 0.0 else 0
+        self.acceleration_ratio = float(self.sum_acceleration_ratio / self.success_missions_num) if self.success_missions_num > 0 else 0
 
         # 5.2 completion ratio (Classified by type, not consider early fail)
-        for mission_info in last_step_succ_mission_infos:
-            appointed_node_id=mission_info['appointed_node_id']
-            node_type=self.__getNodeTypeById(appointed_node_id)
-            if node_type=='V':
-                self.finish_mission_num_on_vehicle+=1
-                self.success_mission_num_on_vehicle+=1
-            elif node_type=='U':
-                self.finish_mission_num_on_UAV += 1
-                self.success_mission_num_on_UAV += 1
-            else:
-                raise TypeError('Node type is invalid')
-
-        for mission_info in last_step_fail_mission_infos:
-            appointed_node_id=mission_info['appointed_node_id']
-            node_type=self.__getNodeTypeById(appointed_node_id)
-            if node_type=='V':
-                self.finish_mission_num_on_vehicle+=1
-            elif node_type=='U':
-                self.finish_mission_num_on_UAV += 1
-            else:
-                raise TypeError('Node type is invalid')
-
-        self.completion_ratio_on_vehicle=self.success_mission_num_on_vehicle / self.finish_mission_num_on_vehicle if self.finish_mission_num_on_vehicle > 0 else 0
-        self.completion_ratio_on_UAV=self.success_mission_num_on_UAV / self.finish_mission_num_on_UAV if self.finish_mission_num_on_UAV > 0 else 0
+        self.completion_ratio_on_vehicle = float(self.success_mission_num_on_vehicle / self.finish_mission_num_on_vehicle) if self.finish_mission_num_on_vehicle > 0 else 0
+        self.completion_ratio_on_UAV = float(self.success_mission_num_on_UAV / self.finish_mission_num_on_UAV) if self.finish_mission_num_on_UAV > 0 else 0
 
         # optimization objectives
         for mission_info in last_step_succ_mission_infos:
+            appointed_node_id = mission_info['appointed_node_id']
+            node_type = self.__getNodeTypeById(appointed_node_id)
             duration = mission_info['mission_duration_sum']
-            finish_time = mission_info['mission_finish_time']
-            arrival_time = mission_info['mission_arrival_time']
-            self.sum_executing_time += finish_time - arrival_time
+            mission_finish_time = mission_info['mission_finish_time']
+            mission_arrival_time = mission_info['mission_arrival_time']
+            mission_start_time = mission_info['mission_start_time']
+            sensing_finish_time = mission_info['sensing_finish_time']
+            pre_move_time = sensing_finish_time-mission_start_time - duration
+            transmission_time = mission_finish_time - sensing_finish_time
+            self.sum_executing_time += mission_finish_time - mission_arrival_time
             self.sum_sensing_time += duration
 
-        self.avg_floating_time = (self.sum_executing_time - self.sum_sensing_time) / self.success_missions_num if self.success_missions_num > 0 else 0
-        self.avg_executing_time = self.sum_executing_time / self.success_missions_num if self.success_missions_num > 0 else 0
+            self.sum_move_time+=pre_move_time
+            self.sum_trans_time += transmission_time
+            if node_type == 'V':
+                self.sum_move_time_on_vehicle+=pre_move_time
+                self.sum_trans_time_on_vehicle+=transmission_time
+            elif node_type == 'U':
+                self.sum_move_time_on_UAV+=pre_move_time
+                self.sum_trans_time_on_UAV+=transmission_time
+            else:
+                raise TypeError('Node type is invalid')
 
+        self.avg_floating_time = float((self.sum_executing_time - self.sum_sensing_time) / self.success_missions_num) if self.success_missions_num > 0 else 0
+        self.avg_executing_time = float(self.sum_executing_time / self.success_missions_num) if self.success_missions_num > 0 else 0
+
+        self.avg_move_time=float(self.sum_move_time/self.success_missions_num) if self.success_missions_num > 0 else 0
+        self.avg_move_time_on_vehicle=float(self.sum_move_time_on_vehicle/self.success_mission_num_on_vehicle) if self.success_mission_num_on_vehicle > 0 else 0
+        self.avg_move_time_on_UAV=float(self.sum_move_time_on_UAV/self.success_mission_num_on_UAV) if self.success_mission_num_on_UAV > 0 else 0
+
+        self.avg_trans_time=float(self.sum_trans_time/self.success_missions_num) if self.success_missions_num > 0 else 0
+        self.avg_trans_time_on_vehicle=float(self.sum_trans_time_on_vehicle/self.success_mission_num_on_vehicle) if self.success_mission_num_on_vehicle > 0 else 0
+        self.avg_trans_time_on_UAV=float(self.sum_trans_time_on_UAV/self.success_mission_num_on_UAV) if self.success_mission_num_on_UAV > 0 else 0
 
     def printEvaluation(self):
         # 仿真时间
@@ -286,6 +371,15 @@ class AirFogSimEvaluation:
         print('traffic_step_fail_num: ', self.traffic_step_fail_num)
         print('traffic_step_early_fail_num: ', self.traffic_step_early_fail_num)
 
+        print('finish_mission_num: ', self.finish_mission_num)
+
+        print('finish_mission_num_on_vehicle: ', self.finish_mission_num_on_vehicle)
+        print('success_mission_num_on_vehicle: ', self.success_mission_num_on_vehicle)
+        print('fail_mission_num_on_vehicle: ', self.fail_mission_num_on_vehicle)
+        print('finish_mission_num_on_UAV: ', self.finish_mission_num_on_UAV)
+        print('success_mission_num_on_UAV: ', self.success_mission_num_on_UAV)
+        print('fail_mission_num_on_UAV: ', self.fail_mission_num_on_UAV)
+
         # 信道速率指标
         print('信道速率')
         print('avg_trans_rate: ', self.avg_trans_rate)
@@ -293,29 +387,18 @@ class AirFogSimEvaluation:
         print('avg_V2I_trans_rate: ', self.avg_V2I_trans_rate)
         print('avg_U2I_trans_rate: ', self.avg_U2I_trans_rate)
 
-
         # reward
         print('奖励')
-        print('sum_reward: ', self.sum_reward)
-        print('sum_success_reward: ', self.sum_success_reward)
         print('avg_reward: ', self.avg_reward)
         print('avg_success_reward: ', self.avg_success_reward)
 
         # ratio
         print('比率')
-        print('finish_mission_num: ', self.finish_mission_num)
+
         print('completion_ratio: ', self.completion_ratio)
-
-        print('finish_mission_num_on_vehicle: ', self.finish_mission_num_on_vehicle)
-        print('success_mission_num_on_vehicle: ', self.success_mission_num_on_vehicle)
         print('completion_ratio_on_vehicle: ', self.completion_ratio_on_vehicle)
-
-        print('finish_mission_num_on_UAV: ', self.finish_mission_num_on_UAV)
-        print('success_mission_num_on_UAV: ', self.success_mission_num_on_UAV)
         print('completion_ratio_on_UAV: ', self.completion_ratio_on_UAV)
 
-
-        print('sum_weight: ', self.sum_weight)
         print('sum_weighted_acceleration_ratio: ', self.sum_weighted_acceleration_ratio)
         print('weighted_acceleration_ratio: ', self.weighted_acceleration_ratio)
 
@@ -324,10 +407,15 @@ class AirFogSimEvaluation:
 
         # optimization objectives
         print('优化目标')
-        print('sum_executing_time: ', self.sum_executing_time)
-        print('sum_sensing_time: ', self.sum_sensing_time)
         print('avg_floating_time: ', self.avg_floating_time)
         print('avg_executing_time: ', self.avg_executing_time)
+
+        print('avg_move_time: ', self.avg_move_time)
+        print('avg_move_time_on_vehicle: ', self.avg_move_time_on_vehicle)
+        print('avg_move_time_on_UAV: ', self.avg_move_time_on_UAV)
+        print('avg_trans_time: ', self.avg_trans_time)
+        print('avg_trans_time_on_vehicle: ', self.avg_trans_time_on_vehicle)
+        print('avg_trans_time_on_UAV: ', self.avg_trans_time_on_UAV)
 
         print('\n')
 
@@ -345,6 +433,11 @@ class AirFogSimEvaluation:
         self.step_success_num.append(self.traffic_step_success_num)
         self.step_fail_num.append(self.traffic_step_fail_num)
         self.step_early_fail_num.append(self.traffic_step_early_fail_num)
+
+        self.step_sum_success_num_on_UAV.append(self.success_mission_num_on_UAV)
+        self.step_sum_fail_num_on_UAV.append(self.fail_mission_num_on_UAV)
+        self.step_sum_success_num_on_vehicle.append(self.success_mission_num_on_vehicle)
+        self.step_sum_fail_num_on_vehicle.append(self.fail_mission_num_on_vehicle)
 
         # 信道速率指标
         self.step_avg_trans_rate.append(self.avg_trans_rate)
@@ -368,26 +461,36 @@ class AirFogSimEvaluation:
         self.step_avg_floating_time.append(self.avg_floating_time)
         self.step_avg_executing_time.append(self.avg_executing_time)
 
-    def drawAndResetStepRecord(self,episode):
+        self.step_avg_move_time.append(self.avg_move_time)
+        self.step_avg_move_time_on_vehicle.append(self.avg_move_time_on_vehicle)
+        self.step_avg_move_time_on_UAV.append(self.avg_move_time_on_UAV)
+
+        self.step_avg_trans_time.append(self.avg_trans_time)
+        self.step_avg_trans_time_on_vehicle.append(self.avg_trans_time_on_vehicle)
+        self.step_avg_trans_time_on_UAV.append(self.avg_trans_time_on_UAV)
+
+
+
+    def drawAndResetStepRecord(self, episode):
         path_to_save = self.base_path + f'episode_{episode}/'
         if not os.path.exists(path_to_save):
             os.makedirs(path_to_save)
 
-        # 过程监控
+        # 1.过程监控
         # 累计任务
         x_indices = list(range(1, self.step_num + 1))
         plt.figure(clear=True)
-        plt.plot(x_indices, self.step_to_generate_missions_num,label='To generate', color='gray')
-        plt.plot(x_indices, self.step_executing_missions_num,label='Executing', color='blueviolet')
-        plt.plot(x_indices, self.step_success_missions_num,label='Success', color='limegreen')
-        plt.plot(x_indices, self.step_failed_missions_num,label='Fail', color='red')
-        plt.plot(x_indices, self.step_early_failed_missions_num,label='Not Allocate', color='orange')
+        plt.plot(x_indices, self.step_to_generate_missions_num, label='To generate', color='gray')
+        plt.plot(x_indices, self.step_executing_missions_num, label='Executing', color='deepskyblue')
+        plt.plot(x_indices, self.step_success_missions_num, label='Success', color='limegreen')
+        plt.plot(x_indices, self.step_failed_missions_num, label='Fail', color='red')
+        plt.plot(x_indices, self.step_early_failed_missions_num, label='Not Allocate', color='orange')
         plt.title('Accumulate Process Monitoring')
         plt.xlabel('Step')
         plt.ylabel('The Number of Missions')
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()
-        plt.savefig(path_to_save+'AccumulateProcessMonitoring.png')
+        plt.savefig(path_to_save + 'AccumulateProcessMonitoring.png')
         plt.close()
 
         # 时隙任务
@@ -401,7 +504,7 @@ class AirFogSimEvaluation:
         axes[0, 0].grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
         axes[0, 0].legend()
         # 子图2: Allocate
-        axes[0, 1].plot(x_indices, self.step_allocate_num, label='Allocate', color='blueviolet')
+        axes[0, 1].plot(x_indices, self.step_allocate_num, label='Allocate', color='deepskyblue')
         axes[0, 1].set_title('Allocate')
         axes[0, 1].grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
         axes[0, 1].legend()
@@ -432,11 +535,40 @@ class AirFogSimEvaluation:
         plt.savefig(path_to_save + 'TimeslotProcessMonitoring.png')
         plt.close()
 
+        # 分类累计任务-成功
+        x_indices = list(range(1, self.step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, self.step_success_missions_num, label='Sum', color='limegreen')
+        plt.plot(x_indices, self.step_sum_success_num_on_vehicle, label='Veh', color='orange')
+        plt.plot(x_indices, self.step_sum_success_num_on_UAV, label='UAV', color='deepskyblue')
+        plt.title('Accumulate Process Monitoring (Success)')
+        plt.xlabel('Step')
+        plt.ylabel('The Number of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(path_to_save + 'AccumulateProcessMonitoring_Success.png')
+        plt.close()
 
+        # 分类累计任务-失败
+        x_indices = list(range(1, self.step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, self.step_failed_missions_num, label='Sum', color='red')
+        plt.plot(x_indices, self.step_sum_fail_num_on_vehicle, label='Veh', color='orange')
+        plt.plot(x_indices, self.step_sum_fail_num_on_UAV, label='UAV', color='deepskyblue')
+        plt.title('Accumulate Process Monitoring (Fail)')
+        plt.xlabel('Step')
+        plt.ylabel('The Number of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(path_to_save + 'AccumulateProcessMonitoring_Fail.png')
+        plt.close()
+
+
+        # 2.信道状态
         # 信道速率指标
         x_indices = list(range(1, self.step_num + 1))
         plt.figure(clear=True)
-        plt.plot(x_indices, self.step_avg_trans_rate, label='Avg', color='blueviolet')
+        plt.plot(x_indices, self.step_avg_trans_rate, label='Avg', color='deepskyblue')
         plt.plot(x_indices, self.step_avg_V2U_trans_rate, label='V2U', color='limegreen')
         plt.plot(x_indices, self.step_avg_V2I_trans_rate, label='V2I', color='red')
         plt.plot(x_indices, self.step_avg_U2I_trans_rate, label='U2I', color='orange')
@@ -449,7 +581,7 @@ class AirFogSimEvaluation:
         plt.close()
 
         # 信道使用情况
-        x_indices = list(range(1, len(self.V2U_link_using) + 1))
+        x_indices = list(range(1, self.step_num + 1))
         plt.figure(clear=True)
         plt.plot(x_indices, self.V2U_link_using, label='V2U', color='limegreen')
         plt.plot(x_indices, self.V2I_link_using, label='V2I', color='red')
@@ -462,7 +594,7 @@ class AirFogSimEvaluation:
         plt.savefig(path_to_save + 'LinkUsing.png')
         plt.close()
 
-        # data trans
+        # 数据传输
         # V2U
         x_indices = list(range(1, len(self.V2U_data_trans_list) + 1))
         plt.figure(clear=True)
@@ -494,7 +626,7 @@ class AirFogSimEvaluation:
         plt.savefig(path_to_save + 'U2I_data_trans.png')
         plt.close()
 
-        # reward
+        # 3.奖励
         x_indices = list(range(1, self.step_num + 1))
         plt.figure(clear=True)
         plt.plot(x_indices, self.step_avg_reward, label='Avg', color='orange')
@@ -507,12 +639,13 @@ class AirFogSimEvaluation:
         plt.savefig(path_to_save + 'Reward.png')
         plt.close()
 
+        # 4.完成率/加速率
         # completion ratio
         x_indices = list(range(1, self.step_num + 1))
         plt.figure(clear=True)
-        plt.plot(x_indices, self.step_completion_ratio,label='Sum', color='blueviolet')
-        plt.plot(x_indices, self.step_completion_ratio_on_vehicle,label='Vehicle', color='limegreen')
-        plt.plot(x_indices, self.step_completion_ratio_on_UAV,label='UAV', color='orange')
+        plt.plot(x_indices, self.step_completion_ratio, label='Sum', color='limegreen')
+        plt.plot(x_indices, self.step_completion_ratio_on_vehicle, label='Vehicle', color='orange')
+        plt.plot(x_indices, self.step_completion_ratio_on_UAV, label='UAV', color='deepskyblue')
         plt.title('Completion Ratio')
         plt.xlabel('Step')
         plt.ylabel('The Completion Ratio of Missions')
@@ -524,8 +657,8 @@ class AirFogSimEvaluation:
         # acceleration ratio
         x_indices = list(range(1, self.step_num + 1))
         plt.figure(clear=True)
-        plt.plot(x_indices, self.step_weighted_acceleration_ratio,label='Weighted', color='orange')
-        plt.plot(x_indices, self.step_acceleration_ratio,label='Not Weighted', color='limegreen')
+        plt.plot(x_indices, self.step_weighted_acceleration_ratio, label='Weighted', color='orange')
+        plt.plot(x_indices, self.step_acceleration_ratio, label='Not Weighted', color='limegreen')
         plt.title('Acceleration Ratio')
         plt.xlabel('Step')
         plt.ylabel('The Acceleration Ratio of Missions')
@@ -534,11 +667,11 @@ class AirFogSimEvaluation:
         plt.savefig(path_to_save + 'AccelerationRatio.png')
         plt.close()
 
-        # optimization objectives
+        # 5.时间优化指标
         x_indices = list(range(1, self.step_num + 1))
         plt.figure(clear=True)
-        plt.plot(x_indices, self.step_avg_floating_time,label='Floating', color='orange')
-        plt.plot(x_indices, self.step_avg_executing_time,label='Executing', color='limegreen')
+        plt.plot(x_indices, self.step_avg_floating_time, label='Floating', color='orange')
+        plt.plot(x_indices, self.step_avg_executing_time, label='Executing', color='limegreen')
         plt.title('Time')
         plt.xlabel('Step')
         plt.ylabel('The Related Time of Missions')
@@ -547,18 +680,50 @@ class AirFogSimEvaluation:
         plt.savefig(path_to_save + 'Time.png')
         plt.close()
 
+        # 移动时间
+        x_indices = list(range(1, self.step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, self.step_avg_move_time, label='Sum', color='limegreen')
+        plt.plot(x_indices, self.step_avg_move_time_on_vehicle, label='Veh', color='orange')
+        plt.plot(x_indices, self.step_avg_move_time_on_UAV, label='UAV', color='deepskyblue')
+        plt.title('Pre Move Time')
+        plt.xlabel('Step')
+        plt.ylabel('Time(s)')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(path_to_save + 'PreMoveTime.png')
+        plt.close()
+
+        # 传输时间
+        x_indices = list(range(1, self.step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, self.step_avg_trans_time, label='Sum', color='limegreen')
+        plt.plot(x_indices, self.step_avg_trans_time_on_vehicle, label='Veh', color='orange')
+        plt.plot(x_indices, self.step_avg_trans_time_on_UAV, label='UAV', color='deepskyblue')
+        plt.title('Transmission Time')
+        plt.xlabel('Step')
+        plt.ylabel('Time(s)')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(path_to_save + 'TransmissionTime.png')
+        plt.close()
 
         self.initOrResetStepIndicators()
         self.initOrResetStepRecords()
 
     def addToEpisodeRecord(self):
-        self.episode_num+=1
+        self.episode_num += 1
         # 过程监控
         self.episode_to_generate_missions_num.append(self.to_generate_missions_num)
         self.episode_executing_missions_num.append(self.executing_missions_num)
         self.episode_success_missions_num.append(self.success_missions_num)
         self.episode_failed_missions_num.append(self.failed_missions_num)
         self.episode_early_failed_missions_num.append(self.early_failed_missions_num)
+
+        self.episode_sum_success_num_on_vehicle.append(self.success_mission_num_on_vehicle)
+        self.episode_sum_fail_num_on_vehicle.append(self.fail_mission_num_on_vehicle)
+        self.episode_sum_success_num_on_UAV.append(self.success_mission_num_on_UAV)
+        self.episode_sum_fail_num_on_UAV.append(self.fail_mission_num_on_UAV)
 
         # 信道速率指标
         self.episode_avg_trans_rate.append(self.avg_trans_rate)
@@ -582,6 +747,13 @@ class AirFogSimEvaluation:
         self.episode_avg_floating_time.append(self.avg_floating_time)
         self.episode_avg_executing_time.append(self.avg_executing_time)
 
+        self.episode_avg_move_time.append(self.avg_move_time)
+        self.episode_avg_move_time_on_vehicle.append(self.avg_move_time_on_vehicle)
+        self.episode_avg_move_time_on_UAV.append(self.avg_move_time_on_UAV)
+
+        self.episode_avg_trans_time.append(self.avg_trans_time)
+        self.episode_avg_trans_time_on_vehicle.append(self.avg_trans_time_on_vehicle)
+        self.episode_avg_trans_time_on_UAV.append(self.avg_trans_time_on_UAV)
 
     def drawAndResetEpisodeRecord(self):
         path_to_save = self.base_path + 'final/'
@@ -589,12 +761,12 @@ class AirFogSimEvaluation:
             os.makedirs(path_to_save)
 
         # 横轴为步数
-        x_indices = list(range(1,self.episode_num+1))
+        x_indices = list(range(1, self.episode_num + 1))
 
-        # 过程监控
+        # 1.过程监控
         plt.figure(clear=True)
         plt.plot(x_indices, self.episode_to_generate_missions_num, label='To generate', color='gray')
-        plt.plot(x_indices, self.episode_executing_missions_num, label='Executing', color='blueviolet')
+        plt.plot(x_indices, self.episode_executing_missions_num, label='Executing', color='deepskyblue')
         plt.plot(x_indices, self.episode_success_missions_num, label='Success', color='limegreen')
         plt.plot(x_indices, self.episode_failed_missions_num, label='Fail', color='red')
         plt.plot(x_indices, self.episode_early_failed_missions_num, label='Not Allocate', color='orange')
@@ -606,9 +778,37 @@ class AirFogSimEvaluation:
         plt.savefig(path_to_save + 'ProcessMonitoring.png')
         plt.close()
 
-        # 信道速率指标
+        # 分类累计任务-成功
+        x_indices = list(range(1, self.step_num + 1))
         plt.figure(clear=True)
-        plt.plot(x_indices, self.episode_avg_trans_rate, label='Avg', color='blueviolet')
+        plt.plot(x_indices, self.episode_success_missions_num, label='Sum', color='limegreen')
+        plt.plot(x_indices, self.episode_sum_success_num_on_vehicle, label='Veh', color='orange')
+        plt.plot(x_indices, self.episode_sum_success_num_on_UAV, label='UAV', color='deepskyblue')
+        plt.title('Accumulate Process Monitoring (Success)')
+        plt.xlabel('Episode')
+        plt.ylabel('The Number of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(path_to_save + 'AccumulateProcessMonitoring_Success.png')
+        plt.close()
+
+        # 分类累计任务-失败
+        x_indices = list(range(1, self.step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, self.episode_failed_missions_num, label='Sum', color='red')
+        plt.plot(x_indices, self.episode_sum_fail_num_on_vehicle, label='Veh', color='orange')
+        plt.plot(x_indices, self.episode_sum_fail_num_on_UAV, label='UAV', color='deepskyblue')
+        plt.title('Accumulate Process Monitoring (Fail)')
+        plt.xlabel('Episode')
+        plt.ylabel('The Number of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(path_to_save + 'AccumulateProcessMonitoring_Fail.png')
+        plt.close()
+
+        # 2.信道速率指标
+        plt.figure(clear=True)
+        plt.plot(x_indices, self.episode_avg_trans_rate, label='Avg', color='deepskyblue')
         plt.plot(x_indices, self.episode_avg_V2U_trans_rate, label='V2U', color='limegreen')
         plt.plot(x_indices, self.episode_avg_V2I_trans_rate, label='V2I', color='red')
         plt.plot(x_indices, self.episode_avg_U2I_trans_rate, label='U2I', color='orange')
@@ -620,7 +820,7 @@ class AirFogSimEvaluation:
         plt.savefig(path_to_save + 'ChannelRate.png')
         plt.close()
 
-        # reward
+        # 3.奖励
         plt.figure(clear=True)
         plt.plot(x_indices, self.episode_avg_reward, label='Avg', color='orange')
         plt.plot(x_indices, self.episode_avg_success_reward, label='Suc', color='limegreen')
@@ -632,11 +832,12 @@ class AirFogSimEvaluation:
         plt.savefig(path_to_save + 'Reward.png')
         plt.close()
 
+        # 4.完成率/加速比
         # completion ratio
         plt.figure(clear=True)
-        plt.plot(x_indices, self.episode_completion_ratio, label='Sum', color='blueviolet')
-        plt.plot(x_indices, self.episode_completion_ratio_on_vehicle, label='Vehicle', color='limegreen')
-        plt.plot(x_indices, self.episode_completion_ratio_on_UAV, label='UAV', color='orange')
+        plt.plot(x_indices, self.episode_completion_ratio, label='Sum', color='limegreen')
+        plt.plot(x_indices, self.episode_completion_ratio_on_vehicle, label='Vehicle', color='orange')
+        plt.plot(x_indices, self.episode_completion_ratio_on_UAV, label='UAV', color='deepskyblue')
         plt.title('Completion Ratio')
         plt.xlabel('Episode')
         plt.ylabel('The Completion Ratio of Missions')
@@ -657,7 +858,7 @@ class AirFogSimEvaluation:
         plt.savefig(path_to_save + 'AccelerationRatio.png')
         plt.close()
 
-        # optimization objectives
+        # 5.时间优化指标
         plt.figure(clear=True)
         plt.plot(x_indices, self.episode_avg_floating_time, label='Floating', color='orange')
         plt.plot(x_indices, self.episode_avg_executing_time, label='Executing', color='limegreen')
@@ -669,19 +870,425 @@ class AirFogSimEvaluation:
         plt.savefig(path_to_save + 'Time.png')
         plt.close()
 
+        # 移动时间
+        x_indices = list(range(1, self.step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, self.episode_avg_move_time, label='Sum', color='limegreen')
+        plt.plot(x_indices, self.episode_avg_move_time_on_vehicle, label='Veh', color='orange')
+        plt.plot(x_indices, self.episode_avg_move_time_on_UAV, label='UAV', color='deepskyblue')
+        plt.title('Pre Move Time')
+        plt.xlabel('Episode')
+        plt.ylabel('Time(s)')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(path_to_save + 'PreMoveTime.png')
+        plt.close()
+
+        # 传输时间
+        x_indices = list(range(1, self.step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, self.episode_avg_trans_time, label='Sum', color='limegreen')
+        plt.plot(x_indices, self.episode_avg_trans_time_on_vehicle, label='Veh', color='orange')
+        plt.plot(x_indices, self.episode_avg_trans_time_on_UAV, label='UAV', color='deepskyblue')
+        plt.title('Transmission Time')
+        plt.xlabel('Episode')
+        plt.ylabel('Time(s)')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(path_to_save + 'TransmissionTime.png')
+        plt.close()
+
         self.initOrResetStepIndicators()
         self.initOrResetStepRecords()
         self.initOrResetEpisodeRecords()
 
-    def episodeRecordToFile(self, episode):
-        file_dir = self.base_path+"evaluation.json"
+
+
+    def stepRecordToFile(self, episode):
+        folder_dir=self.base_path + f"episode_{episode}/"
+        if not os.path.exists(folder_dir):
+            os.makedirs(folder_dir)
+        file_dir=folder_dir+f"evaluation.json"
+
         data = {
-            "episode": episode,
+            "step_num": self.step_num,
+
+            "step_to_generate_missions_num": self.step_to_generate_missions_num,
+            "step_executing_missions_num": self.step_executing_missions_num,
+            "step_success_missions_num": self.step_success_missions_num,
+            "step_failed_missions_num": self.step_failed_missions_num,
+            "step_early_failed_missions_num": self.step_early_failed_missions_num,
+
+            "step_generate_num": self.step_generate_num,
+            "step_allocate_num": self.step_allocate_num,
+            "step_success_num": self.step_success_num,
+            "step_fail_num": self.step_fail_num,
+            "step_early_fail_num": self.step_early_fail_num,
+
+            "step_sum_success_num_on_vehicle": self.step_sum_success_num_on_vehicle,
+            "step_sum_fail_num_on_vehicle": self.step_sum_fail_num_on_vehicle,
+            "step_sum_success_num_on_UAV": self.step_sum_success_num_on_UAV,
+            "step_sum_fail_num_on_UAV": self.step_sum_fail_num_on_UAV,
+
+            "step_avg_trans_rate": self.step_avg_trans_rate,
+            "step_avg_V2U_trans_rate": self.step_avg_V2U_trans_rate,
+            "step_avg_V2I_trans_rate": self.step_avg_V2I_trans_rate,
+            "step_avg_U2I_trans_rate": self.step_avg_U2I_trans_rate,
+
+            "V2U_link_using": [float(x) for x in self.V2U_link_using],
+            "V2I_link_using": [float(x) for x in self.V2I_link_using],
+            "U2I_link_using": [float(x) for x in self.U2I_link_using],
+
+            "V2U_data_trans_list": [float(x) for x in self.V2U_data_trans_list],
+            "V2I_data_trans_list": [float(x) for x in self.V2I_data_trans_list],
+            "U2I_data_trans_list": [float(x) for x in self.U2I_data_trans_list],
+
+            "step_avg_reward": self.step_avg_reward,
+            "step_avg_success_reward": self.step_avg_success_reward,
+
+            "step_completion_ratio": self.step_completion_ratio,
+            "step_completion_ratio_on_vehicle": self.step_completion_ratio_on_vehicle,
+            "step_completion_ratio_on_UAV": self.step_completion_ratio_on_UAV,
+
+            "step_weighted_acceleration_ratio": self.step_weighted_acceleration_ratio,
+            "step_acceleration_ratio": self.step_acceleration_ratio,
+
+            "step_avg_floating_time": self.step_avg_floating_time,
+            "step_avg_executing_time": self.step_avg_executing_time,
+
+            "step_avg_move_time": self.step_avg_move_time,
+            "step_avg_move_time_on_vehicle": self.step_avg_move_time_on_vehicle,
+            "step_avg_move_time_on_UAV": self.step_avg_move_time_on_UAV,
+
+            "step_avg_trans_time": self.step_avg_trans_time,
+            "step_avg_trans_time_on_vehicle": self.step_avg_trans_time_on_vehicle,
+            "step_avg_trans_time_on_UAV": self.step_avg_trans_time_on_UAV,
+        }
+
+        # 将数据写回文件
+        with open(file_dir, "w") as file:
+            json.dump(data, file, indent=4)  # json格式缩进4个空格
+
+        print(f"save {self.tag} episode_{episode} step records successfully")
+
+    def drawStepRecordsByFile(self, episode):
+        # json文件路径
+        file_path = self.base_path + f"episode_{episode}/evaluation.json"
+        # 保存路径
+        path_to_save = self.base_path + f'episode_{episode}/'
+
+        if not os.path.exists(path_to_save):
+            os.makedirs(path_to_save)
+
+        # 读取 JSON 文件并累积数据
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+            step_num=data['step_num']
+
+            step_to_generate_missions_num=data['step_to_generate_missions_num']
+            step_executing_missions_num=data['step_executing_missions_num']
+            step_success_missions_num=data['step_success_missions_num']
+            step_failed_missions_num=data['step_failed_missions_num']
+            step_early_failed_missions_num=data['step_early_failed_missions_num']
+
+            step_generate_num=data['step_generate_num']
+            step_allocate_num=data['step_allocate_num']
+            step_success_num=data['step_success_num']
+            step_fail_num=data['step_fail_num']
+            step_early_fail_num=data['step_early_fail_num']
+
+            step_sum_success_num_on_vehicle=data['step_sum_success_num_on_vehicle']
+            step_sum_fail_num_on_vehicle = data['step_sum_fail_num_on_vehicle']
+            step_sum_success_num_on_UAV=data['step_sum_success_num_on_UAV']
+            step_sum_fail_num_on_UAV=data['step_sum_fail_num_on_UAV']
+
+            step_avg_trans_rate=data['step_avg_trans_rate']
+            step_avg_V2U_trans_rate=data['step_avg_V2U_trans_rate']
+            step_avg_V2I_trans_rate=data['step_avg_V2I_trans_rate']
+            step_avg_U2I_trans_rate=data['step_avg_U2I_trans_rate']
+
+            V2U_link_using=data['V2U_link_using']
+            V2I_link_using=data['V2I_link_using']
+            U2I_link_using=data['U2I_link_using']
+
+            V2U_data_trans_list=data['V2U_data_trans_list']
+            V2I_data_trans_list=data['V2I_data_trans_list']
+            U2I_data_trans_list=data['U2I_data_trans_list']
+
+            step_avg_reward=data['step_avg_reward']
+            step_avg_success_reward=data['step_avg_success_reward']
+
+            step_completion_ratio=data['step_completion_ratio']
+            step_completion_ratio_on_vehicle=data['step_completion_ratio_on_vehicle']
+            step_completion_ratio_on_UAV=data['step_completion_ratio_on_UAV']
+
+            step_weighted_acceleration_ratio=data['step_weighted_acceleration_ratio']
+            step_acceleration_ratio=data['step_acceleration_ratio']
+
+            step_avg_floating_time=data['step_avg_floating_time']
+            step_avg_executing_time=data['step_avg_executing_time']
+
+            step_avg_move_time=data['step_avg_move_time']
+            step_avg_move_time_on_vehicle=data['step_avg_move_time_on_vehicle']
+            step_avg_move_time_on_UAV=data['step_avg_move_time_on_UAV']
+
+            step_avg_trans_time=data['step_avg_trans_time']
+            step_avg_trans_time_on_vehicle=data['step_avg_trans_time_on_vehicle']
+            step_avg_trans_time_on_UAV=data['step_avg_trans_time_on_UAV']
+
+        # 1.过程监控
+        # 累计任务
+        x_indices = list(range(1, step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, step_to_generate_missions_num, label='To generate', color='gray')
+        plt.plot(x_indices, step_executing_missions_num, label='Executing', color='deepskyblue')
+        plt.plot(x_indices, step_success_missions_num, label='Success', color='limegreen')
+        plt.plot(x_indices, step_failed_missions_num, label='Fail', color='red')
+        plt.plot(x_indices, step_early_failed_missions_num, label='Not Allocate', color='orange')
+        plt.title('Accumulate Process Monitoring')
+        plt.xlabel('Step')
+        plt.ylabel('The Number of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(path_to_save + 'AccumulateProcessMonitoring.png')
+        plt.close()
+
+        # 时隙任务
+        x_indices = list(range(1, step_num + 1))
+        plt.figure(clear=True)
+        fig, axes = plt.subplots(2, 3, figsize=(12, 8))  # 两行三列
+        # 子图1: Generate
+        axes[0, 0].plot(x_indices, step_generate_num, label='Generate', color='gray')
+        axes[0, 0].set_title('Generate')
+        axes[0, 0].set_ylabel('The Number')
+        axes[0, 0].grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        axes[0, 0].legend()
+        # 子图2: Allocate
+        axes[0, 1].plot(x_indices, step_allocate_num, label='Allocate', color='deepskyblue')
+        axes[0, 1].set_title('Allocate')
+        axes[0, 1].grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        axes[0, 1].legend()
+        # 子图3: Success
+        axes[0, 2].plot(x_indices, step_success_num, label='Success', color='limegreen')
+        axes[0, 2].set_title('Success')
+        axes[0, 2].grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        axes[0, 2].legend()
+        # 子图4: Fail
+        axes[1, 0].plot(x_indices, step_fail_num, label='Fail', color='red')
+        axes[1, 0].set_title('Fail')
+        axes[1, 0].set_ylabel('The Number')
+        axes[1, 0].set_xlabel('Step')
+        axes[1, 0].grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        axes[1, 0].legend()
+        # 子图5: Not Allocate
+        axes[1, 1].plot(x_indices, step_early_fail_num, label='Not Allocate', color='orange')
+        axes[1, 1].set_title('Not Allocate')
+        axes[1, 1].set_xlabel('Step')
+        axes[1, 1].grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        axes[1, 1].legend()
+        # 子图6: 留空或补充说明
+        axes[1, 2].axis('off')  # 禁用第六个子图
+        # axes[1, 2].text(0.5, 0.5, "Additional Info", ha='center', va='center', fontsize=12, color='gray')
+        # 设置全局标题
+        fig.suptitle('Timeslot Process Monitoring', fontsize=16)
+        # 保存图像
+        plt.savefig(path_to_save + 'TimeslotProcessMonitoring.png')
+        plt.close()
+
+        # 分类累计任务-成功
+        x_indices = list(range(1, step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, step_success_missions_num, label='Sum', color='limegreen')
+        plt.plot(x_indices, step_sum_success_num_on_vehicle, label='Veh', color='orange')
+        plt.plot(x_indices, step_sum_success_num_on_UAV, label='UAV', color='deepskyblue')
+        plt.title('Accumulate Process Monitoring (Success)')
+        plt.xlabel('Step')
+        plt.ylabel('The Number of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(path_to_save + 'AccumulateProcessMonitoring_Success.png')
+        plt.close()
+
+        # 分类累计任务-失败
+        x_indices = list(range(1, step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, step_failed_missions_num, label='Sum', color='red')
+        plt.plot(x_indices, step_sum_fail_num_on_vehicle, label='Veh', color='orange')
+        plt.plot(x_indices, step_sum_fail_num_on_UAV, label='UAV', color='deepskyblue')
+        plt.title('Accumulate Process Monitoring (Fail)')
+        plt.xlabel('Step')
+        plt.ylabel('The Number of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(path_to_save + 'AccumulateProcessMonitoring_Fail.png')
+        plt.close()
+
+        # 2.信道状态
+        # 信道速率指标
+        x_indices = list(range(1, step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, step_avg_trans_rate, label='Avg', color='deepskyblue')
+        plt.plot(x_indices, step_avg_V2U_trans_rate, label='V2U', color='limegreen')
+        plt.plot(x_indices, step_avg_V2I_trans_rate, label='V2I', color='red')
+        plt.plot(x_indices, step_avg_U2I_trans_rate, label='U2I', color='orange')
+        plt.title('Channel Rate')
+        plt.xlabel('Step')
+        plt.ylabel('The Average Rate of Channel')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(path_to_save + 'ChannelRate.png')
+        plt.close()
+
+        # 信道使用情况
+        x_indices = list(range(1, step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, V2U_link_using, label='V2U', color='limegreen')
+        plt.plot(x_indices, V2I_link_using, label='V2I', color='red')
+        plt.plot(x_indices, U2I_link_using, label='U2I', color='orange')
+        plt.title('Link Using')
+        plt.xlabel('SimulationStep')
+        plt.ylabel('Link Num in Use')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        plt.legend()
+        plt.savefig(path_to_save + 'LinkUsing.png')
+        plt.close()
+
+        # 数据传输
+        # V2U
+        x_indices = list(range(1, len(V2U_data_trans_list) + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, V2U_data_trans_list, color='orange')
+        plt.title('V2U Data Trans')
+        plt.xlabel('Trans Step')
+        plt.ylabel('Data Size')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        plt.savefig(path_to_save + 'V2U_data_trans.png')
+        plt.close()
+        # V2I
+        x_indices = list(range(1, len(V2I_data_trans_list) + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, V2I_data_trans_list, color='orange')
+        plt.title('V2I Data Trans')
+        plt.xlabel('Trans Step')
+        plt.ylabel('Data Size')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        plt.savefig(path_to_save + 'V2I_data_trans.png')
+        plt.close()
+        # U2I
+        x_indices = list(range(1, len(U2I_data_trans_list) + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, U2I_data_trans_list, color='orange')
+        plt.title('U2I Data Trans')
+        plt.xlabel('Trans Step')
+        plt.ylabel('Data Size')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        plt.savefig(path_to_save + 'U2I_data_trans.png')
+        plt.close()
+
+        # 3.奖励
+        x_indices = list(range(1, step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, step_avg_reward, label='Avg', color='orange')
+        plt.plot(x_indices, step_avg_success_reward, label='Suc', color='limegreen')
+        plt.title('Reward')
+        plt.xlabel('Step')
+        plt.ylabel('The Average Reward of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(path_to_save + 'Reward.png')
+        plt.close()
+
+        # 4.完成率/加速率
+        # completion ratio
+        x_indices = list(range(1, step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, step_completion_ratio, label='Sum', color='limegreen')
+        plt.plot(x_indices, step_completion_ratio_on_vehicle, label='Vehicle', color='orange')
+        plt.plot(x_indices, step_completion_ratio_on_UAV, label='UAV', color='deepskyblue')
+        plt.title('Completion Ratio')
+        plt.xlabel('Step')
+        plt.ylabel('The Completion Ratio of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(path_to_save + 'CompletionRatio.png')
+        plt.close()
+
+        # acceleration ratio
+        x_indices = list(range(1, step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, step_weighted_acceleration_ratio, label='Weighted', color='orange')
+        plt.plot(x_indices, step_acceleration_ratio, label='Not Weighted', color='limegreen')
+        plt.title('Acceleration Ratio')
+        plt.xlabel('Step')
+        plt.ylabel('The Acceleration Ratio of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(path_to_save + 'AccelerationRatio.png')
+        plt.close()
+
+        # 5.时间优化指标
+        x_indices = list(range(1, step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, step_avg_floating_time, label='Floating', color='orange')
+        plt.plot(x_indices, step_avg_executing_time, label='Executing', color='limegreen')
+        plt.title('Time')
+        plt.xlabel('Step')
+        plt.ylabel('The Related Time of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(path_to_save + 'Time.png')
+        plt.close()
+
+        # 移动时间
+        x_indices = list(range(1, step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, step_avg_move_time, label='Sum', color='limegreen')
+        plt.plot(x_indices, step_avg_move_time_on_vehicle, label='Veh', color='orange')
+        plt.plot(x_indices, step_avg_move_time_on_UAV, label='UAV', color='deepskyblue')
+        plt.title('Pre Move Time')
+        plt.xlabel('Step')
+        plt.ylabel('Time(s)')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(path_to_save + 'PreMoveTime.png')
+        plt.close()
+
+        # 传输时间
+        x_indices = list(range(1, step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, step_avg_trans_time, label='Sum', color='limegreen')
+        plt.plot(x_indices, step_avg_trans_time_on_vehicle, label='Veh', color='orange')
+        plt.plot(x_indices, step_avg_trans_time_on_UAV, label='UAV', color='deepskyblue')
+        plt.title('Transmission Time')
+        plt.xlabel('Step')
+        plt.ylabel('Time(s)')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(path_to_save + 'TransmissionTime.png')
+        plt.close()
+
+
+
+    def episodeRecordToFile(self, episode):
+        record_name="episode"
+        record_idx=episode
+        folder_dir=self.base_path + f"final/"
+        if not os.path.exists(folder_dir):
+            os.makedirs(folder_dir)
+        file_dir = folder_dir+"evaluation.json"
+
+        data = {
+            f"{record_name}": record_idx,
             "to_generate_missions_num": self.to_generate_missions_num,
             "executing_missions_num": self.executing_missions_num,
             "success_missions_num": self.success_missions_num,
             "failed_missions_num": self.failed_missions_num,
             "early_failed_missions_num": self.early_failed_missions_num,
+
+            "success_mission_num_on_vehicle": self.success_mission_num_on_vehicle,
+            "fail_mission_num_on_vehicle": self.fail_mission_num_on_vehicle,
+            "success_mission_num_on_UAV": self.success_mission_num_on_UAV,
+            "fail_mission_num_on_UAV": self.fail_mission_num_on_UAV,
 
             "avg_trans_rate": float(self.avg_trans_rate),
             "avg_V2U_trans_rate": float(self.avg_V2U_trans_rate),
@@ -696,10 +1303,19 @@ class AirFogSimEvaluation:
             "completion_ratio_on_UAV": float(self.completion_ratio_on_UAV),
 
             "weighted_acceleration_ratio": float(self.weighted_acceleration_ratio),
-            "acceleration_ratio":float(self.acceleration_ratio),
+            "acceleration_ratio": float(self.acceleration_ratio),
 
             "avg_floating_time": float(self.avg_floating_time),
-            "avg_executing_time": float(self.avg_executing_time)
+            "avg_executing_time": float(self.avg_executing_time),
+
+            "avg_move_time": self.avg_move_time,
+            "avg_move_time_on_vehicle": self.avg_move_time_on_vehicle,
+            "avg_move_time_on_UAV": self.avg_move_time_on_UAV,
+
+            "avg_trans_time": self.avg_trans_time,
+            "avg_trans_time_on_vehicle": self.avg_trans_time_on_vehicle,
+            "avg_trans_time_on_UAV": self.avg_trans_time_on_UAV,
+
         }
 
         # 检查文件是否存在
@@ -721,14 +1337,12 @@ class AirFogSimEvaluation:
     def drawEpisodeRecordsByFile(self):
         """
         Generate plots from JSON files stored for each episode.
-        Args:
-            json_folder_path (str): The folder path containing JSON files for each episode.
         """
         # json文件路径
-        file_path = self.base_path + "evaluation.json"
-
+        file_path = self.base_path + f"final/evaluation.json"
         # 保存路径
-        save_dir = self.base_path + 'final/'
+        save_dir = self.base_path + f'final/'
+
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
@@ -736,6 +1350,7 @@ class AirFogSimEvaluation:
         with open(file_path, 'r') as file:
             data = json.load(file)
             episode_nums = [entry["episode"] for entry in data]
+            step_num=len(episode_nums)
             to_generate_missions_num = [entry["to_generate_missions_num"] for entry in data]
             executing_missions_num = [entry["executing_missions_num"] for entry in data]
             success_missions_num = [entry["success_missions_num"] for entry in data]
@@ -746,6 +1361,11 @@ class AirFogSimEvaluation:
             avg_V2U_trans_rate = [entry["avg_V2U_trans_rate"] for entry in data]
             avg_V2I_trans_rate = [entry["avg_V2I_trans_rate"] for entry in data]
             avg_U2I_trans_rate = [entry["avg_U2I_trans_rate"] for entry in data]
+
+            success_mission_num_on_vehicle = [entry["success_mission_num_on_vehicle"] for entry in data]
+            fail_mission_num_on_vehicle = [entry["fail_mission_num_on_vehicle"] for entry in data]
+            success_mission_num_on_UAV = [entry["success_mission_num_on_UAV"] for entry in data]
+            fail_mission_num_on_UAV = [entry["fail_mission_num_on_UAV"] for entry in data]
 
             avg_reward = [entry["avg_reward"] for entry in data]
             avg_success_reward = [entry["avg_success_reward"] for entry in data]
@@ -760,11 +1380,19 @@ class AirFogSimEvaluation:
             avg_floating_time = [entry["avg_floating_time"] for entry in data]
             avg_executing_time = [entry["avg_executing_time"] for entry in data]
 
+            avg_move_time = [entry["avg_move_time"] for entry in data]
+            avg_move_time_on_vehicle = [entry["avg_move_time_on_vehicle"] for entry in data]
+            avg_move_time_on_UAV = [entry["avg_move_time_on_UAV"] for entry in data]
+
+            avg_trans_time = [entry["avg_trans_time"] for entry in data]
+            avg_trans_time_on_vehicle = [entry["avg_trans_time_on_vehicle"] for entry in data]
+            avg_trans_time_on_UAV = [entry["avg_trans_time_on_UAV"] for entry in data]
+
         # 绘图
         # 过程监控
         plt.figure()
         plt.plot(episode_nums, to_generate_missions_num, label='To generate', color='gray')
-        plt.plot(episode_nums, executing_missions_num, label='Executing', color='blueviolet')
+        plt.plot(episode_nums, executing_missions_num, label='Executing', color='deepskyblue')
         plt.plot(episode_nums, success_missions_num, label='Success', color='limegreen')
         plt.plot(episode_nums, failed_missions_num, label='Fail', color='red')
         plt.plot(episode_nums, early_failed_missions_num, label='Not Allocate', color='orange')
@@ -776,9 +1404,37 @@ class AirFogSimEvaluation:
         plt.savefig(save_dir + 'ProcessMonitoring.png')
         plt.close()
 
+        # 分类累计任务-成功
+        x_indices = list(range(1, step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, success_missions_num, label='Sum', color='limegreen')
+        plt.plot(x_indices, success_mission_num_on_vehicle, label='Veh', color='orange')
+        plt.plot(x_indices, success_mission_num_on_UAV, label='UAV', color='deepskyblue')
+        plt.title('Accumulate Process Monitoring (Success)')
+        plt.xlabel('Episode')
+        plt.ylabel('The Number of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(save_dir + 'AccumulateProcessMonitoring_Success.png')
+        plt.close()
+
+        # 分类累计任务-失败
+        x_indices = list(range(1, step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, failed_missions_num, label='Sum', color='red')
+        plt.plot(x_indices, fail_mission_num_on_vehicle, label='Veh', color='orange')
+        plt.plot(x_indices, fail_mission_num_on_UAV, label='UAV', color='deepskyblue')
+        plt.title('Accumulate Process Monitoring (Fail)')
+        plt.xlabel('Episode')
+        plt.ylabel('The Number of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(save_dir + 'AccumulateProcessMonitoring_Fail.png')
+        plt.close()
+
         # 信道速率指标
         plt.figure()
-        plt.plot(episode_nums, avg_trans_rate, label='Avg', color='blueviolet')
+        plt.plot(episode_nums, avg_trans_rate, label='Avg', color='deepskyblue')
         plt.plot(episode_nums, avg_V2U_trans_rate, label='V2U', color='limegreen')
         plt.plot(episode_nums, avg_V2I_trans_rate, label='V2I', color='red')
         plt.plot(episode_nums, avg_U2I_trans_rate, label='U2I', color='orange')
@@ -804,9 +1460,9 @@ class AirFogSimEvaluation:
 
         # completion ratio
         plt.figure()
-        plt.plot(episode_nums, completion_ratio, label='Sum', color='blueviolet')
-        plt.plot(episode_nums, completion_ratio_on_vehicle, label='Vehicle', color='limegreen')
-        plt.plot(episode_nums, completion_ratio_on_UAV, label='UAV', color='orange')
+        plt.plot(episode_nums, completion_ratio, label='Sum', color='limegreen')
+        plt.plot(episode_nums, completion_ratio_on_vehicle, label='Vehicle', color='orange')
+        plt.plot(episode_nums, completion_ratio_on_UAV, label='UAV', color='deepskyblue')
         plt.title('Completion Ratio')
         plt.xlabel('Episode')
         plt.ylabel('The Completion Ratio of Missions')
@@ -839,9 +1495,38 @@ class AirFogSimEvaluation:
         plt.savefig(save_dir + 'Time.png')
         plt.close()
 
-    def __getNodeTypeById(self,node_id):
-        node_id=node_id.capitalize()
-        assert node_id[0] in ['V','I','U','C'],f'Invalid node type of {node_id}'
+        # 移动时间
+        x_indices = list(range(1, step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, avg_move_time, label='Sum', color='limegreen')
+        plt.plot(x_indices, avg_move_time_on_vehicle, label='Veh', color='orange')
+        plt.plot(x_indices, avg_move_time_on_UAV, label='UAV', color='deepskyblue')
+        plt.title('Pre Move Time')
+        plt.xlabel('Episode')
+        plt.ylabel('Time(s)')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(save_dir + 'PreMoveTime.png')
+        plt.close()
+
+        # 传输时间
+        x_indices = list(range(1, step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, avg_trans_time, label='Sum', color='limegreen')
+        plt.plot(x_indices, avg_trans_time_on_vehicle, label='Veh', color='orange')
+        plt.plot(x_indices, avg_trans_time_on_UAV, label='UAV', color='deepskyblue')
+        plt.title('Transmission Time')
+        plt.xlabel('Episode')
+        plt.ylabel('Time(s)')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+        plt.legend()
+        plt.savefig(save_dir + 'TransmissionTime.png')
+        plt.close()
+
+
+    def __getNodeTypeById(self, node_id):
+        node_id = node_id.capitalize()
+        assert node_id[0] in ['V', 'I', 'U', 'C'], f'Invalid node type of {node_id}'
         if node_id[0] == 'V':
             return 'V'
         elif node_id[0] == 'I':
@@ -861,4 +1546,3 @@ class AirFogSimEvaluation:
 
     def getCompletionRatio(self):
         return self.completion_ratio
-

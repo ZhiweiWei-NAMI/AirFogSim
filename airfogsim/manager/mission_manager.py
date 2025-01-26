@@ -35,6 +35,9 @@ class MissionManager:
         self._mission_generation_model = self._config_mission['mission_generation_model']
         self._generation_model_args = self._config_mission['generation_model_args']
         self._distance_threshold=self._config_mission['distance_threshold']
+        self._TA_distance_Veh = self._config_mission['TA_distance_Veh']
+        self._TA_distance_UAV = self._config_mission['TA_distance_UAV']
+        self._relay_probability = self._config_mission['relay_probability']
 
         self._sensor_type_num = config_sensing['sensor_type_num']
 
@@ -212,6 +215,8 @@ class MissionManager:
                     self._recently_fail_100_missions.append(mission)
                     to_remove.append(mission)
                     sensor_manager.endUseById(sensor_id)
+                if mission.isSensingFinished() and mission.sensingFinishTimeNotSet()==True:
+                    mission.setSensingFinishTime(current_time)
             for mission in to_remove:
                 self._executing_missions[node_id].remove(mission)
         # 2.Check to be generated mission profiles in _to_generate_missions_profile

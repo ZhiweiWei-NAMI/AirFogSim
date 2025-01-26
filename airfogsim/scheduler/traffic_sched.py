@@ -140,7 +140,7 @@ class TrafficScheduler(BaseScheduler):
         if len(route) == 0:
             return
 
-        target_position = route[0]
+        target_position = route[0]['position']
         distance = np.linalg.norm(np.asarray(current_position) - np.asarray(target_position))
         if distance < distance_threshold:
             route[0]['to_stay_time'] = max(route[0]['to_stay_time'] - stay_time, 0)

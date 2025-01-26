@@ -11,9 +11,7 @@ print('useCUPY:', os.environ['useCUPY'])
 # When n_RB < 50, numpy is better than cupy; When n_RB >= 50, cupy is better than numpy.
 
 from airfogsim import AirFogSimEnv, AirFogSimEvaluation
-from baselines.crowdsensing.greedy.greedy_algorithm import GreedyAlgorithmModule
-from baselines.crowdsensing.RL.TDDQN_MADDPG_algorithm import TransDDQN_MADDPG_AlgorithmModule
-import numpy as np
+from baselines.crowdsensing.greedy.base_greedy.base_greedy_algorithm import GreedyAlgorithmModule
 import yaml
 from pyinstrument import Profiler
 
@@ -26,12 +24,15 @@ def load_config(path):
         return config
 
 
-last_episode = 172
+last_episode = 0
 max_episode = 200
 
-# 启动性能监控
-profiler = Profiler()
-profiler.start()
+# 启动全局性能监控
+# global_profiler = Profiler()
+# global_profiler.start()
+
+# 定义episode性能监控
+episode_profiler= Profiler()
 
 # 1. Load the configuration file
 config_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), 'config.yaml')
@@ -53,6 +54,8 @@ algorithm_module.initialize(env,last_episode=last_episode)
 evaluation_module = AirFogSimEvaluation(algorithm_module.getAlgorithmTag())
 
 for episode in range(last_episode + 1, max_episode + 1):
+    # 启动episode性能监控
+    episode_profiler.start()
     if algorithm_tag == 'Greedy':
         while not env.isDone():
             algorithm_module.scheduleStep(env)
@@ -67,9 +70,10 @@ for episode in range(last_episode + 1, max_episode + 1):
             evaluation_module.addToStepRecord()
             # evaluation_module.printEvaluation()
 
-        evaluation_module.episodeRecordToFile(episode)
         evaluation_module.addToEpisodeRecord()
-        evaluation_module.drawAndResetStepRecord(episode)
+        evaluation_module.stepRecordToFile(episode)
+        evaluation_module.episodeRecordToFile(episode)
+        evaluation_module.drawStepRecordsByFile(episode)
 
     elif algorithm_tag == 'TDDQN_MADDPG':
         while not env.isDone():
@@ -93,17 +97,26 @@ for episode in range(last_episode + 1, max_episode + 1):
 
         algorithm_module.TransDDQN_env.saveModel(episode)
         algorithm_module.MADDPG_env.saveModel(episode)
-        evaluation_module.episodeRecordToFile(episode)
+
         evaluation_module.addToEpisodeRecord()
-        evaluation_module.drawAndResetStepRecord(episode)
+        evaluation_module.stepRecordToFile(episode)
+        evaluation_module.episodeRecordToFile(episode)
+        evaluation_module.drawStepRecordsByFile(episode)
+        # evaluation_module.drawAndResetStepRecord(episode)
 
     # 构建车辆数据时不能reset，且只需要一个episode
     env.reset()
     algorithm_module.reset(env)
+    print(f"episode: {episode} finished")
+    # 结束性能监控并打印报告
+    episode_profiler.stop()
+    episode_profiler.print()
+    # 重置性能监控
+    episode_profiler.reset()
 
 # evaluation_module.drawAndResetEpisodeRecord()
 evaluation_module.drawEpisodeRecordsByFile()
 env.close()
 # 结束性能监控并打印报告
-profiler.stop()
-profiler.print()
+# global_profiler.stop()
+# global_profiler.print()

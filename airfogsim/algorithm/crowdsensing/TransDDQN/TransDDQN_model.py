@@ -6,8 +6,18 @@ from torch.nn import functional as F
 import numpy as np
 import collections  # 队列
 import random
+import logging
 from .TransDDQN_relay_buffer import ReplayBuffer
 from .TransDDQN_network import Net
+
+def soft_update(target, source, t):
+    for target_param, source_param in zip(target.parameters(),source.parameters()):
+        target_param.data.copy_((1 - t) * target_param.data + t * source_param.data)
+
+
+def hard_update(target, source):
+    for target_param, source_param in zip(target.parameters(),source.parameters()):
+        target_param.data.copy_(source_param.data)
 
 # ----------------------------------- #
 # 模型构建
@@ -45,14 +55,6 @@ class TransDDQN:
         # 经验池
         self.memory = ReplayBuffer(buffer_size=self.buffer_size, train_min_size=self.train_min_size)
 
-    # 目标网络更新
-    def update_network_parameters(self, tau=None):
-        if tau is None:
-            tau = self.tau
-
-        for q_target_params, q_params in zip(self.target_q_net.parameters(), self.q_net.parameters()):
-            q_target_params.data.copy_(tau * q_params + (1 - tau) * q_target_params)
-
     def remember(self, node_state, mission_state, sensor_state, sensor_mask, action,  reward, next_node_state, next_mission_state, next_sensor_state, next_sensor_mask, done):
         self.memory.add(node_state, mission_state, sensor_state, sensor_mask, action, reward, next_node_state, next_mission_state, next_sensor_state, next_sensor_mask, done)
 
@@ -65,6 +67,7 @@ class TransDDQN:
             sensor_state: [m_uv, max_sensors, dim_sensor]
             sensor_mask: [m_uv, max_sensors], 1 for valid sensors, 0 for others
         """
+
         # numpy[m1, dim_node]-->[1, m1, dim_node]-->Tensor
         node_state = torch.tensor(node_state[np.newaxis, :], dtype=torch.float).to(self.device)
         # numpy[dim_mission]-->[1, dim_mission]-->Tensor
@@ -81,19 +84,27 @@ class TransDDQN:
         # 非法动作置为最小值
         flatten_mask=sensor_mask.flatten()
         flatten_q_values=q_values.flatten()
-        masked_q_values = torch.where(flatten_mask, flatten_q_values, torch.tensor(float('-inf')))
+        # masked_q_values = torch.where(flatten_mask, flatten_q_values, torch.tensor(float('-inf')))
+        flatten_q_values.copy_(torch.where(flatten_mask, flatten_q_values, torch.tensor(float('-inf'))))
         # 对每个样本找到最大 Q 值对应的动作的索引
-        max_q_value, max_action_index = torch.max(masked_q_values, dim=-1)
+        max_q_value, max_action_index = torch.max(flatten_q_values, dim=-1)
         # 如果小于贪婪系数就取最大值reward最大的动作
         if np.random.random() < self.epsilon:
             is_random = False
             # 获取reward最大值对应的动作索引
-            action = masked_q_values.argmax().item()
-        # 如果大于贪婪系数就随即探索
+            # action = masked_q_values.argmax().item()
+            if max_q_value.item() == float('-inf'):
+                action = None
+            else:
+                action = max_action_index.item()
+        # 如果大于贪婪系数就随机探索
         else:
             is_random = True
             valid_action_indices = torch.nonzero(flatten_mask, as_tuple=False).squeeze(1)
-            action = valid_action_indices[torch.randint(0, len(valid_action_indices), (1,))].item()
+            if valid_action_indices.numel() == 0:
+                action = None
+            else:
+                action = valid_action_indices[torch.randint(0, len(valid_action_indices), (1,))].item()
 
         return is_random, max_q_value, action
 
@@ -114,7 +125,8 @@ class TransDDQN:
     # 网络训练
     def update(self):
         if not self.memory.ready():
-            return
+            return None
+
         node_states, mission_states, sensor_states, sensor_masks, actions, rewards, next_node_states, next_mission_states, next_sensor_states, next_sensor_masks, dones = self.memory.sample(self.batch_size)
 
         # 当前状态
@@ -149,27 +161,16 @@ class TransDDQN:
         # numpy[batch_size]-->Tensor[batch_size]
         dones = torch.tensor(dones, dtype=torch.bool).to(self.device)
 
-        # # 当前状态，array_shape=[b,4]
-        # states = torch.tensor(states, dtype=torch.float)
-        # # 当前状态的动作，tuple_shape=[b]==>[b,1]
-        # actions = torch.tensor(actions, dtype=torch.int64).view(-1, 1)
-        # # 动作掩码（布尔张量，True为有效动作，False为无效动作）
-        # masks = torch.tensor(masks, dtype=torch.bool).view(-1, 1)
-        # # 选择当前动作的奖励, tuple_shape=[b]==>[b,1]
-        # rewards = torch.tensor(rewards, dtype=torch.float).view(-1, 1)
-        # # 下一个时刻的状态array_shape=[b,4]
-        # next_states = torch.tensor(next_states, dtype=torch.float)
-        # # 动作掩码（布尔张量，True为有效动作，False为无效动作）
-        # next_masks = torch.tensor(next_masks, dtype=torch.bool).view(-1, 1)
-        # # 是否到达目标 tuple_shape=[b,1]
-        # dones = torch.tensor(dones, dtype=torch.bool).view(-1, 1)
-
+        flatten_next_masks=next_sensor_masks.reshape(self.batch_size,-1) # shape(b, m_uv * max_sensors)
         with torch.no_grad():
             next_q_values = self.q_net.forward(next_node_states,next_mission_states,next_sensor_states,next_sensor_masks)
-            next_masked_q_values = torch.where(next_sensor_masks, next_q_values, torch.tensor(float('-inf')))
-            max_next_actions = torch.argmax(next_masked_q_values, dim=-1)
+            # next_masked_q_values = torch.where(flatten_next_masks, next_q_values, torch.tensor(float('-inf')))
+            next_q_values.copy_(torch.where(flatten_next_masks, next_q_values, torch.tensor(float('-inf'))))
+            # [batch_size] -> [batch_size,index_size(1)]
+            max_next_actions = torch.argmax(next_q_values, dim=1).unsqueeze(-1)
             next_q_targets = self.target_q_net.forward(next_node_states,next_mission_states,next_sensor_states,next_sensor_masks)
-            td_q_targets = rewards + self.gamma * next_q_targets.gather(1, max_next_actions) * (1 - dones)
+            td_q_targets = rewards + self.gamma * next_q_targets.gather(1, max_next_actions) * (1 - dones.int())
+        actions=actions.unsqueeze(-1)
         q_values = self.q_net(node_states,mission_states,sensor_states,sensor_masks).gather(1, actions)
 
         # 预测值和目标值的均方误差损失(取一个batch的平均值)
@@ -183,28 +184,59 @@ class TransDDQN:
 
         # 更新目标网络参数
         if self.steps_done % self.target_update == 0 and self.steps_done>0:
-            self.update_network_parameters(self.tau)
+            soft_update(self.target_q_net,self.q_net,self.tau)
         self.decrement_epsilon()
         # 迭代计数+1
         self.steps_done += 1
 
-    def save_models(self, episode,base_dir):
-        file_dir=f"{base_dir}/episode_{episode}/"
+        return dqn_loss.detach().item()
+
+    def save_models(self, episode,base_dir,final):
+        if final is True:
+            file_dir = f"{base_dir}/final"
+        else:
+            file_dir=f"{base_dir}/episode_{episode}"
         if not os.path.exists(file_dir):
             os.makedirs(file_dir)
+        logging.basicConfig(
+            level=logging.INFO,  # 日志级别
+            format='%(asctime)s [%(levelname)s] %(message)s',  # 日志格式
+            datefmt='%Y-%m-%d %H:%M:%S',  # 时间格式
+            filename=f'{file_dir}/model.log',  # 日志文件名
+            filemode='a'  # 追加模式写入日志文件
+        )
 
-        self.q_net.save_model(file_dir + f'TransDDQN_Q_net.pth')
+        self.q_net.save_model(file_dir + f'/TransDDQN_Q_net.pth')
         print('Saving TransDDQN_Q_net network successfully!')
-        self.target_q_net.save_model(file_dir + f'TransDDQN_Q_target.pth')
+        logging.info('Saving TransDDQN_Q_net network successfully!')
+        self.target_q_net.save_model(file_dir + f'/TransDDQN_Q_target.pth')
         print('Saving TransDDQN_Q_target network successfully!')
-        self.memory.save(file_dir+f'TransDDQN_memory.pkl')
+        logging.info('Saving TransDDQN_Q_target network successfully!')
+        self.memory.save(file_dir+f'/TransDDQN_memory.pkl')
         print('Saving TransDDQN memory successfully!')
+        logging.info('Saving TransDDQN memory successfully!')
 
-    def load_models(self, episode,base_dir):
-        file_dir = f"{base_dir}/episode_{episode}/"
-        self.q_net.load_model(file_dir + f'TransDDQN_Q_net.pth')
+    def load_models(self, episode,base_dir,final):
+        if final is True:
+            file_dir = f"{base_dir}/final"
+        else:
+            file_dir=f"{base_dir}/episode_{episode}"
+        if not os.path.exists(file_dir):
+            os.makedirs(file_dir)
+        logging.basicConfig(
+            level=logging.INFO,  # 日志级别
+            format='%(asctime)s [%(levelname)s] %(message)s',  # 日志格式
+            datefmt='%Y-%m-%d %H:%M:%S',  # 时间格式
+            filename=f'{file_dir}/model.log',  # 日志文件名
+            filemode='a'  # 追加模式写入日志文件
+        )
+
+        self.q_net.load_model(file_dir + f'/TransDDQN_Q_net.pth')
         print('Loading TransDDQN_Q_net network successfully!')
-        self.target_q_net.load_model(file_dir + f'TransDDQN_Q_target.pth')
+        logging.info('Loading TransDDQN_Q_net network successfully!')
+        self.target_q_net.load_model(file_dir + f'/TransDDQN_Q_target.pth')
         print('Loading TransDDQN_Q_target network successfully!')
-        self.memory.load(file_dir+f'TransDDQN_memory.pkl')
+        logging.info('Loading TransDDQN_Q_target network successfully!')
+        self.memory.load(file_dir+f'/TransDDQN_memory.pkl')
         print('Loading TransDDQN memory successfully!')
+        logging.info('Loading TransDDQN memory successfully!')

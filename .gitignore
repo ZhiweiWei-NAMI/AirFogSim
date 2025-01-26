@@ -2,8 +2,9 @@
 *.log
 *.run
 **/__pycache__/
-/evaluation
-/models
+**/evaluation
+**/models
+**/logs
 **.pth
 **/runs/**
 tripinfo.xml

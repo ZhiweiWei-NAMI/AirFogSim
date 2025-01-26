@@ -24,6 +24,7 @@ class Net(nn.Module):
         self.num_layers=dim_args.num_layers
         self.dim_hiddens= dim_args.dim_hiddens
 
+
         # Embedding layers
         self.node_embedding = nn.Linear(self.dim_node, self.dim_model)
         self.mission_embedding = nn.Linear(self.dim_mission, self.dim_model)
@@ -32,11 +33,11 @@ class Net(nn.Module):
 
         # Transformer Encoder
         self.transformer = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(d_model=self.dim_model, nhead=self.nhead, activation=F.gelu),
+            nn.TransformerEncoderLayer(d_model=self.dim_model, nhead=self.nhead, activation=F.gelu,batch_first=True),
             num_layers=self.num_layers
         )
 
-        # Compute node selection head sigmoid for possible values [0, 1]
+        # Sensing node selection head sigmoid for possible values [0, 1]
         self.mission_node_selector = nn.Sequential(
             nn.Linear((self.m1 + 1 + self.m_uv * self.max_sensors) * self.dim_model, self.dim_hiddens),
             nn.GELU(),
@@ -75,10 +76,15 @@ class Net(nn.Module):
         sensor_mask_flat = sensor_mask.view(batch_size, -1)  # [batch_size, m_uv * max_sensors]=[batch_size, m2]
 
         # Apply Transformer Encoder
+        # transformer_output = self.transformer(
+        #     src=combined_sequence.permute(1, 0, 2),  # [seq_len, batch_size, dim_model]
+        # ).permute(1, 0, 2)  # [batch_size, seq_len, dim_model]
+
+        # batch_firsh==True就不用调整维度顺序了
         transformer_output = self.transformer(
-            src=combined_sequence.permute(1, 0, 2),  # [seq_len, batch_size, dim_model]
-        ).permute(1, 0, 2)  # [batch_size, seq_len, dim_model]
-        flatten_outputs = transformer_output.view(batch_size,
+            src=combined_sequence,  # [batch_size, seq_len, dim_model]
+        ) # [batch_size, seq_len, dim_model]
+        flatten_outputs = transformer_output.reshape(batch_size,
                                                   -1)  # [batch_size, (m1+1+m_uv * max_sensors) * dim_model ]
 
         # Select mission node

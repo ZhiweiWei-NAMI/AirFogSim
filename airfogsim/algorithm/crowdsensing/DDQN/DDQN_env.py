@@ -55,12 +55,13 @@ class DDQN_Env:
         self.agent.remember(state, action,mask, reward, next_state,next_mask, done)
 
     def train(self):
-        self.agent.update()
+        loss=self.agent.update()
+        return loss
 
-    def saveModel(self,episode):
-        self.agent.save_models(episode,self.model_base_dir)
+    def saveModel(self,episode,final=False):
+        self.agent.save_models(episode,self.model_base_dir,final)
 
-    def loadModel(self,episode):
-        self.agent.load_models(episode,self.model_base_dir)
+    def loadModel(self,episode,final=False):
+        self.agent.load_models(episode,self.model_base_dir,final)
 
 

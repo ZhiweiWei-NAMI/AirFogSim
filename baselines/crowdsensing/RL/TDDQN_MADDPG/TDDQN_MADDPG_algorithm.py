@@ -14,6 +14,8 @@ import numpy as np
 device = "cuda" if torch.cuda.is_available() else "cpu"
 cuda_num = torch.cuda.device_count()
 # device = "cpu"
+base_dir="/home/chenjiarui/data/project/crowdsensing"
+
 print('device: ',device)
 print('torch_version: ',torch.__version__)
 print('cuda_num: ',cuda_num)
@@ -21,25 +23,24 @@ if cuda_num > 0:
     cuda_list = list(range(cuda_num))
     TransDDQN_device = f"cuda:{cuda_list[cuda_num-1]}"
     MADDPG_device = f"cuda:{cuda_list[cuda_num - 2]}"
-    transformer_device = f"cuda:{cuda_list[1]}"
 
 
 def parseTransDDQNTrainArgs():
     parser = argparse.ArgumentParser(description='TransDDQN train arguments')
-    parser.add_argument('--buffer_size', type=int, default=5000)  # 经验池容量
+    parser.add_argument('--buffer_size', type=int, default=1000)  # 经验池容量
     parser.add_argument('--learning_rate', type=float, default=2e-3)  # 学习率
     parser.add_argument('--gamma', type=float, default=0.9)  # 折扣因子
     parser.add_argument('--epsilon', type=float, default=0.9)  # 探索系数
     parser.add_argument('--eps_end', type=float, default=0.01)  # 最低探索系数
-    parser.add_argument('--eps_dec', type=float, default=5e-7)  # 探索系数衰减率
+    parser.add_argument('--eps_dec', type=float, default=2e-3)  # 探索系数衰减率
     parser.add_argument('--target_update', type=int, default=200)  # 目标网络的参数的更新频率
-    parser.add_argument('--batch_size', type=int, default=1)  # 每次训练选取的经验数量32
+    parser.add_argument('--batch_size', type=int, default=16)  # 每次训练选取的经验数量32
     parser.add_argument('--dim_hidden', type=int, default=128)  # 隐含层神经元个数
-    parser.add_argument('--train_min_size', type=int, default=1)  # 经验池超过200后再训练(train_min_size>batch_size)
-    parser.add_argument('--tau', type=float, default=0.995)  # 目标网络软更新平滑因子(策略网络权重)
-    parser.add_argument('--smooth_factor', type=float, default=0.995)  # 最大q值平滑因子（旧值权重）
+    parser.add_argument('--train_min_size', type=int, default=200)  # 经验池超过200后再训练(train_min_size>batch_size)
+    parser.add_argument('--tau', type=float, default=0.01)  # 目标网络软更新平滑因子(训练策略网络权重)
+    parser.add_argument('--smooth_factor', type=float, default=0.99)  # 最大q值平滑因子（旧值权重）
     parser.add_argument('--device', type=str, default=TransDDQN_device)  # 训练设备(GPU/CPU)
-    parser.add_argument('--model_base_dir', type=str, default="models/TransDDQN/")  # 模型文件路径
+    parser.add_argument('--model_base_dir', type=str, default=f"{base_dir}/models/TransDDQN")  # 模型文件路径
 
     args = parser.parse_args()
     return args
@@ -54,9 +55,9 @@ def parseTransDDQNDimArgs():
     # [type, accuracy]
     parser.add_argument('--dim_sensor', type=int, default=2)  # Dimension of sensor
     parser.add_argument('--max_sensors', type=int, default=4)  # Sensors on each mission node
-    parser.add_argument('--m_u', type=int, default=10)  # Maximum UAVs
+    parser.add_argument('--m_u', type=int, default=15)  # Maximum UAVs
     parser.add_argument('--m_v', type=int, default=100)  # Maximum vehicles
-    parser.add_argument('--m_r', type=int, default=4)  # Maximum RSUs
+    parser.add_argument('--m_r', type=int, default=5)  # Maximum RSUs
     parser.add_argument('--dim_model', type=int, default=512)  # Embedding feature dimension
     parser.add_argument('--nhead', type=float, default=4)  # Head num
     parser.add_argument('--num_layers', type=float, default=3)  # Transformer encoder layers num
@@ -70,16 +71,16 @@ def parseMADDPGTrainArgs():
     parser.add_argument('--buffer_size', type=int, default=5000)  # 经验池容量
     parser.add_argument('--learning_rate', type=float, default=2e-3)  # 学习率
     parser.add_argument('--gamma', type=float, default=0.9)  # 折扣因子
-    parser.add_argument('--var', type=float, default=1.0)  # 动作探索随机噪声
+    parser.add_argument('--var', type=float, default=0.9)  # 动作探索随机噪声
     parser.add_argument('--var_end', type=float, default=0.01)  # 最低噪声
-    parser.add_argument('--var_dec', type=float, default=2e-5)  # 噪声衰减率
+    parser.add_argument('--var_dec', type=float, default=2e-4)  # 噪声衰减率
     parser.add_argument('--target_update', type=int, default=200)  # 目标网络的参数的更新频率
-    parser.add_argument('--batch_size', type=int, default=32)  # 每次训练选取的经验数量
+    parser.add_argument('--batch_size', type=int, default=64)  # 每次训练选取的经验数量
     parser.add_argument('--dim_hidden', type=int, default=128)  # 隐含层神经元个数
     parser.add_argument('--train_min_size', type=int, default=200)  # 经验池超过200后再训练(train_min_size>batch_size)
-    parser.add_argument('--tau', type=float, default=0.995)  # 目标网络软更新平滑因子(策略网络权重)
+    parser.add_argument('--tau', type=float, default=0.01)  # 目标网络软更新平滑因子(训练网络权重)
     parser.add_argument('--device', type=str, default=MADDPG_device)  # 训练设备(GPU/CPU)
-    parser.add_argument('--model_base_dir', type=str, default="models/MADDPG/")  # 模型文件路径
+    parser.add_argument('--model_base_dir', type=str, default=f"{base_dir}/models/MADDPG")  # 模型文件路径
     args = parser.parse_args()
     return args
 
@@ -110,8 +111,8 @@ def parseMADDPGDimArgs():
 
     # 算法实际使用的维度
     parser.add_argument('--dim_observation', type=int, default=dim_observation)  # Dimension of observation
-    parser.add_argument('--dim_action', type=int, default=3)  # Dimension of action [angle, phi, speed]
-    parser.add_argument('--n_agents', type=int, default=10)  # Number of agents
+    parser.add_argument('--dim_action', type=int, default=1)  # Dimension of action [angle] (phi, speed取默认值)
+    parser.add_argument('--n_agents', type=int, default=15)  # Number of agents
     parser.add_argument('--dim_hiddens', type=float, default=512)  # Dimension of hidden layer
     args = parser.parse_args()
     return args
@@ -169,7 +170,10 @@ class TransDDQN_MADDPG_AlgorithmModule(BaseAlgorithmModule):
                                    'done': done}
 
         def setNextState(self, exp_id, next_node_state, next_mission_state, next_sensor_state, next_sensor_mask, done):
-            assert exp_id in self.buffer, "State_id is invalid."
+            # assert exp_id in self.buffer, "State_id is invalid."
+            if exp_id not in self.buffer:
+                return
+
             self.buffer[exp_id]['next_node_state'] = next_node_state
             self.buffer[exp_id]['next_mission_state'] = next_mission_state
             self.buffer[exp_id]['next_sensor_state'] = next_sensor_state
@@ -178,6 +182,9 @@ class TransDDQN_MADDPG_AlgorithmModule(BaseAlgorithmModule):
 
         def completeAndPopExperience(self, exp_id, reward):
             assert exp_id in self.buffer, "exp_id is invalid."
+            if self.buffer[exp_id]['next_node_state'] is None:
+                return None
+
             self.buffer[exp_id]['reward'] = reward
             packed_exp = self.__expToFlattenArray(self.buffer[exp_id])
             del self.buffer[exp_id]
@@ -250,6 +257,8 @@ class TransDDQN_MADDPG_AlgorithmModule(BaseAlgorithmModule):
         self.max_n_RSUs = self.trafficScheduler.getConfig(env, 'max_n_RSUs')
         self.max_mission_size = self.missionScheduler.getConfig(env, 'mission_size_range')[1]
         self.max_energy = env.energy_manager.getConfig('initial_energy_range')[0]
+        self.TA_distance_Veh=self.missionScheduler.getConfig(env, 'TA_distance_Veh')
+        self.TA_distance_UAV = self.missionScheduler.getConfig(env, 'TA_distance_UAV')
         self.node_type_dict = {
             'U': 1,
             'V': 2,
@@ -527,28 +536,31 @@ class TransDDQN_MADDPG_AlgorithmModule(BaseAlgorithmModule):
                                                                                       mission_sensor_type,
                                                                                       mission_accuracy,
                                                                                       excluded_sensor_ids,
+                                                                                      mission_position,
+                                                                                      self.TA_distance_Veh,
+                                                                                      self.TA_distance_UAV,
                                                                                       self.node_priority)
+            if valid_sensor_num == 0:
+                continue
             encode_sensor_states, encode_mask = self._encode_sensor_states(sensor_states, max_sensor_node_num,
                                                                            self.TransDDQN_dim_args.max_sensors,
                                                                            self.TransDDQN_dim_args.dim_sensor)
-            if valid_sensor_num == 0:
-                continue
+
             is_random, max_q_value, action_index = self.TransDDQN_env.takeAction(encode_node_states,
                                                                                  encode_mission_state,
                                                                                  encode_sensor_states, encode_mask)
 
-            if self.last_mission_id is not None:
-                self.ta_buffer.setNextState(self.last_mission_id, encode_node_states, encode_mission_state,
-                                            encode_sensor_states, encode_mask, False)
-            self.ta_buffer.add(mission_id, encode_node_states, encode_mission_state, encode_sensor_states, encode_mask,
-                               action_index)
-            self.last_mission_id = mission_id
-
+            if action_index is None:
+                continue
             appointed_node_type, appointed_node_id, appointed_sensor_id, appointed_sensor_accuracy = self.algorithmScheduler.getSensorInfoByAction(
                 env, action_index, sensor_states)
             if appointed_node_id is not None and appointed_sensor_id is not None:
                 if appointed_node_type == 'U':
-                    self.trafficScheduler.addUAVRoute(env, appointed_node_id, mission_position)
+                    route_with_time={
+                        'position':mission_position,
+                        'to_stay_time':mission_profile['mission_duration'][0]
+                    }
+                    self.trafficScheduler.addUAVRoute(env, appointed_node_id, route_with_time)
                 mission_profile['appointed_node_id'] = appointed_node_id
                 mission_profile['appointed_sensor_id'] = appointed_sensor_id
                 mission_profile['appointed_sensor_accuracy'] = appointed_sensor_accuracy
@@ -566,6 +578,15 @@ class TransDDQN_MADDPG_AlgorithmModule(BaseAlgorithmModule):
                     mission_profile['mission_task_sets'].append(task_set)
                 self.missionScheduler.generateAndAddMission(env, mission_profile)
                 allocate_num += 1
+
+                # set state buffer
+                if self.last_mission_id is not None:
+                    self.ta_buffer.setNextState(self.last_mission_id, encode_node_states, encode_mission_state,
+                                                encode_sensor_states, encode_mask, False)
+                self.ta_buffer.add(mission_id, encode_node_states, encode_mission_state, encode_sensor_states,
+                                   encode_mask,
+                                   action_index)
+                self.last_mission_id = mission_id
 
                 delete_mission_profile_ids.append(mission_profile['mission_id'])
                 excluded_sensor_ids.append(appointed_sensor_id)
@@ -612,7 +633,7 @@ class TransDDQN_MADDPG_AlgorithmModule(BaseAlgorithmModule):
                         nearest_r_id = self.entityScheduler.getNodeInfoByIndexAndType(env, int(nearest_r_idx[0]), 'I')[
                             'id']
 
-                    relay_probability = 0.5
+                    relay_probability=env.mission_manager.getConfig("relay_probability")
                     if random.random() < relay_probability and UAV_num > 0:
                         return_route = [nearest_u_id, nearest_r_id]
                     else:
@@ -679,8 +700,13 @@ class TransDDQN_MADDPG_AlgorithmModule(BaseAlgorithmModule):
         norm_actions = self.MADDPG_env.takeAction(encode_global_states) # Tensor
 
         for idx, norm_action in enumerate(norm_actions):
-            action_array = norm_action.tolist()
-            norm_angle, norm_phi, norm_speed = action_array
+            # 计算 xy 平面的方位角
+            norm_angle = norm_action.tolist()[0]
+            # z 相对于 xy 平面的仰角为0
+            norm_phi=0
+            # 最大速度飞行
+            norm_speed=1
+
             angle, phi, speed = self._transformUAVMobilityPattern(norm_angle=norm_angle, norm_phi=norm_phi,
                                                                   norm_speed=norm_speed)
             mobility_pattern = {'angle': angle, 'phi': phi, 'speed': speed}
@@ -689,37 +715,10 @@ class TransDDQN_MADDPG_AlgorithmModule(BaseAlgorithmModule):
 
             last_state = self.last_UAV_states.get(UAV_id, None)
             if last_state is not None:
-                self.pp_buffer.add(UAV_id, last_state, action_array)
+                self.pp_buffer.add(UAV_id, last_state, norm_angle)
                 self.pp_buffer.setNextState(UAV_id, encode_global_states[idx], False)
             self.last_UAV_states[UAV_id] = encode_global_states[idx]
 
-            # target_position = self.missionScheduler.getNearestMissionPosition(env, UAV_id, UAV_info['position'])
-            # if target_position is None:
-            #     # 悬停
-            #     mobility_pattern = {'angle': 0, 'phi': 0, 'speed': 0}
-            #     UAVs_mobile_pattern[UAV_id] = mobility_pattern
-            # else:
-            #     # Update stay time at first position in route
-            #     distance_threshold = self.trafficScheduler.getConfig(env, 'distance_threshold')
-            #     distance = np.linalg.norm(np.array(target_position) - np.array(current_position))
-            #     if distance < distance_threshold:
-            #         self.trafficScheduler.updateRoute(env, UAV_id, self.trafficScheduler.getTrafficInterval(env))
-            #
-            #     delta_x = target_position[0] - current_position[0]
-            #     delta_y = target_position[1] - current_position[1]
-            #     delta_z = target_position[2] - current_position[2]
-            #
-            #     # 计算 xy 平面的方位角
-            #     angle = np.arctan2(delta_y, delta_x)
-            #
-            #     # 计算 z 相对于 xy 平面的仰角
-            #     distance_xy = np.sqrt(delta_x ** 2 + delta_y ** 2)
-            #     phi = np.arctan2(delta_z, distance_xy)
-            #
-            #     mobility_pattern = {'angle': angle, 'phi': phi}
-            #     UAV_speed_range = self.trafficScheduler.getConfig(env, 'UAV_speed_range')
-            #     mobility_pattern['speed'] = random.uniform(UAV_speed_range[0], UAV_speed_range[1])
-            #     UAVs_mobile_pattern[UAV_id] = mobility_pattern
         self.trafficScheduler.setUAVMobilityPatterns(env, UAV_mobile_patterns)
 
     def scheduleOffloading(self, env: AirFogSimEnv):
@@ -745,12 +744,14 @@ class TransDDQN_MADDPG_AlgorithmModule(BaseAlgorithmModule):
             reward = self.rewardScheduler.getRewardByMission(env, mission_info)
             # reward要转成标准float型，否则以Float对象存入会出问题
             exp = self.ta_buffer.completeAndPopExperience(mission_info['mission_id'], float(reward))
-            self.TransDDQN_env.addExperience(*exp)
+            if exp is not None:
+                self.TransDDQN_env.addExperience(*exp)
         for mission_info in last_step_fail_mission_infos:
             reward = self.rewardScheduler.getPunishByMission(env, mission_info)
             # reward要转成标准float型，否则以Float对象存入会出问题
             exp = self.ta_buffer.completeAndPopExperience(mission_info['mission_id'], float(reward))
-            self.TransDDQN_env.addExperience(*exp)
+            if exp is not None:
+                self.TransDDQN_env.addExperience(*exp)
 
     def updatePPExperience(self, env: AirFogSimEnv):
         if self.pp_buffer.size() == 0:

@@ -14,8 +14,8 @@ class ReplayBuffer:
         self.train_min_size = train_min_size
         self.buffer = collections.deque(maxlen=buffer_size)
 
-    def add(self, state,action,next_state,reward):
-        self.buffer.append((state,action,next_state,reward))
+    def add(self, state,action,reward, next_state):
+        self.buffer.append((state,action,reward, next_state))
 
     def sample(self, batch_size):
         transitions=random.sample(self.buffer, batch_size)

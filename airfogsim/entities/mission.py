@@ -25,23 +25,26 @@ class Mission:
                 distance_threshold (float): The distance threshold for the location comparison.
         """
         self._mission_id = mission_profile['mission_id']
+        self._mission_sensor_type = mission_profile['mission_sensor_type']
+        self._mission_accuracy = mission_profile['mission_accuracy']
         self._appointed_node_id = mission_profile['appointed_node_id']
         self._appointed_sensor_id = mission_profile['appointed_sensor_id']
         self._appointed_sensor_accuracy = mission_profile['appointed_sensor_accuracy']
         self._mission_routes = mission_profile['mission_routes']
+        self._mission_task_sets = mission_profile['mission_task_sets']
         self._mission_duration = mission_profile['mission_duration']
         self._mission_duration_sum = sum(self._mission_duration)  # The sum duration time of each point of the mission
         self._mission_size = mission_profile['mission_size']
-        self._mission_sensor_type = mission_profile['mission_sensor_type']
-        self._mission_accuracy = mission_profile['mission_accuracy']
+        self._mission_deadline = mission_profile['mission_deadline']
+        self._distance_threshold = mission_profile.get('distance_threshold', 100)
+
+        self._mission_arrival_time = mission_profile['mission_arrival_time']
+        self._mission_start_time = mission_profile['mission_start_time']
         self._mission_stayed_time = np.zeros(len(mission_profile['mission_routes']))
         self._last_stayed_time = -np.ones(len(mission_profile['mission_routes']))
-        self._mission_start_time = mission_profile['mission_start_time']
-        self._mission_deadline = mission_profile['mission_deadline']
-        self._mission_task_sets = mission_profile['mission_task_sets']
-        self._mission_arrival_time = mission_profile['mission_arrival_time']
+        self._sensing_finish_time = 0
         self._mission_finish_time = 0  # The finish time of the mission (to be updated at the finish time, success or fail)
-        self._distance_threshold = mission_profile.get('distance_threshold', 100)
+
 
         if self._appointed_node_id is not None:
             assert len(mission_profile['mission_routes']) == len(mission_profile['mission_task_sets']) == len(mission_profile['mission_duration']), "The length of mission_routes, mission_task_sets, and mission_duration should be the same."
@@ -79,7 +82,7 @@ class Mission:
                     self._mission_stayed_time[i] += time_step
                     self._last_stayed_time[i] = current_time
                     step_duration+=time_step
-                    break
+
         return step_duration
 
     def isFinished(self):
@@ -97,10 +100,10 @@ class Mission:
 
     def isSensingFinished(self, index=None):
         if index is None:
-            return all(self._mission_stayed_time > self._mission_duration)
+            return all(self._mission_stayed_time >= self._mission_duration)
         else:
             assert index < len(self._mission_routes)
-            return self._mission_stayed_time[index] > self._mission_duration[index]
+            return self._mission_stayed_time[index] >= self._mission_duration[index]
 
     def isRelatedToNode(self, node_id):
         """Check if the mission is related to the node. (The mission is related to the node if the mission is
@@ -170,6 +173,15 @@ class Mission:
     def getLeftSensingTime(self):
         sum_left_time=sum(self._mission_duration-self._mission_stayed_time)
         return sum_left_time
+
+    def getSensingFinishTime(self):
+        return self._sensing_finish_time
+
+    def setSensingFinishTime(self, current_time):
+        self._sensing_finish_time=current_time
+
+    def sensingFinishTimeNotSet(self):
+        return self._sensing_finish_time==0
 
     def getLeftReturnSize(self):
         left_size=0

@@ -221,6 +221,7 @@ class AirFogSimEnv():
         Returns:
             bool: The done signal. True if the episode is done, False otherwise.
         """
+        self.clearTempRecords()
         # 0. Update the traffics (positions, speeds, routes, etc.)
         self._updateTraffics()
         # 1. Update the AI models (Federated Learning, Transfer Learning, etc.)
@@ -256,7 +257,6 @@ class AirFogSimEnv():
         # ensure the simulation time is the same as the traffic time
         self.simulation_time = self.traffic_manager.getCurrentTime()
         self.clearDecisions()
-        self.clearTempRecords()
         return self.isDone()
 
     def clearDecisions(self):
@@ -593,7 +593,7 @@ class AirFogSimEnv():
 
         """
         for UAV_id in self.uav_ids_as_index:
-            is_moving = self.traffic_manager.checkIsRemovingByUAVId(UAV_id)
+            is_moving = self.traffic_manager.checkIsMovingByUAVId(UAV_id)
             using_sensor_num = self.sensor_manager.getUsingSensorsNumByNodeId(UAV_id)
             sending_data_size, receiving_data_size, = self.channel_manager.getThisTimeslotTransSizeByNodeId(UAV_id)
             self.energy_manager.updateEnergyPattern(UAV_id, is_moving, using_sensor_num, sending_data_size,

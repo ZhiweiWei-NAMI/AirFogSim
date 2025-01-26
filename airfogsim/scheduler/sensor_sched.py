@@ -51,6 +51,30 @@ class SensorScheduler(BaseScheduler):
         return appointed_node_id, appointed_sensor_id, appointed_sensor_accuracy
 
     @staticmethod
+    def getLowestAccurateIdleSensorInRangeOnUAV(env, type, lowest_accuracy,target_position,distance_threshold, excluded_sensor_ids):
+        candidate_sensors = env.sensor_manager.getSensorsByStateAndType('idle', type)
+        appointed_node_id = None
+        appointed_sensor_id = None
+        appointed_sensor_accuracy = 0
+
+        # Choose the sensor with the highest accuracy among the idle sensors
+        for node_id, sensors in candidate_sensors.items():
+            node=env._getNodeById(node_id)
+            node_type=env._getNodeTypeById(node_id)
+            node_position=node.getPosition()
+            distance=np.linalg.norm(np.array(node_position)-np.array(target_position))
+            if not (distance < distance_threshold and node_type=='U'):
+                continue
+            for sensor in sensors:
+                if sensor.getSensorAccuracy() > lowest_accuracy and sensor.getSensorId() not in excluded_sensor_ids:
+                    if appointed_sensor_accuracy == 0 or sensor.getSensorAccuracy() < appointed_sensor_accuracy:
+                        # nonlocal appointed_node_id, appointed_sensor_id, appointed_sensor_accuracy
+                        appointed_sensor_accuracy = sensor.getSensorAccuracy()
+                        appointed_node_id = node_id
+                        appointed_sensor_id = sensor.getSensorId()
+        return appointed_node_id, appointed_sensor_id, appointed_sensor_accuracy
+
+    @staticmethod
     def getNearestIdleSensorInNodes(env, sensor_type, lowest_accuracy, target_position, node_infos,
                                     excluded_sensor_ids):
         candidate_sensors = env.sensor_manager.getSensorsByStateAndType('idle', sensor_type)

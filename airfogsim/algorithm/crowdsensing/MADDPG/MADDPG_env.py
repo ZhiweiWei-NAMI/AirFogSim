@@ -26,13 +26,13 @@ class MADDPG_Env:
         self.agent.remember(state, action, reward, next_state)
 
     def train(self):
-        self.agent.update()
+        a_loss,c_loss=self.agent.update()
+        return a_loss,c_loss
 
-    def saveModel(self,episode):
-        self.agent.save_models(episode,self.model_base_dir)
+    def saveModel(self,episode,final=False):
+        self.agent.save_models(episode,self.model_base_dir,final)
 
-    def loadModel(self,episode):
-        self.agent.load_models(episode,self.model_base_dir)
+    def loadModel(self,episode,final=False):
+        self.agent.load_models(episode,self.model_base_dir,final)
 
-    def cleanGPU(self):
-        torch.cuda.empty_cache()  # 清理缓存
+

@@ -532,7 +532,7 @@ class TrafficManager():
         assert UAV_id in self._UAV_infos.keys(), 'UAV_id not in _UAV_infos'
         del self._UAV_infos[UAV_id]
 
-    def checkIsRemovingByUAVId(self, UAV_id):
+    def checkIsMovingByUAVId(self, UAV_id):
         UAV_info = self._UAV_infos[UAV_id]
         assert UAV_id in self._UAV_infos.keys(), 'UAV_id not in _UAV_infos'
         return UAV_info['speed'] > 0

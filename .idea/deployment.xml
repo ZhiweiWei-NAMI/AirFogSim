@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="chenjiarui@100.84.84.235:22 key" autoUploadExternalChanges="true">
+  <component name="PublishConfigData" autoUpload="Always" serverName="chenjiarui@100.84.84.235:22 key" createEmptyFolders="true" confirmBeforeDeletion="false" autoUploadExternalChanges="true">
+    <option name="confirmBeforeDeletion" value="false" />
     <serverData>
       <paths name="chenjiarui@100.84.84.235:22 key">
         <serverdata>

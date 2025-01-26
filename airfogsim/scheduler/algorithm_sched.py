@@ -169,7 +169,7 @@ class AlgorithmScheduler(BaseScheduler):
         return top_10_sensor_states
 
     @staticmethod
-    def getSensorStates(env, sensor_type, lower_bound_accuracy, excluded_sensor_ids, node_priority):
+    def getSensorStates(env, sensor_type, lower_bound_accuracy, excluded_sensor_ids,current_position,TA_distance_Veh,TA_distance_UAV, node_priority):
         """Get sensor states (shape:[sensor_num,dim]).
 
          Args:
@@ -202,11 +202,24 @@ class AlgorithmScheduler(BaseScheduler):
             node_sensor_states = sensor_states_dict.get(node_id, [])
             node_type = env._getNodeTypeById(node_id)
             assert node_type is not None, "Node is invalid."
+            node=env._getNodeById(node_id)
+            node_position = node.getPosition()
+            distance = np.linalg.norm(np.asarray(node_position) - np.asarray(current_position))
+
             for sensor in sensors:
                 sensor_id=sensor.getSensorId()
-                if sensor.getSensorAccuracy() > lower_bound_accuracy and \
+                if node_type=='V' and \
+                        sensor.getSensorAccuracy() > lower_bound_accuracy and \
                         sensor_id not in excluded_sensor_ids and \
-                        sensor_id in candidate_sensor_ids:
+                        sensor_id in candidate_sensor_ids and \
+                        distance < TA_distance_Veh: # Veh可分配距离阈值
+                    candidate = True
+                    valid_sensor_num += 1
+                elif node_type=='U' and \
+                        sensor.getSensorAccuracy() > lower_bound_accuracy and \
+                        sensor_id not in excluded_sensor_ids and \
+                        sensor_id in candidate_sensor_ids and \
+                        distance < TA_distance_UAV: # UAV可分配距离阈值
                     candidate = True
                     valid_sensor_num += 1
                 else:

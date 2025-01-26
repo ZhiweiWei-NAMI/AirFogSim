@@ -66,16 +66,85 @@ class BaseAlgorithmModule:
             env (AirFogSimEnv): The environment object.
         """
         waiting_to_return_tasks = self.taskScheduler.getWaitingToReturnTaskInfos(env)
-        RSU_infos = self.trafficScheduler.getRSUTrafficInfos(env)
         for task_node_id, tasks in waiting_to_return_tasks.items():
             for task in tasks:
-                distance_dict = {}
                 current_node_id = task.getCurrentNodeId()
-                for RSU_id, RSU_info in RSU_infos.items():
-                    distance_dict[RSU_id] = self.trafficScheduler.getDistanceBetweenNodesById(env, current_node_id, RSU_id)
-                distance_list = sorted(distance_dict.items(), key=lambda d: d[1],
-                                       reverse=False)  # distance_list[idx][0]:key [1]:value
-                return_route = [distance_list[0][0]]  # Select the nearest RSU
+                current_node_type = self.entityScheduler.getNodeTypeById(env, current_node_id)
+                assert current_node_type is not None
+                vehicle_num = self.entityScheduler.getNodeNumByType(env, 'V')
+                UAV_num = self.entityScheduler.getNodeNumByType(env, 'U')
+                RSU_num = self.entityScheduler.getNodeNumByType(env, 'I')
+
+                if current_node_type == 'V':
+                    # relay_comm_rate = np.zeros((1, UAV_num, RSU_num))
+                    # direct_comm_rate = np.zeros((1, RSU_num))
+                    # v_idx=self.entityScheduler.getNodeIdxById(env,current_node_id)
+                    # for u_idx in range(UAV_num):
+                    #     for r_idx in range(RSU_num):
+                    #         V2U_rate = self.commScheduler.getSumRateByChannelType(env, v_idx, u_idx, 'V2U')
+                    #         U2I_rate = self.commScheduler.getSumRateByChannelType(env, u_idx, r_idx, 'U2I')
+                    #         avg_rate = V2U_rate * U2I_rate / (V2U_rate + U2I_rate)
+                    #         relay_comm_rate[0][u_idx][r_idx] = avg_rate
+                    # for r_idx in range(RSU_num):
+                    #     V2I_rate = self.commScheduler.getSumRateByChannelType(env, v_idx, r_idx, 'V2I')
+                    #     direct_comm_rate[0][r_idx] = V2I_rate
+                    #
+                    # relay_max_value = np.max(relay_comm_rate)
+                    # relay_max_index = np.unravel_index(np.argmax(relay_comm_rate), relay_comm_rate.shape)
+                    # relay_u_id = self.entityScheduler.getNodeInfoByIndexAndType(env, int(relay_max_index[1]), 'U')['id']
+                    # relay_r_id = self.entityScheduler.getNodeInfoByIndexAndType(env, int(relay_max_index[2]), 'I')['id']
+                    # relay_max_route = [relay_u_id, relay_r_id]
+                    #
+                    # direct_max_value = np.max(direct_comm_rate)
+                    # direct_max_index = np.unravel_index(np.argmax(direct_comm_rate), direct_comm_rate.shape)
+                    # direct_r_id = self.entityScheduler.getNodeInfoByIndexAndType(env, int(direct_max_index[1]), 'I')['id']
+                    # direct_max_route = [direct_r_id]
+                    # print('relay',relay_max_value,relay_max_route)
+                    # print('direct',direct_max_value,direct_max_route)
+
+                    # return_route = relay_max_route if relay_max_value > direct_max_value else direct_max_route
+
+                    if UAV_num > 0:
+                        V2U_distance = np.zeros((UAV_num))
+                        for u_idx in range(UAV_num):
+                            u_id = self.entityScheduler.getNodeInfoByIndexAndType(env, u_idx, 'U')['id']
+                            distance = self.trafficScheduler.getDistanceBetweenNodesById(env, current_node_id, u_id)
+                            V2U_distance[u_idx] = distance
+                        nearest_u_distance = np.max(V2U_distance)
+                        nearest_u_idx = np.unravel_index(np.argmax(V2U_distance), V2U_distance.shape)
+                        nearest_u_id = self.entityScheduler.getNodeInfoByIndexAndType(env, int(nearest_u_idx[0]), 'U')[
+                            'id']
+
+                    if RSU_num > 0:
+                        V2R_distance = np.zeros(RSU_num)
+                        for r_idx in range(RSU_num):
+                            r_id = self.entityScheduler.getNodeInfoByIndexAndType(env, r_idx, 'I')['id']
+                            distance = self.trafficScheduler.getDistanceBetweenNodesById(env, current_node_id, r_id)
+                            V2R_distance[r_idx] = distance
+                        nearest_r_distance = np.max(V2R_distance)
+                        nearest_r_idx = np.unravel_index(np.argmax(V2R_distance), V2R_distance.shape)
+                        nearest_r_id = self.entityScheduler.getNodeInfoByIndexAndType(env, int(nearest_r_idx[0]), 'I')[
+                            'id']
+
+                    relay_probability = env.mission_manager.getConfig("relay_probability")
+                    if random.random() < relay_probability and UAV_num > 0:
+                        return_route = [nearest_u_id, nearest_r_id]
+                    else:
+                        return_route = [nearest_r_id]
+
+                elif current_node_type == 'U':
+                    U2R_distance = np.zeros((RSU_num))
+                    for r_idx in range(RSU_num):
+                        r_id = self.entityScheduler.getNodeInfoByIndexAndType(env, r_idx, 'I')['id']
+                        distance = self.trafficScheduler.getDistanceBetweenNodesById(env, current_node_id, r_id)
+                        U2R_distance[r_idx] = distance
+                    nearest_r_distance = np.max(U2R_distance)
+                    nearest_r_idx = np.unravel_index(np.argmax(U2R_distance), U2R_distance.shape)
+                    nearest_r_id = self.entityScheduler.getNodeInfoByIndexAndType(env, int(nearest_r_idx[0]), 'I')['id']
+                    return_route = [nearest_r_id]
+                else:
+                    raise TypeError('Node type is invalid')
+
                 self.taskScheduler.setTaskReturnRoute(env, task.getTaskId(), return_route)
 
     def scheduleMission(self, env: AirFogSimEnv):
@@ -86,17 +155,31 @@ class BaseAlgorithmModule:
             env (AirFogSimEnv): The environment object.
 
         """
+        UAV_probability = 0.5
         cur_time = self.trafficScheduler.getCurrentTime(env)
+        traffic_interval = self.trafficScheduler.getTrafficInterval(env)
         new_missions_profile = self.missionScheduler.getToBeAssignedMissionsProfile(env, cur_time)
         delete_mission_profile_ids = []
         excluded_sensor_ids = []
 
+        generate_num = 0
+        allocate_num = 0
         for mission_profile in new_missions_profile:
+            if mission_profile['mission_arrival_time'] > cur_time - traffic_interval:
+                generate_num += 1
             mission_sensor_type = mission_profile['mission_sensor_type']
             mission_accuracy = mission_profile['mission_accuracy']
+            sensing_position = mission_profile['mission_routes'][0]
+            TA_distance_Veh = self.missionScheduler.getConfig(env, 'TA_distance_Veh')
+            TA_distance_UAV = self.missionScheduler.getConfig(env, 'TA_distance_UAV')
 
-            appointed_node_id, appointed_sensor_id, appointed_sensor_accuracy = self.sensorScheduler.getLowestAccurateIdleSensorOnUAV(
-                env, mission_sensor_type, mission_accuracy, excluded_sensor_ids)
+            if random.random() < UAV_probability:
+                appointed_node_id, appointed_sensor_id, appointed_sensor_accuracy = self.sensorScheduler.getLowestAccurateIdleSensorInRangeOnUAV(
+                    env, mission_sensor_type, mission_accuracy, sensing_position, TA_distance_UAV, excluded_sensor_ids)
+            else:
+                vehicle_infos = self.trafficScheduler.getVehicleInfosInRange(env, sensing_position, TA_distance_Veh)
+                appointed_node_id, appointed_sensor_id, appointed_sensor_accuracy = self.sensorScheduler.getNearestIdleSensorInNodes(
+                    env, mission_sensor_type, mission_accuracy, sensing_position, vehicle_infos, excluded_sensor_ids)
 
             if appointed_node_id != None and appointed_sensor_id != None:
                 mission_profile['appointed_node_id'] = appointed_node_id
@@ -109,15 +192,18 @@ class BaseAlgorithmModule:
                         'task_node_id': appointed_node_id,
                         'task_deadline': mission_profile['mission_deadline'],
                         'arrival_time': mission_profile['mission_arrival_time'],
-                        'return_size': mission_profile['mission_size']
+                        'return_size': mission_profile['mission_size'],
                     }
                     new_task = self.taskScheduler.generateTaskOfMission(env, mission_task_profile)
                     task_set.append(new_task)
                     mission_profile['mission_task_sets'].append(task_set)
                 self.missionScheduler.generateAndAddMission(env, mission_profile)
+                allocate_num += 1
 
                 delete_mission_profile_ids.append(mission_profile['mission_id'])
                 excluded_sensor_ids.append(appointed_sensor_id)
+
+        self.missionScheduler.setMissionEvaluationIndicators(env, generate_num, allocate_num)
         self.missionScheduler.deleteBeAssignedMissionsProfile(env, delete_mission_profile_ids)
 
     def scheduleTraffic(self, env: AirFogSimEnv):
@@ -132,7 +218,7 @@ class BaseAlgorithmModule:
         for UAV_id, UAV_info in UAVs_info.items():
             current_position = UAV_info['position']
             # target_position = self.trafficScheduler.getNextPositionOfUAV(env, UAV_id)
-            target_position = self.missionScheduler.getNearestMissionPosition(env,UAV_id,current_position)
+            target_position = self.missionScheduler.getNearestMissionPosition(env, UAV_id, current_position)
 
             if target_position is None:
                 # 在 [0, 2π) 范围内生成一个随机角度（弧度）
@@ -162,6 +248,7 @@ class BaseAlgorithmModule:
                 mobility_pattern['speed'] = random.uniform(UAV_speed_range[0], UAV_speed_range[1])
                 UAVs_mobile_pattern[UAV_id] = mobility_pattern
         self.trafficScheduler.setUAVMobilityPatterns(env, UAVs_mobile_pattern)
+
 
     def scheduleOffloading(self, env: AirFogSimEnv):
         """The offloading scheduling logic. Should be implemented by the subclass. Default is to offload the task to the nearest node.

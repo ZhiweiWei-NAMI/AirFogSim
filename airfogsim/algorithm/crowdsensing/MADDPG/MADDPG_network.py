@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class Critic(nn.Module):
-    def __init__(self, n_agent, dim_observation, dim_action, dim_hidden):
+    def __init__(self, n_agent, dim_observation, dim_action, dim_hiddens):
         super(Critic, self).__init__()
         self.n_agent = n_agent
         self.dim_observation = dim_observation
@@ -17,13 +17,13 @@ class Critic(nn.Module):
         # self.FC3 = nn.Linear(512, 300)
         # self.FC4 = nn.Linear(300, 1)
         self.value_calculator=torch.nn.Sequential(
-            nn.Linear(obs_dim+act_dim, dim_hidden),
+            nn.Linear(obs_dim+act_dim, dim_hiddens),
             nn.GELU(),
-            nn.Linear(dim_hidden, dim_hidden),
+            nn.Linear(dim_hiddens, dim_hiddens),
             nn.GELU(),
-            nn.Linear(dim_hidden, dim_hidden),
+            nn.Linear(dim_hiddens, dim_hiddens),
             nn.GELU(),
-            nn.Linear(dim_hidden, 1)
+            nn.Linear(dim_hiddens, 1)
         )
 
     # obs: batch_size * obs_dim
