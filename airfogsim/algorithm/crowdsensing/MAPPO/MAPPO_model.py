@@ -29,7 +29,8 @@ def compute_advantage(gamma, gae_lambda, td_error,device):
         advantage = gamma * gae_lambda * advantage + delta
         advantage_list.append(advantage)
     advantage_list.reverse()
-    return torch.tensor(advantage_list, dtype=torch.float,device=device)
+    advantage_array = np.array(advantage_list)
+    return torch.tensor(advantage_array, dtype=torch.float,device=device)
 
 class MAPPO:
     def __init__(self, dim_args, train_args):
@@ -71,7 +72,6 @@ class MAPPO:
         for x in self.old_critics:
             x.to(self.device)
 
-
         # 记录迭代次数
         self.steps_done = 0
 
@@ -97,19 +97,19 @@ class MAPPO:
         return actions
 
     def update(self):
-        c_loss = []
-        a_loss = []
+        c_loss = [[] for _ in range(self.n_agents)]
+        a_loss = [[] for _ in range(self.n_agents)]
         for _ in range(self.epoch):
             for agent_idx in range(self.n_agents):
                 # 同一时间的全局state,action,next_state,reward
                 states, actions, rewards, next_states= self.memory[agent_idx].get_all()
                 # 转换为 PyTorch 张量
-                # numpy[batch_size, n_agents, state_dim]-->Tensor[batch_size, n_agents, state_dim]
+                # numpy[batch_size,n_agents, state_dim]-->Tensor[batch_size,n_agents, state_dim]
                 states = torch.tensor(states, dtype=torch.float).to(self.device)
-                # numpy[batch_size, action_dim]-->Tensor[batch_size, n_agents, action_dim]
+                # numpy[batch_size, action_dim]-->Tensor[batch_size, action_dim]
                 actions = torch.tensor(actions, dtype=torch.float).to(self.device)
-                # numpy[batch_size]-->Tensor[batch_size, n_agents]
-                rewards = torch.tensor(rewards, dtype=torch.float).to(self.device)
+                # numpy[batch_size]-->Tensor[batch_size,1]
+                rewards = torch.tensor(rewards, dtype=torch.float).unsqueeze(1).to(self.device)
                 # numpy[batch_size, n_agents, state_dim]-->Tensor[batch_size, n_agents, state_dim]
                 next_states = torch.tensor(next_states, dtype=torch.float).to(self.device)
 
@@ -142,8 +142,8 @@ class MAPPO:
                 loss_critic.backward()
                 self.critic_optimizer[agent_idx].step()
 
-                a_loss.append(loss_actor.detach().item())
-                c_loss.append(loss_critic.detach().item())
+                a_loss[agent_idx].append(loss_actor.detach().item())
+                c_loss[agent_idx].append(loss_critic.detach().item())
 
         for i in range(self.n_agents):
             hard_update(self.critics[i], self.old_critics[i])
@@ -158,6 +158,8 @@ class MAPPO:
             file_dir = f"{base_dir}/final"
         else:
             file_dir=f"{base_dir}/episode_{episode}"
+        model_type = "final" if final is True else "checkpoint"
+
         if not os.path.exists(file_dir):
             os.makedirs(file_dir)
         logging.basicConfig(
@@ -170,17 +172,17 @@ class MAPPO:
 
         for i in range(self.n_agents):
             self.critics[i].save_model(file_dir + f'/MAPPO_critics_{i}.pth')
-            print(f'Saving MAPPO_critics_{i} network successfully!')
-            logging.info(f'Saving MAPPO_critics_{i} network successfully!')
+            print(f'Saving {model_type} episode_{episode} MAPPO_critics_{i} network successfully!')
+            logging.info(f'Saving {model_type} episode_{episode} MAPPO_critics_{i} network successfully!')
             self.actors[i].save_model(file_dir + f'/MAPPO_actors_{i}.pth')
-            print(f'Saving MAPPO_actors_{i} network successfully!')
-            logging.info(f'Saving MAPPO_actors_{i} network successfully!')
+            print(f'Saving {model_type} episode_{episode} MAPPO_actors_{i} network successfully!')
+            logging.info(f'Saving {model_type} episode_{episode} MAPPO_actors_{i} network successfully!')
             self.old_critics[i].save_model(file_dir + f'/MAPPO_old_critics_{i}.pth')
-            print(f'Saving MAPPO_old_critics_{i} network successfully!')
-            logging.info(f'Saving MAPPO_old_critics_{i} network successfully!')
+            print(f'Saving {model_type} episode_{episode} MAPPO_old_critics_{i} network successfully!')
+            logging.info(f'Saving {model_type} episode_{episode} MAPPO_old_critics_{i} network successfully!')
             self.old_actors[i].save_model(file_dir + f'/MAPPO_old_actors_{i}.pth')
-            print(f'Saving MAPPO_old_actors_{i} network successfully!')
-            logging.info(f'Saving MAPPO_old_actors_{i} network successfully!')
+            print(f'Saving {model_type} episode_{episode} MAPPO_old_actors_{i} network successfully!')
+            logging.info(f'Saving {model_type} episode_{episode} MAPPO_old_actors_{i} network successfully!')
 
 
     def load_models(self, episode, base_dir,final):
@@ -188,6 +190,7 @@ class MAPPO:
             file_dir = f"{base_dir}/final"
         else:
             file_dir=f"{base_dir}/episode_{episode}"
+        model_type = "final" if final is True else "checkpoint"
 
         logging.basicConfig(
             level=logging.INFO,  # 日志级别
@@ -199,15 +202,15 @@ class MAPPO:
 
         for i in range(self.n_agents):
             self.critics[i].load_model(file_dir + f'/MAPPO_critics_{i}.pth')
-            print(f'Loading MAPPO_critics_{i} network successfully!')
-            logging.info(f'Loading MAPPO_critics_{i} network successfully!')
+            print(f'Loading {model_type} episode_{episode} MAPPO_critics_{i} network successfully!')
+            logging.info(f'Loading {model_type} episode_{episode} MAPPO_critics_{i} network successfully!')
             self.actors[i].load_model(file_dir + f'/MAPPO_actors_{i}.pth')
-            print(f'Loading MAPPO_actors_{i} network successfully!')
-            logging.info(f'Loading MAPPO_actors_{i} network successfully!')
+            print(f'Loading {model_type} episode_{episode} MAPPO_actors_{i} network successfully!')
+            logging.info(f'Loading {model_type} episode_{episode} MAPPO_actors_{i} network successfully!')
             self.old_critics[i].load_model(file_dir + f'/MAPPO_old_critics_{i}.pth')
-            print(f'Loading MAPPO_old_critics_{i} network successfully!')
-            logging.info(f'Loading MAPPO_old_critics_{i} network successfully!')
+            print(f'Loading {model_type} episode_{episode} MAPPO_old_critics_{i} network successfully!')
+            logging.info(f'Loading {model_type} episode_{episode} MAPPO_old_critics_{i} network successfully!')
             self.old_actors[i].load_model(file_dir + f'/MAPPO_old_actors_{i}.pth')
-            print(f'Loading MAPPO_old_actors_{i} network successfully!')
-            logging.info(f'Loading MAPPO_old_actors_{i} network successfully!')
+            print(f'Loading {model_type} episode_{episode} MAPPO_old_actors_{i} network successfully!')
+            logging.info(f'Loading {model_type} episode_{episode} MAPPO_old_actors_{i} network successfully!')
 

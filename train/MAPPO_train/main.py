@@ -37,8 +37,9 @@ def load_config(path):
         return config
 
 
-last_episode = 92
-max_episode = 200
+last_episode = 0
+max_episode = 400
+checkpoint = 50
 
 # 启动全局性能监控
 # global_profiler = Profiler()
@@ -51,13 +52,11 @@ episode_profiler= Profiler()
 writer = SummaryWriter("./logs")
 
 # 1. Load the configuration file
-config_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join("../", 'config.yaml')
+config_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join("./", 'config.yaml')
 config = load_config(config_path)
 
 # 2. Get algorithm module
-# algorithm_module = GreedyAlgorithmModule()
 algorithm_module = MAPPO_Train_AlgorithmModule()
-algorithm_tag = algorithm_module.getAlgorithmTag()
 
 # 3. Create the new environment
 env = AirFogSimEnv(config, interactive_mode=None)
@@ -67,7 +66,7 @@ env = AirFogSimEnv(config, interactive_mode=None)
 algorithm_module.initialize(env,last_episode=last_episode,final=True)
 
 # 5. Create the evaluation module
-evaluation_module = AirFogSimEvaluation(algorithm_tag)
+evaluation_module = AirFogSimEvaluation(env,algorithm_module)
 
 for episode in range(last_episode + 1, max_episode + 1):
     # 启动episode性能监控
@@ -81,7 +80,7 @@ for episode in range(last_episode + 1, max_episode + 1):
         env.step()
         env.render()
 
-        evaluation_module.updateAndSaveStepRecords(env, algorithm_module) # 保存一步记录
+        evaluation_module.updateAndSaveStepRecords() # 保存一步记录
 
         acc_reward = evaluation_module.getAccReward()
         avg_reward = evaluation_module.getAvgReward()
@@ -95,16 +94,17 @@ for episode in range(last_episode + 1, max_episode + 1):
         for i in range(len(a_loss)):
             if len(actor_step_loss) <= i:
                 actor_step_loss.append([])
-            actor_step_loss[i].append(a_loss[i])
+            actor_step_loss[i]=a_loss[i]
         for i in range(len(c_loss)):
             if len(critic_step_loss) <= i:
                 critic_step_loss.append([])
-            critic_step_loss[i].append(c_loss[i])
+            critic_step_loss[i]=c_loss[i]
     print(f'a_loss: {a_loss}')
     print(f'c_loss: {c_loss}')
 
-    algorithm_module.saveModel(episode,final=True) # 保存模型
-    evaluation_module.updateAndSaveEpisodeRecords(episode) # 保存整个episode记录
+    algorithm_module.saveModel(episode, final=True)  # 保存模型
+    if episode % checkpoint == 0:
+        algorithm_module.saveModel(episode, final=False)
 
     # 记录训练效果
     if episode > 1:
@@ -119,6 +119,9 @@ for episode in range(last_episode + 1, max_episode + 1):
             avg_loss = sum(critic_step_loss[i]) / len(critic_step_loss[i])
             writer.add_scalar(f"critic_loss_{i}", avg_loss, episode)
 
+    evaluation_module.updateAndSaveEpisodeRecords(episode) # 保存整个episode记录
+    evaluation_module.drawEpisodeRecordsByFile()
+
     # 构建车辆数据时不能reset，且只需要一个episode
     env.reset()
     algorithm_module.reset(env)
@@ -130,7 +133,7 @@ for episode in range(last_episode + 1, max_episode + 1):
     # 重置性能监控
     episode_profiler.reset()
 
-evaluation_module.drawEpisodeRecordsByFile() # 可视化训练过程（一个episode一条数据）
+# evaluation_module.drawEpisodeRecordsByFile() # 可视化训练过程（一个episode一条数据）
 env.close()
 writer.close()
 # 结束性能监控并打印报告

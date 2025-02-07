@@ -1,27 +1,28 @@
 import json
 import math
 
-# from airfogsim_env import AirFogSimEnv
-# from airfogsim_algorithm import BaseAlgorithmModule,NVHAUAlgorithmModule
 import os
 import sys
 import matplotlib.pyplot as plt
+from airfogsim.enum_const import MissionFinalStateEnum
 
 
 class AirFogSimEvaluation:
-    def __init__(self, tag):
+    def __init__(self,env, algorithm_module):
         self.initOrResetStepIndicators()
         self.initOrResetStepRecords()
         self.initOrResetEpisodeRecords()
         # Path to save image
         self.base_path = f"./evaluation/" # 和main在同一文件夹下
-        self.tag = tag
+        self.algorithm_module=algorithm_module
+        self.tag = algorithm_module.getAlgorithmTag()
+        self.env=env
         if not os.path.exists(self.base_path):
             os.makedirs(self.base_path)
 
     def initOrResetStepIndicators(self):
         # 1.仿真时间
-        self.simulation_time = 0
+        self.simulation_time = None
         self.step_num = 0
 
         # 2.过程监控
@@ -48,6 +49,13 @@ class AirFogSimEvaluation:
         self.fail_mission_num_on_UAV = 0
         self.success_mission_num_on_UAV = 0
         self.completion_ratio_on_UAV = 0
+
+        self.fail_differ_type_mission_num_on_vehicle = [0 for _ in range(len(MissionFinalStateEnum))]
+        self.fail_differ_type_mission_num_on_UAV = [0 for _ in range(len(MissionFinalStateEnum))]
+
+        self.available_sensor_num_list=[] # available_sensor_num when a mission is allocated to node
+        self.UAV_positions={}
+        self.UAV_mission_positions={}
 
         # 3.信道速率指标
         self.avg_trans_rate = 0
@@ -122,6 +130,9 @@ class AirFogSimEvaluation:
         self.step_sum_success_num_on_vehicle = []
         self.step_sum_fail_num_on_vehicle = []
 
+        self.step_fail_differ_type_mission_num_on_vehicle = [[] for _ in range(len(MissionFinalStateEnum))]
+        self.step_fail_differ_type_mission_num_on_UAV = [[] for _ in range(len(MissionFinalStateEnum))]
+
         # 3.信道速率指标
         self.step_avg_trans_rate = []
         self.step_avg_V2U_trans_rate = []
@@ -175,6 +186,11 @@ class AirFogSimEvaluation:
         self.episode_sum_success_num_on_vehicle = []
         self.episode_sum_fail_num_on_vehicle = []
 
+        self.episode_fail_differ_type_mission_num_on_vehicle = [[] for _ in range(len(MissionFinalStateEnum))]
+        self.episode_fail_differ_type_mission_num_on_UAV = [[] for _ in range(len(MissionFinalStateEnum))]
+
+        self.episode_available_sensor_num = []
+
         # 3.信道速率指标
         self.episode_avg_trans_rate = []
         self.episode_avg_V2U_trans_rate = []
@@ -209,8 +225,8 @@ class AirFogSimEvaluation:
         self.episode_avg_trans_time_on_UAV = []
         self.episode_avg_trans_time_on_vehicle = []
 
-    def updateAndSaveStepRecords(self, env, algorithm_module):
-        self.updateEvaluationIndicators(env, algorithm_module) # 更新step信息
+    def updateAndSaveStepRecords(self):
+        self.updateEvaluationIndicators() # 更新step信息
         self.addToStepRecord() # step record添加一条记录
 
     def updateAndSaveEpisodeRecords(self, episode):
@@ -221,22 +237,22 @@ class AirFogSimEvaluation:
         self.initOrResetStepRecords() # 重新初始化记录一个episode每step情况的数组
         self.initOrResetStepIndicators() # 重新初始化记录step实时信息的指标
 
-    def updateEvaluationIndicators(self, env, algorithm_module):
-        step_reward, step_punish, step_sum_reward = algorithm_module.getRewardByMission(
-            env)  # success reward, fail punish, sum of reward and punish
-        to_generate_missions_num = env.mission_manager.getToGenerateMissionNum()
-        executing_missions_num = env.mission_manager.getExecutingMissionNum()
-        success_missions_num = env.mission_manager.getSuccessMissionNum()
-        failed_missions_num = env.mission_manager.getFailedMissionNum()
-        early_failed_missions_num = env.mission_manager.getEarlyFailedMissionNum()
+    def updateEvaluationIndicators(self):
+        step_reward, step_punish, step_sum_reward = self.algorithm_module.getRewardByMission(
+            self.env)  # success reward, fail punish, sum of reward and punish
+        to_generate_missions_num = self.env.mission_manager.getToGenerateMissionNum()
+        executing_missions_num = self.env.mission_manager.getExecutingMissionNum()
+        success_missions_num = self.env.mission_manager.getSuccessMissionNum()
+        failed_missions_num = self.env.mission_manager.getFailedMissionNum()
+        early_failed_missions_num = self.env.mission_manager.getEarlyFailedMissionNum()
         sum_over_missions = success_missions_num + failed_missions_num + early_failed_missions_num
 
-        last_step_succ_mission_infos = algorithm_module.missionScheduler.getLastStepSuccMissionInfos(env)
-        last_step_fail_mission_infos = algorithm_module.missionScheduler.getLastStepFailMissionInfos(env)
-        last_step_early_fail_mission_infos = algorithm_module.missionScheduler.getLastStepEarlyFailMissionInfos(env)
+        last_step_succ_mission_infos = self.algorithm_module.missionScheduler.getLastStepSuccMissionInfos(self.env)
+        last_step_fail_mission_infos = self.algorithm_module.missionScheduler.getLastStepFailMissionInfos(self.env)
+        last_step_early_fail_mission_infos = self.algorithm_module.missionScheduler.getLastStepEarlyFailMissionInfos(self.env)
 
         # 1.仿真时间
-        self.simulation_time = env.simulation_time
+        self.simulation_time = self.env.simulation_time
 
         # 2.过程监控
         self.to_generate_missions_num = to_generate_missions_num
@@ -247,7 +263,7 @@ class AirFogSimEvaluation:
 
         self.finish_mission_num = sum_over_missions
 
-        self.traffic_step_generate_num, self.traffic_step_allocate_num = env.getMissionEvaluationIndicators()
+        self.traffic_step_generate_num, self.traffic_step_allocate_num = self.env.getMissionEvaluationIndicators()
         self.traffic_step_success_num = len(last_step_succ_mission_infos)
         self.traffic_step_fail_num = len(last_step_fail_mission_infos)
         self.traffic_step_early_fail_num = len(last_step_early_fail_mission_infos)
@@ -270,23 +286,29 @@ class AirFogSimEvaluation:
             if node_type == 'V':
                 self.finish_mission_num_on_vehicle += 1
                 self.fail_mission_num_on_vehicle += 1
+                self.fail_differ_type_mission_num_on_vehicle[mission_info['mission_final_state_code'].value] += 1
             elif node_type == 'U':
                 self.finish_mission_num_on_UAV += 1
                 self.fail_mission_num_on_UAV += 1
+                self.fail_differ_type_mission_num_on_UAV[mission_info['mission_final_state_code'].value] += 1
             else:
                 raise TypeError('Node type is invalid')
 
+        self.available_sensor_num_list = self.env.getAvailableSensorNumList()
+        self.UAV_positions=self.env.getUAVPositions()
+        self.UAV_mission_positions=self.env.getUAVMissionPositions()
+
         # 3.信道速率指标
-        self.avg_trans_rate = float(env.getChannelAvgRate())
-        self.avg_V2U_trans_rate = float(env.getChannelAvgRate('V2U'))
-        self.avg_V2I_trans_rate = float(env.getChannelAvgRate('V2I'))
-        self.avg_U2I_trans_rate = float(env.getChannelAvgRate('U2I'))
-        self.V2U_data_trans_list = env.getChannelTransDataHistory('V2U')
-        self.V2I_data_trans_list = env.getChannelTransDataHistory('V2I')
-        self.U2I_data_trans_list = env.getChannelTransDataHistory('U2I')
-        self.V2U_link_using = env.getLinkUsingHistory('V2U')
-        self.V2I_link_using = env.getLinkUsingHistory('V2I')
-        self.U2I_link_using = env.getLinkUsingHistory('U2I')
+        self.avg_trans_rate = float(self.env.getChannelAvgRate())
+        self.avg_V2U_trans_rate = float(self.env.getChannelAvgRate('V2U'))
+        self.avg_V2I_trans_rate = float(self.env.getChannelAvgRate('V2I'))
+        self.avg_U2I_trans_rate = float(self.env.getChannelAvgRate('U2I'))
+        self.V2U_data_trans_list = self.env.getChannelTransDataHistory('V2U')
+        self.V2I_data_trans_list = self.env.getChannelTransDataHistory('V2I')
+        self.U2I_data_trans_list = self.env.getChannelTransDataHistory('U2I')
+        self.V2U_link_using = self.env.getLinkUsingHistory('V2U')
+        self.V2I_link_using = self.env.getLinkUsingHistory('V2I')
+        self.U2I_link_using = self.env.getLinkUsingHistory('U2I')
 
         # 4.reward
         self.sum_reward += step_sum_reward
@@ -296,7 +318,7 @@ class AirFogSimEvaluation:
 
         # 5.ratio
         # 5.1 completion ratio (all)
-        self.completion_ratio = env.mission_manager.getMissionCompletionRatio()[0]  # return: (ratio, mission_num)
+        self.completion_ratio = self.env.mission_manager.getMissionCompletionRatio()[0]  # return: (ratio, mission_num)
         for mission_info in last_step_succ_mission_infos:
             TTL = mission_info['mission_deadline']
             duration = mission_info['mission_duration_sum']
@@ -380,6 +402,11 @@ class AirFogSimEvaluation:
         print('success_mission_num_on_UAV: ', self.success_mission_num_on_UAV)
         print('fail_mission_num_on_UAV: ', self.fail_mission_num_on_UAV)
 
+        print('fail_differ_type_mission_num_on_vehicle: ', self.fail_differ_type_mission_num_on_vehicle)
+        print('fail_differ_type_mission_num_on_UAV: ', self.fail_differ_type_mission_num_on_UAV)
+
+        print('available_sensor_num_list: ', self.available_sensor_num_list)
+
         # 信道速率指标
         print('信道速率')
         print('avg_trans_rate: ', self.avg_trans_rate)
@@ -438,6 +465,11 @@ class AirFogSimEvaluation:
         self.step_sum_fail_num_on_UAV.append(self.fail_mission_num_on_UAV)
         self.step_sum_success_num_on_vehicle.append(self.success_mission_num_on_vehicle)
         self.step_sum_fail_num_on_vehicle.append(self.fail_mission_num_on_vehicle)
+
+        for step_list, fail_value in zip(self.step_fail_differ_type_mission_num_on_UAV,self.fail_differ_type_mission_num_on_UAV):
+            step_list.append(fail_value)
+        for step_list, fail_value in zip(self.step_fail_differ_type_mission_num_on_vehicle,self.fail_differ_type_mission_num_on_vehicle):
+            step_list.append(fail_value)
 
         # 信道速率指标
         self.step_avg_trans_rate.append(self.avg_trans_rate)
@@ -562,6 +594,85 @@ class AirFogSimEvaluation:
         plt.legend()
         plt.savefig(path_to_save + 'AccumulateProcessMonitoring_Fail.png')
         plt.close()
+
+        # 失败类型分类统计-UAV
+        x_indices = list(range(1, self.step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, self.step_fail_differ_type_mission_num_on_UAV[MissionFinalStateEnum.SENSING_FAIL.value], color='red')
+        plt.plot(x_indices, self.step_fail_differ_type_mission_num_on_UAV[MissionFinalStateEnum.TRANSMISSION_FAIL.value], color='orange')
+        plt.title('Fail on Different Stage UAV')
+        plt.xlabel('Step')
+        plt.ylabel('The Number of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        plt.savefig(path_to_save + 'FailOnDifferentStage_UAV.png')
+        plt.close()
+
+        # 失败类型分类统计-Veh
+        x_indices = list(range(1, self.step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, self.step_fail_differ_type_mission_num_on_vehicle[MissionFinalStateEnum.SENSING_FAIL.value], color='red')
+        plt.plot(x_indices, self.step_fail_differ_type_mission_num_on_vehicle[MissionFinalStateEnum.TRANSMISSION_FAIL.value], color='orange')
+        plt.title('Fail on Different Stage Vehicle')
+        plt.xlabel('Step')
+        plt.ylabel('The Number of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        plt.savefig(path_to_save + 'FailOnDifferentStage_Veh.png')
+        plt.close()
+
+        # mission分配时可用sensor数量
+        x_indices = list(range(1, len(self.available_sensor_num_list)+1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, self.available_sensor_num_list, color='green')
+        plt.title('Available Sensor Num')
+        plt.xlabel('Mission')
+        plt.ylabel('The Number of Sensors')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        plt.savefig(path_to_save + 'AvailableSensorNum.png')
+        plt.close()
+
+        # UAV轨迹与mission位置
+        min_x = self.env.config['traffic']['x_range'][0]
+        max_x = self.env.config['traffic']['x_range'][1]
+        min_y = self.env.config['traffic']['y_range'][0]
+        max_y = self.env.config['traffic']['y_range'][1]
+        for i, (UAV_id, positions) in enumerate(self.UAV_positions.items()):
+            plt.figure(clear=True)
+            plt.gca().invert_yaxis()
+            plt.xlim(min_x, max_x)
+            plt.ylim(min_y, max_y)
+            row = int(i / 5)
+            col = int(i % 5)
+            UAV_positions_x = [position[0] for position in positions]
+            UAV_positions_y = [position[1] for position in positions]
+            mission_positions = self.UAV_mission_positions[UAV_id]
+            UAV_mission_positions_x = [position[0] for position in mission_positions]
+            UAV_mission_positions_y = [position[1] for position in mission_positions]
+            # 画出轨迹
+            plt.plot(UAV_positions_x, UAV_positions_y, color='blue', linestyle='-', linewidth=2, zorder=1,
+                     label='Trajectory')
+            # 画出轨迹的各个点：
+            # 中间的点为蓝色（如果有）
+            if len(UAV_positions_x) > 2:
+                plt.scatter(UAV_positions_x[1:-1], UAV_positions_y[1:-1], color='blue', s=2, zorder=2,
+                            label='Trajectory Intermediate')
+            # 第一个点为绿色
+            plt.scatter(UAV_positions_x[0], UAV_positions_y[0], color='green', s=20, zorder=2, label='Trajectory Start')
+            # 最后一个点为红色
+            plt.scatter(UAV_positions_x[-1], UAV_positions_y[-1], color='red', s=20, zorder=2, label='Trajectory End')
+            # 画mission位置，设置 zorder 高于轨迹，保证不会被覆盖
+            plt.scatter(UAV_mission_positions_x, UAV_mission_positions_y, color='orange', s=20, zorder=3,
+                        label='Scatter Points')
+            # 设置横纵轴等
+            plt.xlabel('X')
+            plt.ylabel('Y')
+            plt.grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+            # 设置全局标题
+            plt.title(f'Trajectory and Mission Points On {UAV_id}')
+            # 显示图例
+            plt.legend()
+            # 保存图像
+            plt.savefig(path_to_save + f'TrajectoryAndMissionPoints_{UAV_id}.png')
+            plt.close()
 
 
         # 2.信道状态
@@ -725,6 +836,13 @@ class AirFogSimEvaluation:
         self.episode_sum_success_num_on_UAV.append(self.success_mission_num_on_UAV)
         self.episode_sum_fail_num_on_UAV.append(self.fail_mission_num_on_UAV)
 
+        for step_list, fail_value in zip(self.episode_fail_differ_type_mission_num_on_UAV,self.fail_differ_type_mission_num_on_UAV):
+            step_list.append(fail_value)
+        for step_list, fail_value in zip(self.episode_fail_differ_type_mission_num_on_vehicle,self.fail_differ_type_mission_num_on_vehicle):
+            step_list.append(fail_value)
+
+        self.episode_available_sensor_num.append(sum(self.available_sensor_num_list)/len(self.available_sensor_num_list) if len(self.available_sensor_num_list) > 0 else 0)
+
         # 信道速率指标
         self.episode_avg_trans_rate.append(self.avg_trans_rate)
         self.episode_avg_V2U_trans_rate.append(self.avg_V2U_trans_rate)
@@ -779,7 +897,6 @@ class AirFogSimEvaluation:
         plt.close()
 
         # 分类累计任务-成功
-        x_indices = list(range(1, self.step_num + 1))
         plt.figure(clear=True)
         plt.plot(x_indices, self.episode_success_missions_num, label='Sum', color='limegreen')
         plt.plot(x_indices, self.episode_sum_success_num_on_vehicle, label='Veh', color='orange')
@@ -793,7 +910,6 @@ class AirFogSimEvaluation:
         plt.close()
 
         # 分类累计任务-失败
-        x_indices = list(range(1, self.step_num + 1))
         plt.figure(clear=True)
         plt.plot(x_indices, self.episode_failed_missions_num, label='Sum', color='red')
         plt.plot(x_indices, self.episode_sum_fail_num_on_vehicle, label='Veh', color='orange')
@@ -804,6 +920,42 @@ class AirFogSimEvaluation:
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()
         plt.savefig(path_to_save + 'AccumulateProcessMonitoring_Fail.png')
+        plt.close()
+
+        # 失败类型分类统计-UAV
+        plt.figure(clear=True)
+        plt.plot(x_indices, self.episode_fail_differ_type_mission_num_on_UAV[MissionFinalStateEnum.SENSING_FAIL.value],
+                 color='red')
+        plt.plot(x_indices, self.episode_fail_differ_type_mission_num_on_UAV[MissionFinalStateEnum.TRANSMISSION_FAIL.value],
+                 color='orange')
+        plt.title('Fail on Different Stage UAV')
+        plt.xlabel('Step')
+        plt.ylabel('The Number of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        plt.savefig(path_to_save + 'Fail_On_Different_Stage_UAV.png')
+        plt.close()
+
+        # 失败类型分类统计-Veh
+        plt.figure(clear=True)
+        plt.plot(x_indices, self.episode_fail_differ_type_mission_num_on_vehicle[MissionFinalStateEnum.SENSING_FAIL.value],
+                 color='red')
+        plt.plot(x_indices, self.episode_fail_differ_type_mission_num_on_vehicle[MissionFinalStateEnum.TRANSMISSION_FAIL.value],
+                 color='orange')
+        plt.title('Fail on Different Stage Vehicle')
+        plt.xlabel('Step')
+        plt.ylabel('The Number of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        plt.savefig(path_to_save + 'Fail_On_Different_Stage_Veh.png')
+        plt.close()
+
+        # mission分配时可用sensor数量
+        plt.figure(clear=True)
+        plt.plot(x_indices, self.episode_available_sensor_num, color='green')
+        plt.title('Available Sensor Num')
+        plt.xlabel('Step')
+        plt.ylabel('The Number of Sensors')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        plt.savefig(path_to_save + 'Available_Sensor_Num.png')
         plt.close()
 
         # 2.信道速率指标
@@ -930,10 +1082,17 @@ class AirFogSimEvaluation:
             "step_sum_success_num_on_UAV": self.step_sum_success_num_on_UAV,
             "step_sum_fail_num_on_UAV": self.step_sum_fail_num_on_UAV,
 
+            "step_fail_differ_type_mission_num_on_vehicle":self.step_fail_differ_type_mission_num_on_vehicle,
+            "step_fail_differ_type_mission_num_on_UAV": self.step_fail_differ_type_mission_num_on_UAV,
+
             "step_avg_trans_rate": self.step_avg_trans_rate,
             "step_avg_V2U_trans_rate": self.step_avg_V2U_trans_rate,
             "step_avg_V2I_trans_rate": self.step_avg_V2I_trans_rate,
             "step_avg_U2I_trans_rate": self.step_avg_U2I_trans_rate,
+
+            "available_sensor_num_list": [float(x) for x in self.available_sensor_num_list],
+            "UAV_positions" :self.UAV_positions,
+            "UAV_mission_positions" : self.UAV_mission_positions,
 
             "V2U_link_using": [float(x) for x in self.V2U_link_using],
             "V2I_link_using": [float(x) for x in self.V2I_link_using],
@@ -1001,6 +1160,13 @@ class AirFogSimEvaluation:
             step_sum_fail_num_on_vehicle = data['step_sum_fail_num_on_vehicle']
             step_sum_success_num_on_UAV=data['step_sum_success_num_on_UAV']
             step_sum_fail_num_on_UAV=data['step_sum_fail_num_on_UAV']
+
+            step_fail_differ_type_mission_num_on_vehicle=data['step_fail_differ_type_mission_num_on_vehicle']
+            step_fail_differ_type_mission_num_on_UAV=data['step_fail_differ_type_mission_num_on_UAV']
+
+            available_sensor_num_list=data['available_sensor_num_list']
+            UAV_positions=data['UAV_positions']
+            UAV_mission_positions=data['UAV_mission_positions']
 
             step_avg_trans_rate=data['step_avg_trans_rate']
             step_avg_V2U_trans_rate=data['step_avg_V2U_trans_rate']
@@ -1122,6 +1288,84 @@ class AirFogSimEvaluation:
         plt.legend()
         plt.savefig(path_to_save + 'AccumulateProcessMonitoring_Fail.png')
         plt.close()
+
+        # 失败类型分类统计-UAV
+        x_indices = list(range(1, step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, step_fail_differ_type_mission_num_on_UAV[MissionFinalStateEnum.SENSING_FAIL.value],
+                 label='Sense',color='red')
+        plt.plot(x_indices, step_fail_differ_type_mission_num_on_UAV[MissionFinalStateEnum.TRANSMISSION_FAIL.value],
+                 label='Trans',color='orange')
+        plt.title('Fail on Different Stage UAV')
+        plt.xlabel('Step')
+        plt.ylabel('The Number of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        plt.legend()
+        plt.savefig(path_to_save + 'Fail_On_Different_Stage_UAV.png')
+        plt.close()
+
+        # 失败类型分类统计-Veh
+        x_indices = list(range(1, step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, step_fail_differ_type_mission_num_on_vehicle[MissionFinalStateEnum.SENSING_FAIL.value],
+                 label='Sense',color='red')
+        plt.plot(x_indices, step_fail_differ_type_mission_num_on_vehicle[MissionFinalStateEnum.TRANSMISSION_FAIL.value],
+                 label='Trans',color='orange')
+        plt.title('Fail on Different Stage Vehicle')
+        plt.xlabel('Step')
+        plt.ylabel('The Number of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        plt.legend()
+        plt.savefig(path_to_save + 'Fail_On_Different_Stage_Veh.png')
+        plt.close()
+
+        # mission分配时可用sensor数量
+        x_indices = list(range(1, len(available_sensor_num_list) + 1))
+        plt.figure(clear=True)
+        plt.plot(x_indices, self.available_sensor_num_list,label='Num', color='green')
+        plt.title('Available Sensor Num')
+        plt.xlabel('Mission')
+        plt.ylabel('The Number of Sensors')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        plt.legend()
+        plt.savefig(path_to_save + 'Available_Sensor_Num.png')
+        plt.close()
+
+        # UAV轨迹与mission位置
+        for i, (UAV_id, positions) in enumerate(UAV_positions.items()):
+            plt.figure(clear=True)
+            plt.gca().invert_yaxis()
+            row=int(i/5)
+            col=int(i%5)
+            UAV_positions_x=[position[0] for position in positions]
+            UAV_positions_y = [position[1] for position in positions]
+            mission_positions=UAV_mission_positions[UAV_id]
+            UAV_mission_positions_x=[position[0] for position in mission_positions]
+            UAV_mission_positions_y = [position[1] for position in mission_positions]
+            # 画出轨迹
+            plt.plot(UAV_positions_x, UAV_positions_y, color='blue', linestyle='-', linewidth=2, zorder=1, label='Trajectory')
+            # 画出轨迹的各个点：
+            # 中间的点为蓝色（如果有）
+            if len(UAV_positions_x) > 2:
+                plt.scatter(UAV_positions_x[1:-1], UAV_positions_y[1:-1], color='blue', s=2, zorder=2, label='Trajectory Intermediate')
+            # 第一个点为绿色
+            plt.scatter(UAV_positions_x[0], UAV_positions_y[0], color='green', s=20, zorder=2, label='Trajectory Start')
+            # 最后一个点为红色
+            plt.scatter(UAV_positions_x[-1], UAV_positions_y[-1], color='red', s=20, zorder=2, label='Trajectory End')
+
+            # 画mission位置，设置 zorder 高于轨迹，保证不会被覆盖
+            plt.scatter(UAV_mission_positions_x, UAV_mission_positions_y, color='orange', s=20, zorder=3, label='Scatter Points')
+            # 设置横纵轴等
+            plt.xlabel('X')
+            plt.ylabel('Y')
+            plt.grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+            # 设置全局标题
+            plt.title(f'Trajectory and Mission Points On {UAV_id}')
+            # 显示图例
+            plt.legend()
+            # 保存图像
+            plt.savefig(path_to_save + f'TrajectoryAndMissionPoints_{UAV_id}.png')
+            plt.close()
 
         # 2.信道状态
         # 信道速率指标
@@ -1290,6 +1534,11 @@ class AirFogSimEvaluation:
             "success_mission_num_on_UAV": self.success_mission_num_on_UAV,
             "fail_mission_num_on_UAV": self.fail_mission_num_on_UAV,
 
+            "fail_differ_type_mission_num_on_UAV": self.fail_differ_type_mission_num_on_UAV,
+            "fail_differ_type_mission_num_on_vehicle": self.fail_differ_type_mission_num_on_vehicle,
+
+            "episode_available_sensor_num": float(sum(self.available_sensor_num_list)/len(self.available_sensor_num_list) if len(self.available_sensor_num_list)>0 else 0),
+
             "avg_trans_rate": float(self.avg_trans_rate),
             "avg_V2U_trans_rate": float(self.avg_V2U_trans_rate),
             "avg_V2I_trans_rate": float(self.avg_V2I_trans_rate),
@@ -1357,6 +1606,15 @@ class AirFogSimEvaluation:
             failed_missions_num = [entry["failed_missions_num"] for entry in data]
             early_failed_missions_num = [entry["early_failed_missions_num"] for entry in data]
 
+            fail_differ_type_mission_num_on_UAV = [entry["fail_differ_type_mission_num_on_UAV"] for entry in data]
+            fail_differ_type_mission_num_on_UAV = list(zip(*fail_differ_type_mission_num_on_UAV))
+            fail_differ_type_mission_num_on_UAV = [list(arr) for arr in fail_differ_type_mission_num_on_UAV]
+            fail_differ_type_mission_num_on_vehicle = [entry["fail_differ_type_mission_num_on_vehicle"] for entry in data]
+            fail_differ_type_mission_num_on_vehicle = list(zip(*fail_differ_type_mission_num_on_vehicle))
+            fail_differ_type_mission_num_on_vehicle = [list(arr) for arr in fail_differ_type_mission_num_on_vehicle]
+
+            episode_available_sensor_num = [entry["episode_available_sensor_num"] for entry in data]
+
             avg_trans_rate = [entry["avg_trans_rate"] for entry in data]
             avg_V2U_trans_rate = [entry["avg_V2U_trans_rate"] for entry in data]
             avg_V2I_trans_rate = [entry["avg_V2I_trans_rate"] for entry in data]
@@ -1405,11 +1663,10 @@ class AirFogSimEvaluation:
         plt.close()
 
         # 分类累计任务-成功
-        x_indices = list(range(1, step_num + 1))
         plt.figure(clear=True)
-        plt.plot(x_indices, success_missions_num, label='Sum', color='limegreen')
-        plt.plot(x_indices, success_mission_num_on_vehicle, label='Veh', color='orange')
-        plt.plot(x_indices, success_mission_num_on_UAV, label='UAV', color='deepskyblue')
+        plt.plot(episode_nums, success_missions_num, label='Sum', color='limegreen')
+        plt.plot(episode_nums, success_mission_num_on_vehicle, label='Veh', color='orange')
+        plt.plot(episode_nums, success_mission_num_on_UAV, label='UAV', color='deepskyblue')
         plt.title('Accumulate Process Monitoring (Success)')
         plt.xlabel('Episode')
         plt.ylabel('The Number of Missions')
@@ -1419,17 +1676,53 @@ class AirFogSimEvaluation:
         plt.close()
 
         # 分类累计任务-失败
-        x_indices = list(range(1, step_num + 1))
         plt.figure(clear=True)
-        plt.plot(x_indices, failed_missions_num, label='Sum', color='red')
-        plt.plot(x_indices, fail_mission_num_on_vehicle, label='Veh', color='orange')
-        plt.plot(x_indices, fail_mission_num_on_UAV, label='UAV', color='deepskyblue')
+        plt.plot(episode_nums, failed_missions_num, label='Sum', color='red')
+        plt.plot(episode_nums, fail_mission_num_on_vehicle, label='Veh', color='orange')
+        plt.plot(episode_nums, fail_mission_num_on_UAV, label='UAV', color='deepskyblue')
         plt.title('Accumulate Process Monitoring (Fail)')
         plt.xlabel('Episode')
         plt.ylabel('The Number of Missions')
         plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
         plt.legend()
         plt.savefig(save_dir + 'AccumulateProcessMonitoring_Fail.png')
+        plt.close()
+
+        # 失败类型分类统计-UAV
+        plt.figure(clear=True)
+        plt.plot(episode_nums, fail_differ_type_mission_num_on_UAV[MissionFinalStateEnum.SENSING_FAIL.value],
+                 color='red')
+        plt.plot(episode_nums, fail_differ_type_mission_num_on_UAV[MissionFinalStateEnum.TRANSMISSION_FAIL.value],
+                 color='orange')
+        plt.title('Fail on Different Stage UAV')
+        plt.xlabel('Step')
+        plt.ylabel('The Number of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        plt.savefig(save_dir + 'Fail_On_Different_Stage_UAV.png')
+        plt.close()
+
+        # 失败类型分类统计-Veh
+        x_indices = list(range(1, step_num + 1))
+        plt.figure(clear=True)
+        plt.plot(episode_nums, fail_differ_type_mission_num_on_vehicle[MissionFinalStateEnum.SENSING_FAIL.value],
+                 color='red')
+        plt.plot(episode_nums, fail_differ_type_mission_num_on_vehicle[MissionFinalStateEnum.TRANSMISSION_FAIL.value],
+                 color='orange')
+        plt.title('Fail on Different Stage Vehicle')
+        plt.xlabel('Step')
+        plt.ylabel('The Number of Missions')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        plt.savefig(save_dir + 'Fail_On_Different_Stage_Veh.png')
+        plt.close()
+
+        # mission分配时可用sensor数量
+        plt.figure(clear=True)
+        plt.plot(episode_nums, episode_available_sensor_num, color='green')
+        plt.title('Available Sensor Num')
+        plt.xlabel('Step')
+        plt.ylabel('The Number of Sensors')
+        plt.grid(True, which='both', linestyle='--', linewidth=0.1, alpha=0.7)
+        plt.savefig(save_dir + 'Available_Sensor_Num.png')
         plt.close()
 
         # 信道速率指标

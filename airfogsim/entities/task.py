@@ -181,7 +181,7 @@ class Task:
             bool: True if the task requires return, False otherwise.
         """
         assert self.isComputed(), "The task should be computed before returning."
-        if (self._to_return_node_id is None and self._return_lazy_set):
+        if (self._to_return_node_id is None and self._return_lazy_set) or (self._to_return_node_id is not None):
             return True
         if (self._assigned_to != self._to_return_node_id and self._required_returned_size > 0):
             return True
@@ -252,7 +252,7 @@ class Task:
             to_return_route (list): The route to return. Each element is the node ID.
         """
         assert len(self._to_return_route) == 0 and len(to_return_route) > 0
-        self._return_lazy_set = False
+        # self._return_lazy_set = False
         self._to_return_route = to_return_route
         self._to_return_node_id = self._to_return_route[-1]
 
@@ -305,7 +305,8 @@ class Task:
             self._routed_time.append(current_time)
             if not fast_return:
                 del self._to_offload_route[0]  # remove the first element
-            return True
+            if fast_return or (self.isComputed() and len(self._to_return_route) == 0):
+                return True
         return False
 
     def offloadTo(self, node_id, route, time):

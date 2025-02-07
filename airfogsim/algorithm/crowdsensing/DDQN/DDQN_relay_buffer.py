@@ -15,16 +15,16 @@ class ReplayBuffer:
 
 
     # 填充经验池
-    def add(self, state, action, mask, reward, next_state, next_mask, done):
-        self.buffer.append((state, action, mask, reward, next_state, next_mask, done))
+    def add(self, state, mask, action, reward, next_state, next_mask, done):
+        self.buffer.append((state, mask, action, reward, next_state, next_mask, done))
 
     # 随机采样batch组样本数据
     def sample(self, batch_size):
         transitions = random.sample(self.buffer, batch_size)
         # 分别取出这些数据，*获取list中的所有值
-        state, action, mask, reward, next_state, next_mask, done = zip(*transitions)
+        state, mask, action, reward, next_state, next_mask, done = zip(*transitions)
         # 将state变成数组，后面方便计算
-        return np.array(state), np.array(action), np.array(mask), np.array(reward), np.array(next_state), np.array(next_mask), np.array(done)
+        return np.array(state), np.array(mask), np.array(action), np.array(reward), np.array(next_state), np.array(next_mask), np.array(done)
 
     # 队列的长度
     def size(self):

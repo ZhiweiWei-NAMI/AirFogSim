@@ -8,19 +8,19 @@ simulation:
   
 
 sumo:
-  sumo_config: "../../sumo_wujiaochang/osm.sumocfg"
-  sumo_osm: "../../sumo_wujiaochang/osm_bbox.osm.xml"
-  sumo_net: "../../sumo_wujiaochang/osm.net.xml"
+  sumo_config: "../../../sumo_wujiaochang/osm.sumocfg"
+  sumo_osm: "../../../sumo_wujiaochang/osm_bbox.osm.xml"
+  sumo_net: "../../../sumo_wujiaochang/osm.net.xml"
   sumo_port: 8813
   export_tripinfo: False # 如果True，则导出tripinfo.xml文件（很大）
-  tripinfo_output: "../../sumo_wujiaochang/tripinfo.xml"
+  tripinfo_output: "../../../sumo_wujiaochang/tripinfo.xml"
 
 visualization:
-  icon_path: "../../icon"
+  icon_path: "../../../icon"
 
 traffic:
   traffic_mode: "real" # "real" or "SUMO"
-  tripinfo: "../../sumo_wujiaochang/tripinfo_0.1_500s.csv" # The path to the SUMO tripinfo file
+  tripinfo: "../../../sumo_wujiaochang/tripinfo_0.1_500s.csv" # The path to the SUMO tripinfo file
   start_traffic_time: 200 # Swipe to select the range to use the dataset
   traffic_interval: 0.1 # in seconds, for traffic simulation. Remember to set the same value in the SUMO configuration file; otherwise, the simulation will not work properly
   UAV_z_range: [100, 200] # The range of z coordinates for UAVs
@@ -161,6 +161,12 @@ mission:
       std: 1
     Exponential:
       beta: 1
+  mission_position_model: "Uniform" # supported model:['Uniform', 'Normal']
+  position_model_args:
+    Normal:
+      mean: 0.5
+      std: 0.03
+      rho: 0
 
 energy:
   initial_energy_range: [48000,52000]

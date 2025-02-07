@@ -142,7 +142,7 @@ class TransD3QN:
         actions = torch.tensor(actions, dtype=torch.int64).to(self.device)
 
         # 当前动作的奖励
-        # numpy[batch_size]-->Tensor[batch_size
+        # numpy[batch_size]-->Tensor[batch_size]
         rewards = torch.tensor(rewards, dtype=torch.float).to(self.device)
 
         # 下一状态
@@ -194,6 +194,8 @@ class TransD3QN:
             file_dir = f"{base_dir}/final"
         else:
             file_dir=f"{base_dir}/episode_{episode}"
+        model_type = "final" if final is True else "checkpoint"
+
         if not os.path.exists(file_dir):
             os.makedirs(file_dir)
         logging.basicConfig(
@@ -205,20 +207,21 @@ class TransD3QN:
         )
 
         self.q_net.save_model(file_dir + f'/TransD3QN_Q_net.pth')
-        print('Saving TransD3QN_Q_net network successfully!')
-        logging.info('Saving TransD3QN_Q_net network successfully!')
+        print(f'Saving {model_type} episode_{episode} TransD3QN_Q_net network successfully!')
+        logging.info(f'Saving {model_type} episode_{episode} TransD3QN_Q_net network successfully!')
         self.target_q_net.save_model(file_dir + f'/TransD3QN_Q_target.pth')
-        print('Saving TransD3QN_Q_target network successfully!')
-        logging.info('Saving TransD3QN_Q_target network successfully!')
+        print(f'Saving {model_type} episode_{episode} TransD3QN_Q_target network successfully!')
+        logging.info(f'Saving {model_type} episode_{episode} TransD3QN_Q_target network successfully!')
         self.memory.save(file_dir+f'/TransD3QN_memory.pkl')
-        print('Saving TransD3QN memory successfully!')
-        logging.info('Saving TransD3QN memory successfully!')
+        print(f'Saving {model_type} episode_{episode} TransD3QN memory successfully!')
+        logging.info(f'Saving {model_type} episode_{episode} TransD3QN memory successfully!')
 
     def load_models(self, episode,base_dir,final):
         if final is True:
             file_dir = f"{base_dir}/final"
         else:
             file_dir=f"{base_dir}/episode_{episode}"
+        model_type = "final" if final is True else "checkpoint"
 
         logging.basicConfig(
             level=logging.INFO,  # 日志级别
@@ -229,11 +232,11 @@ class TransD3QN:
         )
 
         self.q_net.load_model(file_dir + f'/TransD3QN_Q_net.pth')
-        print('Loading TransD3QN_Q_net network successfully!')
-        logging.info('Loading TransD3QN_Q_net network successfully!')
+        print(f'Loading {model_type} episode_{episode} TransD3QN_Q_net network successfully!')
+        logging.info(f'Loading {model_type} episode_{episode} TransD3QN_Q_net network successfully!')
         self.target_q_net.load_model(file_dir + f'/TransD3QN_Q_target.pth')
-        print('Loading TransD3QN_Q_target network successfully!')
-        logging.info('Loading TransD3QN_Q_target network successfully!')
+        print(f'Loading {model_type} episode_{episode} TransD3QN_Q_target network successfully!')
+        logging.info(f'Loading {model_type} episode_{episode} TransD3QN_Q_target network successfully!')
         self.memory.load(file_dir+f'/TransD3QN_memory.pkl')
-        print('Loading TransD3QN memory successfully!')
-        logging.info('Loading TransD3QN memory successfully!')
+        print(f'Loading {model_type} episode_{episode} TransD3QN memory successfully!')
+        logging.info(f'Loading {model_type} episode_{episode} TransD3QN memory successfully!')

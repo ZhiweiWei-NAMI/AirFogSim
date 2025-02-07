@@ -155,7 +155,7 @@ class BaseAlgorithmModule:
             env (AirFogSimEnv): The environment object.
 
         """
-        UAV_probability = 0.5
+        UAV_probability = self.missionScheduler.getConfig(env, 'UAV_execution_probability')
         cur_time = self.trafficScheduler.getCurrentTime(env)
         traffic_interval = self.trafficScheduler.getTrafficInterval(env)
         new_missions_profile = self.missionScheduler.getToBeAssignedMissionsProfile(env, cur_time)
@@ -174,9 +174,11 @@ class BaseAlgorithmModule:
             TA_distance_UAV = self.missionScheduler.getConfig(env, 'TA_distance_UAV')
 
             if random.random() < UAV_probability:
+                node_type = 'U'
                 appointed_node_id, appointed_sensor_id, appointed_sensor_accuracy = self.sensorScheduler.getLowestAccurateIdleSensorInRangeOnUAV(
                     env, mission_sensor_type, mission_accuracy, sensing_position, TA_distance_UAV, excluded_sensor_ids)
             else:
+                node_type = 'V'
                 vehicle_infos = self.trafficScheduler.getVehicleInfosInRange(env, sensing_position, TA_distance_Veh)
                 appointed_node_id, appointed_sensor_id, appointed_sensor_accuracy = self.sensorScheduler.getNearestIdleSensorInNodes(
                     env, mission_sensor_type, mission_accuracy, sensing_position, vehicle_infos, excluded_sensor_ids)
@@ -197,6 +199,12 @@ class BaseAlgorithmModule:
                     new_task = self.taskScheduler.generateTaskOfMission(env, mission_task_profile)
                     task_set.append(new_task)
                     mission_profile['mission_task_sets'].append(task_set)
+                if node_type == 'U':
+                    route_with_time = {
+                        'position': sensing_position,
+                        'to_stay_time': mission_profile['mission_duration'][0]
+                    }
+                    self.trafficScheduler.addUAVRoute(env, appointed_node_id, route_with_time)
                 self.missionScheduler.generateAndAddMission(env, mission_profile)
                 allocate_num += 1
 
@@ -213,12 +221,15 @@ class BaseAlgorithmModule:
         Args:
             env (AirFogSimEnv): The environment object.
         """
+        distance_threshold = self.missionScheduler.getConfig(env, 'distance_threshold')
+        traffic_interval = self.trafficScheduler.getTrafficInterval(env)
         UAVs_info = self.trafficScheduler.getUAVTrafficInfos(env)
         UAVs_mobile_pattern = {}
         for UAV_id, UAV_info in UAVs_info.items():
             current_position = UAV_info['position']
-            # target_position = self.trafficScheduler.getNextPositionOfUAV(env, UAV_id)
-            target_position = self.missionScheduler.getNearestMissionPosition(env, UAV_id, current_position)
+            self.trafficScheduler.updateRoute(env, UAV_id, current_position, distance_threshold, traffic_interval)
+            target_position = self.trafficScheduler.getNextPositionOfUAV(env, UAV_id)
+            # target_position = self.missionScheduler.getNearestMissionPosition(env, UAV_id, current_position)
 
             if target_position is None:
                 # 在 [0, 2π) 范围内生成一个随机角度（弧度）
@@ -248,7 +259,6 @@ class BaseAlgorithmModule:
                 mobility_pattern['speed'] = random.uniform(UAV_speed_range[0], UAV_speed_range[1])
                 UAVs_mobile_pattern[UAV_id] = mobility_pattern
         self.trafficScheduler.setUAVMobilityPatterns(env, UAVs_mobile_pattern)
-
 
     def scheduleOffloading(self, env: AirFogSimEnv):
         """The offloading scheduling logic. Should be implemented by the subclass. Default is to offload the task to the nearest node.

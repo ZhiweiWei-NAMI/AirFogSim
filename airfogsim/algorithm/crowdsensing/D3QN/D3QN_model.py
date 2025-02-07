@@ -64,12 +64,12 @@ class D3QN:
         for q_target_params, q_params in zip(self.target_q_net.parameters(), self.q_net.parameters()):
             q_target_params.data.copy_(tau * q_params + (1 - tau) * q_target_params)
 
-    def remember(self, state, action, mask, reward, next_state, next_mask, done):
-        self.memory.add(state, action, mask, reward, next_state, next_mask, done)
+    def remember(self, state, mask, action, reward, next_state, next_mask, done):
+        self.memory.add(state, mask, action, reward, next_state, next_mask, done)
 
     # 动作选择
     def take_action(self, state, mask):
-        # numpy[n_states]-->[1, dim_statess]-->Tensor
+        # numpy[n_states]-->[1, dim_states]-->Tensor
         state = torch.Tensor(state[np.newaxis, :]).to(self.device)
         # numpy[n_actions]-->[1, dim_actions]-->Tensor
         mask = torch.Tensor(mask[np.newaxis, :]).bool().to(self.device)
@@ -123,7 +123,7 @@ class D3QN:
     def update(self):
         if not self.memory.ready():
             return
-        states, actions, masks, rewards, next_states, next_masks, dones = self.memory.sample(self.batch_size)
+        states, masks, actions, rewards, next_states, next_masks, dones = self.memory.sample(self.batch_size)
 
         # 当前状态, array_shape=[b,dim_states]
         states = torch.tensor(states, dtype=torch.float).to(self.device)
@@ -144,9 +144,10 @@ class D3QN:
             next_q_values = self.q_net.forward(next_states)
             # next_masked_q_values = torch.where(next_masks, next_q_values, torch.tensor(float('-inf')))
             next_q_values.copy_(torch.where(next_masks, next_q_values, torch.tensor(float('-inf'))))
-            max_next_actions = torch.argmax(next_q_values, dim=-1)
+            # [batch_size] -> [batch_size,index_size(1)]
+            max_next_actions = torch.argmax(next_q_values, dim=1).unsqueeze(-1)
             next_q_targets = self.target_q_net.forward(next_states)
-            td_q_targets = rewards + self.gamma * next_q_targets.gather(1, max_next_actions) * (1 - dones)
+            td_q_targets = rewards + self.gamma * next_q_targets.gather(1, max_next_actions) * (1 - dones.int())
         q_values = self.q_net(states).gather(1, actions)
 
         # 预测值和目标值的均方误差损失(取一个batch的平均值)
@@ -172,6 +173,8 @@ class D3QN:
             file_dir = f"{base_dir}/final"
         else:
             file_dir=f"{base_dir}/episode_{episode}"
+        model_type = "final" if final is True else "checkpoint"
+
         if not os.path.exists(file_dir):
             os.makedirs(file_dir)
         logging.basicConfig(
@@ -183,20 +186,21 @@ class D3QN:
         )
 
         self.q_net.save_model(file_dir + f'/D3QN_Q_net.pth')
-        print('Saving D3QN_Q_net network successfully!')
-        logging.info('Saving D3QN_Q_net network successfully!')
+        print(f'Saving {model_type} episode_{episode} D3QN_Q_net network successfully!')
+        logging.info(f'Saving {model_type} episode_{episode} D3QN_Q_net network successfully!')
         self.target_q_net.save_model(file_dir + f'/D3QN_Q_target.pth')
-        print('Saving D3QN_Q_target network successfully!')
-        logging.info('Saving D3QN_Q_target network successfully!')
+        print(f'Saving {model_type} episode_{episode} D3QN_Q_target network successfully!')
+        logging.info(f'Saving {model_type} episode_{episode} D3QN_Q_target network successfully!')
         self.memory.save(file_dir+f'/D3QN_memory.pkl')
-        print('Saving D3QN memory successfully!')
-        logging.info('Saving D3QN memory successfully!')
+        print(f'Saving {model_type} episode_{episode} D3QN memory successfully!')
+        logging.info(f'Saving {model_type} episode_{episode} D3QN memory successfully!')
 
     def load_models(self, episode,base_dir,final):
         if final is True:
             file_dir = f"{base_dir}/final"
         else:
             file_dir=f"{base_dir}/episode_{episode}"
+        model_type="final" if final is True else "checkpoint"
 
         logging.basicConfig(
             level=logging.INFO,  # 日志级别
@@ -207,13 +211,16 @@ class D3QN:
         )
 
         self.q_net.load_model(file_dir + f'/D3QN_Q_net.pth')
-        print('Loading D3QN_Q_net network successfully!')
-        logging.info('Loading D3QN_Q_net network successfully!')
+        print(f'Loading {model_type} episode_{episode} D3QN_Q_net network successfully!')
+        logging.info(f'Loading {model_type} episode_{episode} D3QN_Q_net network successfully!')
         self.target_q_net.load_model(file_dir + f'/D3QN_Q_target.pth')
-        print('Loading D3QN_Q_target network successfully!')
-        logging.info('Loading D3QN_Q_target network successfully!')
+        print(f'Loading {model_type} episode_{episode} D3QN_Q_target network successfully!')
+        logging.info(f'Loading {model_type} episode_{episode} D3QN_Q_target network successfully!')
         self.memory.load(file_dir+f'/D3QN_memory.pkl')
-        print('Loading D3QN memory successfully!')
-        logging.info('Loading D3QN memory successfully!')
+        print(f'Loading {model_type} episode_{episode} D3QN memory successfully!')
+        logging.info(f'Loading {model_type} episode_{episode} D3QN memory successfully!')
+
+
+
 
 

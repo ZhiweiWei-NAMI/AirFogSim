@@ -39,7 +39,7 @@ class D3QN_Env:
         self.model_base_dir=train_args.model_base_dir
 
         # 实例化 Double-DQN
-        self.agent = Double_DQN(dim_args, train_args)
+        self.agent = D3QN(dim_args, train_args)
 
     def takeAction(self, state, mask):
         # 状态state时做动作选择，action为动作索引
@@ -50,9 +50,9 @@ class D3QN_Env:
         # self.max_q_value_list.append(self.max_q_value)
         return is_random,self.max_q_value,action
 
-    def addExperience(self, state, action,mask, reward, next_state,next_mask, done):
+    def addExperience(self, state,mask, action, reward, next_state,next_mask, done):
         # 添加经验池
-        self.agent.remember(state, action,mask, reward, next_state,next_mask, done)
+        self.agent.remember(state,mask, action, reward, next_state,next_mask, done)
 
     def train(self):
         loss=self.agent.update()

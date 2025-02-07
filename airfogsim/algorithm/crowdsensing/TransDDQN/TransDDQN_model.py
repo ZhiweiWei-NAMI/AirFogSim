@@ -196,6 +196,8 @@ class TransDDQN:
             file_dir = f"{base_dir}/final"
         else:
             file_dir=f"{base_dir}/episode_{episode}"
+        model_type = "final" if final is True else "checkpoint"
+
         if not os.path.exists(file_dir):
             os.makedirs(file_dir)
         logging.basicConfig(
@@ -207,22 +209,23 @@ class TransDDQN:
         )
 
         self.q_net.save_model(file_dir + f'/TransDDQN_Q_net.pth')
-        print('Saving TransDDQN_Q_net network successfully!')
-        logging.info('Saving TransDDQN_Q_net network successfully!')
+        print(f'Saving {model_type} episode_{episode} TransDDQN_Q_net network successfully!')
+        logging.info(f'Saving {model_type} episode_{episode} TransDDQN_Q_net network successfully!')
         self.target_q_net.save_model(file_dir + f'/TransDDQN_Q_target.pth')
-        print('Saving TransDDQN_Q_target network successfully!')
-        logging.info('Saving TransDDQN_Q_target network successfully!')
+        print(f'Saving {model_type} episode_{episode} TransDDQN_Q_target network successfully!')
+        logging.info(f'Saving {model_type} episode_{episode} TransDDQN_Q_target network successfully!')
         self.memory.save(file_dir+f'/TransDDQN_memory.pkl')
-        print('Saving TransDDQN memory successfully!')
-        logging.info('Saving TransDDQN memory successfully!')
+        print(f'Saving {model_type} episode_{episode} TransDDQN memory successfully!')
+        logging.info(f'Saving {model_type} episode_{episode} TransDDQN memory successfully!')
+
 
     def load_models(self, episode,base_dir,final):
         if final is True:
             file_dir = f"{base_dir}/final"
         else:
             file_dir=f"{base_dir}/episode_{episode}"
-        if not os.path.exists(file_dir):
-            os.makedirs(file_dir)
+        model_type = "final" if final is True else "checkpoint"
+
         logging.basicConfig(
             level=logging.INFO,  # 日志级别
             format='%(asctime)s [%(levelname)s] %(message)s',  # 日志格式
@@ -232,11 +235,11 @@ class TransDDQN:
         )
 
         self.q_net.load_model(file_dir + f'/TransDDQN_Q_net.pth')
-        print('Loading TransDDQN_Q_net network successfully!')
-        logging.info('Loading TransDDQN_Q_net network successfully!')
+        print(f'Loading {model_type} episode_{episode} TransDDQN_Q_net network successfully!')
+        logging.info(f'Loading {model_type} episode_{episode} TransDDQN_Q_net network successfully!')
         self.target_q_net.load_model(file_dir + f'/TransDDQN_Q_target.pth')
-        print('Loading TransDDQN_Q_target network successfully!')
-        logging.info('Loading TransDDQN_Q_target network successfully!')
+        print(f'Loading {model_type} episode_{episode} TransDDQN_Q_target network successfully!')
+        logging.info(f'Loading {model_type} episode_{episode} TransDDQN_Q_target network successfully!')
         self.memory.load(file_dir+f'/TransDDQN_memory.pkl')
-        print('Loading TransDDQN memory successfully!')
-        logging.info('Loading TransDDQN memory successfully!')
+        print(f'Loading {model_type} episode_{episode} TransDDQN memory successfully!')
+        logging.info(f'Loading {model_type} episode_{episode} TransDDQN memory successfully!')

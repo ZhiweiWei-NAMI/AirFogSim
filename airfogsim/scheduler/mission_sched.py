@@ -20,6 +20,11 @@ class MissionScheduler(BaseScheduler):
                 missions_dict.append(mission.to_dict())
         return missions_dict
 
+    @staticmethod
+    def getAllToAllocateMissionInfos(env):
+        mission_profiles=env.mission_manager.getToGenerateMissionsProfile()
+        return mission_profiles
+
 
     @staticmethod
     def generateAndAddMission(env,mission_profile):
@@ -126,3 +131,4 @@ class MissionScheduler(BaseScheduler):
     @staticmethod
     def getConfig(env,name):
         return env.mission_manager.getConfig(name)
+

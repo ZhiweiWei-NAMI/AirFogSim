@@ -21,7 +21,7 @@ class TrafficManager():
         self._y_range = config_traffic.get("y_range", [0, 1000]) # set in airfogsim_env.py according to used area map
         self._nonfly_zone_coordinates = config_traffic.get("nonfly_zone_coordinates", [])
         self._UAV_z_range = config_traffic.get("UAV_z_range", [100, 200])
-        self._UAV_speed_range = config_traffic.get("UAV_speed_range", [20, 40])
+        self._UAV_speed_range = config_traffic.get("UAV_speed_range", [10, 30])
         self._max_n_UAVs = config_traffic.get("max_n_UAVs", 10)
         self._max_n_RSUs = config_traffic.get("max_n_RSUs", 4)
         self._RSU_positions = config_traffic.get("RSU_positions", [[0, 0, 0]])

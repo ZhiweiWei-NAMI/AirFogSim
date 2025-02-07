@@ -164,6 +164,8 @@ class MADDPG:
             file_dir = f"{base_dir}/final"
         else:
             file_dir=f"{base_dir}/episode_{episode}"
+        model_type = "final" if final is True else "checkpoint"
+
         if not os.path.exists(file_dir):
             os.makedirs(file_dir)
         logging.basicConfig(
@@ -176,21 +178,21 @@ class MADDPG:
 
         for i in range(self.n_agents):
             self.critics_target[i].save_model(file_dir + f'/MADDPG_critics_target_{i}.pth')
-            print(f'Saving MADDPG_critics_target_{i} network successfully!')
-            logging.info(f'Saving MADDPG_critics_target_{i} network successfully!')
+            print(f'Saving {model_type} episode_{episode} MADDPG_critics_target_{i} network successfully!')
+            logging.info(f'Saving {model_type} episode_{episode} MADDPG_critics_target_{i} network successfully!')
             self.actors_target[i].save_model(file_dir + f'/MADDPG_actors_target_{i}.pth')
-            print(f'Saving MADDPG_actors_target_{i} network successfully!')
-            logging.info(f'Saving MADDPG_actors_target_{i} network successfully!')
+            print(f'Saving {model_type} episode_{episode} MADDPG_actors_target_{i} network successfully!')
+            logging.info(f'Saving {model_type} episode_{episode} MADDPG_actors_target_{i} network successfully!')
             self.critics[i].save_model(file_dir + f'/MADDPG_critics_{i}.pth')
-            print(f'Saving MADDPG_critics_{i} network successfully!')
-            logging.info(f'Saving MADDPG_critics_{i} network successfully!')
+            print(f'Saving {model_type} episode_{episode} MADDPG_critics_{i} network successfully!')
+            logging.info(f'Saving {model_type} episode_{episode} MADDPG_critics_{i} network successfully!')
             self.actors[i].save_model(file_dir + f'/MADDPG_actors_{i}.pth')
-            print(f'Saving MADDPG_actors_{i} network successfully!')
-            logging.info(f'Saving MADDPG_actors_{i} network successfully!')
+            print(f'Saving {model_type} episode_{episode} MADDPG_actors_{i} network successfully!')
+            logging.info(f'Saving {model_type} episode_{episode} MADDPG_actors_{i} network successfully!')
 
         self.memory.save(file_dir+f'/MADDPG_memory.pkl')
-        print('Saving MADDPG memory successfully!')
-        logging.info('Saving MADDPG memory successfully!')
+        print(f'Saving {model_type} episode_{episode} MADDPG memory successfully!')
+        logging.info(f'Saving {model_type} episode_{episode} MADDPG memory successfully!')
 
 
     def load_models(self, episode, base_dir,final):
@@ -198,6 +200,7 @@ class MADDPG:
             file_dir = f"{base_dir}/final"
         else:
             file_dir=f"{base_dir}/episode_{episode}"
+        model_type = "final" if final is True else "checkpoint"
 
         logging.basicConfig(
             level=logging.INFO,  # 日志级别
@@ -209,17 +212,17 @@ class MADDPG:
 
         for i in range(self.n_agents):
             self.critics_target[i].load_model(file_dir + f'/MADDPG_critics_target_{i}.pth')
-            print(f'Loading MADDPG_critics_target_{i} network successfully!')
-            logging.info(f'Loading MADDPG_critics_target_{i} network successfully!')
+            print(f'Loading {model_type} episode_{episode} MADDPG_critics_target_{i} network successfully!')
+            logging.info(f'Loading {model_type} episode_{episode} MADDPG_critics_target_{i} network successfully!')
             self.actors_target[i].load_model(file_dir + f'/MADDPG_actors_target_{i}.pth')
-            print(f'Loading MADDPG_actors_target_{i} network successfully!')
-            logging.info(f'Loading MADDPG_actors_target_{i} network successfully!')
+            print(f'Loading {model_type} episode_{episode} MADDPG_actors_target_{i} network successfully!')
+            logging.info(f'Loading {model_type} episode_{episode} MADDPG_actors_target_{i} network successfully!')
             self.critics[i].load_model(file_dir + f'/MADDPG_critics_{i}.pth')
-            print(f'Loading MADDPG_critics_{i} network successfully!')
-            logging.info(f'Loading MADDPG_critics_{i} network successfully!')
+            print(f'Loading {model_type} episode_{episode} MADDPG_critics_{i} network successfully!')
+            logging.info(f'Loading {model_type} episode_{episode} MADDPG_critics_{i} network successfully!')
             self.actors[i].load_model(file_dir + f'/MADDPG_actors_{i}.pth')
-            print(f'Loading MADDPG_actors_{i} network successfully!')
-            logging.info(f'Loading MADDPG_actors_{i} network successfully!')
+            print(f'Loading {model_type} episode_{episode} MADDPG_actors_{i} network successfully!')
+            logging.info(f'Loading {model_type} episode_{episode} MADDPG_actors_{i} network successfully!')
 
         self.memory.load(file_dir+f'/MADDPG_memory.pkl')
         print('Loading MADDPG memory successfully!')

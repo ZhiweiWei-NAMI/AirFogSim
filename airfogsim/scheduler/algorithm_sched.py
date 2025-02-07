@@ -261,12 +261,13 @@ class AlgorithmScheduler(BaseScheduler):
         UAV_states = []
         UAV_infos = env.traffic_manager.getUAVTrafficInfos()
         for UAV_id, UAV_info in UAV_infos.items():
+            node_index = int(UAV_id.split('_')[-1])
             UAV_position = UAV_info['position']
             x, y, z = UAV_position
             distance = np.linalg.norm(np.array(base_position) - np.array(UAV_position))
 
             if distance <= distance_threshold:
-                state = [distance, x, y, z]
+                state = [distance,node_index, x, y, z]
                 UAV_states.append(state)
         states_sorted = sorted(UAV_states, key=lambda x: x[0])
 

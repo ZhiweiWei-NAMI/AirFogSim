@@ -1,3 +1,5 @@
+from enum import Enum
+
 class EnumerateConstants:
     TASK_FAIL_OUT_OF_DDL = 0
     TASK_FAIL_OUT_OF_TTI = 1
@@ -30,8 +32,56 @@ class EnumerateConstants:
             return "Unknown code."
 
 
-class NodeTypeEnum:
+class NodeTypeEnum(Enum):
     CLOUD_SERVER = 0
     RSU = 1
     VEHICLE = 2
     UAV = 3
+
+class MissionFinalStateEnum(Enum):
+    SUCCESS = 0
+    EARLY_FAIL = 1
+    SENSING_FAIL = 2
+    TRANSMISSION_FAIL = 3
+
+    @staticmethod
+    def getDescByCode(code: int):
+        """Get the description by the code.
+
+        Args:
+            code (int): The code.
+
+        Returns:
+            str: The description.
+        """
+        if code == MissionFinalStateEnum.SUCCESS.value:
+            return "Mission success."
+        elif code == MissionFinalStateEnum.EARLY_FAIL.value:
+            return "Mission fails due to early fail."
+        elif code == MissionFinalStateEnum.SENSING_FAIL.value:
+            return "Mission fails due to sensing fail."
+        elif code == MissionFinalStateEnum.TRANSMISSION_FAIL.value:
+            return "Mission fails due to transmission fail."
+        else:
+            return "Unknown code."
+
+    @staticmethod
+    def getDescByEnum(code: Enum):
+        """Get the description by the code.
+
+        Args:
+            code (int): The code.
+
+        Returns:
+            str: The description.
+        """
+        if code == MissionFinalStateEnum.SUCCESS:
+            return "Mission success."
+        elif code == MissionFinalStateEnum.EARLY_FAIL:
+            return "Mission fails due to early fail."
+        elif code == MissionFinalStateEnum.SENSING_FAIL:
+            return "Mission fails due to sensing fail."
+        elif code == MissionFinalStateEnum.TRANSMISSION_FAIL:
+            return "Mission fails due to transmission fail."
+        else:
+            return "Unknown code."

@@ -91,8 +91,8 @@ class SensorScheduler(BaseScheduler):
             if min_distance is None or distance < min_distance:
                 for sensor in sensors:
                     if sensor.getSensorAccuracy() > lowest_accuracy and sensor.getSensorId() not in excluded_sensor_ids:
-                        # nonlocal appointed_node_id, appointed_sensor_id, appointed_sensor_accuracy
                         appointed_sensor_accuracy = sensor.getSensorAccuracy()
                         appointed_node_id = node_id
                         appointed_sensor_id = sensor.getSensorId()
+                min_distance=distance
         return appointed_node_id, appointed_sensor_id, appointed_sensor_accuracy

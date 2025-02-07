@@ -71,7 +71,9 @@ class TkinterLayout(tk.Tk, BaseLayout):
         self.canvas_rsu_images = {}  # env.rsuId -> canvas image
         self.canvas_vehicle_images = {}  # env.vehicleId -> canvas image
         self.canvas_uav_images = {}  # env.uavId -> canvas image
-        self.canvas_dots = {}  # env.missionId -> canvas oval
+        self.canvas_to_allocate_dots = {}  # env.missionId -> canvas oval
+        self.canvas_uav_executing_dots = {}  # env.missionId -> canvas oval
+        self.canvas_vehicle_executing_dots = {}  # env.missionId -> canvas oval
         self.canvas_time_image = None
 
     def create_map_grid_window(self):
@@ -107,7 +109,9 @@ class TkinterLayout(tk.Tk, BaseLayout):
         self.draw_canvas_images(self.canvas_vehicle_images, self.vehicle_positions_in_pixel, self.car_images, "vehicle",
                                 directions=self.vehicle_directions)
         self.draw_canvas_images(self.canvas_uav_images, self.uav_positions_in_pixel, [self.uav_image], "uav")
-        self.draw_canvas_dots(self.canvas_dots, self.mission_positions_in_pixel, 'mission')
+        self.draw_canvas_dots(self.canvas_to_allocate_dots, self.to_allocate_mission_positions_in_pixel, 'mission','red')
+        self.draw_canvas_dots(self.canvas_uav_executing_dots, self.executing_uav_mission_positions_in_pixel, 'mission','blue')
+        self.draw_canvas_dots(self.canvas_vehicle_executing_dots, self.executing_vehicle_mission_positions_in_pixel, 'mission','darkorange')
         self.draw_time()
         if self.isTransActivated:
             self.draw_links()
@@ -209,7 +213,7 @@ class TkinterLayout(tk.Tk, BaseLayout):
                 self.canvas.move(canvas_images[key], position[0] - self.canvas.coords(canvas_images[key])[0],
                                  position[1] - self.canvas.coords(canvas_images[key])[1])
 
-    def draw_canvas_dots(self, canvas_dots: dict, positions: dict, tag):
+    def draw_canvas_dots(self, canvas_dots: dict, positions: dict, tag,color):
         to_delete_keys = canvas_dots.keys() - positions.keys()
         for key in to_delete_keys:
             self.canvas.delete(canvas_dots[key])
@@ -218,7 +222,7 @@ class TkinterLayout(tk.Tk, BaseLayout):
             for dot_position in dot_positions:
                 if key not in canvas_dots:
                     canvas_dot = self.canvas.create_oval(dot_position[0], dot_position[1], dot_position[0],
-                                                         dot_position[1], width=3, fill="red",outline='red')
+                                                         dot_position[1], width=3, fill=color,outline=color)
                     canvas_dots[key] = []
                     canvas_dots[key].append(canvas_dot)
 
@@ -249,16 +253,33 @@ class TkinterLayout(tk.Tk, BaseLayout):
             self.vehicle_directions[info_dict['id']] = info_dict['angle']
 
     def update_mission_position(self):
-        mission_infos = MissionScheduler.getAllExcutingMissionInfos(self._env)
-        self.mission_positions_in_pixel = {}
-        for info_dict in mission_infos:
+        to_allocate_mission_infos = MissionScheduler.getAllToAllocateMissionInfos(self._env)
+        executing_mission_infos = MissionScheduler.getAllExcutingMissionInfos(self._env)
+        self.to_allocate_mission_positions_in_pixel = {}
+        self.executing_uav_mission_positions_in_pixel = {}
+        self.executing_vehicle_mission_positions_in_pixel = {}
+        for info_dict in to_allocate_mission_infos:
             for position in info_dict['mission_routes']:
                 x, y = position[0], position[1]
                 x, y = self.position_to_pixel(x, y)
-                self.mission_positions_in_pixel[info_dict['mission_id']] = self.mission_positions_in_pixel.get(
+                self.to_allocate_mission_positions_in_pixel[info_dict['mission_id']] = self.to_allocate_mission_positions_in_pixel.get(
                     info_dict['mission_id'], [])
-                self.mission_positions_in_pixel[info_dict['mission_id']].append([x, y])
-
+                self.to_allocate_mission_positions_in_pixel[info_dict['mission_id']].append([x, y])
+        for info_dict in executing_mission_infos:
+            for position in info_dict['mission_routes']:
+                x, y = position[0], position[1]
+                x, y = self.position_to_pixel(x, y)
+                node_type=self._env._getNodeTypeById(info_dict['appointed_node_id'])
+                if node_type=='U':
+                    self.executing_uav_mission_positions_in_pixel[info_dict['mission_id']] = \
+                        self.executing_uav_mission_positions_in_pixel.get(info_dict['mission_id'], [])
+                    self.executing_uav_mission_positions_in_pixel[info_dict['mission_id']].append([x, y])
+                elif node_type=='V':
+                    self.executing_vehicle_mission_positions_in_pixel[info_dict['mission_id']] = \
+                        self.executing_vehicle_mission_positions_in_pixel.get(info_dict['mission_id'], [])
+                    self.executing_vehicle_mission_positions_in_pixel[info_dict['mission_id']].append([x, y])
+                else:
+                    raise ValueError('Unknown node type')
     def close(self):
         clear_screen()
         return super().close()

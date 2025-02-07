@@ -1,3 +1,5 @@
+from jinja2.nodes import NodeType
+
 from .manager.traffic_manager import TrafficManager
 from .manager.task_manager import TaskManager
 from .manager.channel_manager_cp import ChannelManagerCP
@@ -109,6 +111,11 @@ class AirFogSimEnv():
         self.U2I_link_sim_step_using = []
         self.traffic_step_generate = 0
         self.traffic_step_allocate = 0
+        self.available_sensor_num_list=[]
+
+        uav_ids = self.traffic_manager.getUAVTrafficInfos().keys()
+        self.UAV_positions={uav_id:[] for uav_id in uav_ids }
+        self.UAV_mission_positions={uav_id:[] for uav_id in uav_ids }
 
         # ----------------temporary records in each traffic simulation step----------------
         self.UAV_energy_consumption = self._generateUAVDict()
@@ -136,12 +143,13 @@ class AirFogSimEnv():
                                                 n_Veh=self.traffic_manager.getNumberOfVehicles(),
                                                 RSU_positions=self.traffic_manager.getRSUPositions(),
                                                 simulation_interval=self.simulation_interval)
-        self.mission_manager = MissionManager(config['mission'], config['sensing'])
+        self.mission_manager = MissionManager(config['mission'], config['sensing'],self.start_simulation_time)
         self.sensor_manager = SensorManager(config['sensing'], self.traffic_manager)
         self.blockchain_manager = BlockchainManager(self.RSUs)
-        self.energy_manager = EnergyManager(config['energy'], self.traffic_manager.getUAVTrafficInfos().keys())
-        self.node_state_manager = StateInfoManager(config[
-                                                       'state_attribute'])  # 用pandas管理节点每个时隙的状态，以fog node/task node划分不同类型的实体（UAV, veh, RSU, cloud server），并从config中获取需要存储的属性列表
+        UAV_keys=self.traffic_manager.getUAVTrafficInfos().keys()
+        self.energy_manager = EnergyManager(config['energy'], UAV_keys,self.simulation_interval)
+        # 用pandas管理节点每个时隙的状态，以fog node/task node划分不同类型的实体（UAV, veh, RSU, cloud server），并从config中获取需要存储的属性列表
+        self.node_state_manager = StateInfoManager(config['state_attribute'])
 
     def _configManagersModelsReset(self):
         self.traffic_manager.reset(self.traci_connection)
@@ -321,7 +329,13 @@ class AirFogSimEnv():
         # check the location duration of each waypoint in the mission; check the task execution at each waypoint; check the mission deadline
         self.mission_manager.generateMissionsProfile(self.simulation_time, self.simulation_interval)
         for mission in self.new_missions:
+            node_id = mission.getAppointedNodeId()
+            node_type=self._getNodeTypeById(node_id)
+            if node_type == "U":
+                position=mission.getRoutes()[0][:2]
+                self.UAV_mission_positions[node_id].append([float(position[0]),float(position[1])])
             self.mission_manager.addMission(mission, self.sensor_manager)
+
         self.new_missions = []
         step_duration_dict = self.mission_manager.updateMissions(self.simulation_interval, self.simulation_time,
                                                                  self._getNodeById, self.sensor_manager,
@@ -812,9 +826,12 @@ class AirFogSimEnv():
                 if 'vehicle' in self.task_node_types and np.random.rand() < self.task_node_gen_poss and self.getTaskNodeNumByType(
                         'vehicle') < self.max_task_node_num['vehicle'] and vehicle_id not in self.task_node_ids:
                     self.task_node_ids.append(vehicle_id)
-
             self.vehicles[vehicle_id].update(vehicle_traffic_info, self.simulation_time)
+
         for uav_id, uav_traffic_info in uav_traffic_infos.items():
+            x=float(uav_traffic_info['position'][0])
+            y=float(uav_traffic_info['position'][1])
+            self.UAV_positions[uav_id].append([x,y])
             if uav_id not in self.UAVs:
                 self.UAVs[uav_id] = UAV(uav_id, uav_traffic_info['position'], uav_traffic_info['speed'],
                                         uav_traffic_info['acceleration'], uav_traffic_info['angle'],
@@ -935,3 +952,15 @@ class AirFogSimEnv():
 
     def getUAVStepSensingData(self):
         return self.UAV_sensing_data
+
+    def addAvailableSensorNum(self, sensor_num):
+        self.available_sensor_num_list.append(sensor_num)
+
+    def getAvailableSensorNumList(self):
+        return self.available_sensor_num_list
+
+    def getUAVPositions(self):
+        return self.UAV_positions
+
+    def getUAVMissionPositions(self):
+        return self.UAV_mission_positions

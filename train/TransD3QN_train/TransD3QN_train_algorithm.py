@@ -49,8 +49,8 @@ def parseTransD3QNTrainArgs():
 
 def parseTransD3QNDimArgs():
     parser = argparse.ArgumentParser(description='TransD3QN dimension arguments')
-    # [type, is_mission_node, is_schedulable, x, y, z]
-    parser.add_argument('--dim_node', type=int, default=6)  # Dimension of nodes (UAV/Veh/RSU)
+    # [id, type, is_mission_node, is_schedulable, x, y, z]
+    parser.add_argument('--dim_node', type=int, default=7)  # Dimension of nodes (UAV/Veh/RSU)
     # [sensor_type, accuracy, return_size, arrival_time, TTL, duration, x, y, z, distance_threshold]
     parser.add_argument('--dim_mission', type=int, default=10)  # Dimension of mission
     # [type, accuracy]
@@ -150,7 +150,7 @@ class TransD3QN_Train_AlgorithmModule(BaseAlgorithmModule):
 
     def __init__(self):
         super().__init__()
-        self.algorithm_module_tag = "TDDQN_Train"
+        self.algorithm_module_tag = "TransD3QN_Train"
         print('algorithm: ', self.algorithm_module_tag)
 
     def initialize(self, env: AirFogSimEnv, config={}, last_episode=None,final=False):
@@ -205,7 +205,7 @@ class TransD3QN_Train_AlgorithmModule(BaseAlgorithmModule):
         # UAVs,Vehicles,RSUs
         # [id, type, is_mission_node, is_schedulable, x, y, z]
         # [1, 'U', True, True, 105.23, 568.15. 225.65]
-        # 选取[type, is_mission_node, is_schedulable, x, y, z]
+        # 选取[id, type, is_mission_node, is_schedulable, x, y, z]
 
         encode_states = []
 
@@ -219,14 +219,15 @@ class TransD3QN_Train_AlgorithmModule(BaseAlgorithmModule):
                     break
 
         for node_state in node_states:
+            id=node_state[0]
             node_type = self.node_type_dict.get(node_state[1], -1)
             is_mission_node = int(node_state[2])
             is_schedulable = int(node_state[3])
             position_x = (node_state[4] - self.min_position_x) / (self.max_position_x - self.min_position_x)
             position_y = (node_state[5] - self.min_position_y) / (self.max_position_y - self.min_position_y)
-            position_z = (node_state[6] - self.min_position_z) / (self.max_position_z - self.min_position_z)
+            position_z = (node_state[6] - self.min_position_z) / (self.max_position_z - self.min_position_z)  if (self.max_position_z - self.min_position_z) > 0 else 1
 
-            state = [node_type, is_mission_node, is_schedulable, position_x, position_y, position_z]
+            state = [id, node_type, is_mission_node, is_schedulable, position_x, position_y, position_z]
             encode_states.append(state)
 
         # 补齐长度
@@ -252,7 +253,7 @@ class TransD3QN_Train_AlgorithmModule(BaseAlgorithmModule):
             duration = mission_state[5] / self.max_simulation_time
             position_x = (mission_state[6] - self.min_position_x) / (self.max_position_x - self.min_position_x)
             position_y = (mission_state[7] - self.min_position_y) / (self.max_position_y - self.min_position_y)
-            position_z = (mission_state[8] - self.min_position_z) / (self.max_position_z - self.min_position_z)
+            position_z = (mission_state[8] - self.min_position_z) / (self.max_position_z - self.min_position_z)  if (self.max_position_z - self.min_position_z) > 0 else 1
             distance_threshold = mission_state[9] / (self.max_position_x - self.min_position_x)
 
             state = [sensor_type, accuracy, return_size, arrival_time, TTL, duration, position_x, position_y,
@@ -377,7 +378,6 @@ class TransD3QN_Train_AlgorithmModule(BaseAlgorithmModule):
                                                                                       self.TA_distance_Veh,
                                                                                       self.TA_distance_UAV,
                                                                                       self.node_priority)
-            print(valid_sensor_num)
             if valid_sensor_num == 0:
                 continue
             encode_sensor_states, encode_mask = self._encode_sensor_states(sensor_states, max_sensor_node_num,
@@ -393,6 +393,7 @@ class TransD3QN_Train_AlgorithmModule(BaseAlgorithmModule):
             appointed_node_type, appointed_node_id, appointed_sensor_id, appointed_sensor_accuracy = self.algorithmScheduler.getSensorInfoByAction(
                 env, action_index, sensor_states)
             if appointed_node_id is not None and appointed_sensor_id is not None:
+                env.addAvailableSensorNum(valid_sensor_num)
                 if appointed_node_type == 'U':
                     route_with_time={
                         'position':mission_position,

@@ -1,6 +1,8 @@
 import random
 from collections import deque
 from ..entities.mission import Mission
+from airfogsim.utils import math_utils
+from airfogsim.enum_const import MissionFinalStateEnum
 
 import numpy as np
 
@@ -10,9 +12,10 @@ class MissionManager:
     """
     SUPPORTED_TASK_GENERATION_MODELS = ['Poisson', 'Uniform', 'Normal', 'Exponential']
 
-    def __init__(self, config_mission, config_sensing):
+    def __init__(self, config_mission, config_sensing,start_simulation_time):
         """The constructor of the MissionManager class.
         """
+        self._start_simulation_time=start_simulation_time
         self._to_generate_missions_profile = []  # list: item is mission_profile dicts
         self._executing_missions = {}  # key: node_id, value: list of missions
         self._success_missions = {}  # key: node_id, value: list of success missions
@@ -34,12 +37,17 @@ class MissionManager:
         self._predictable_seconds = self._config_mission.get('predictable_seconds', 5)
         self._mission_generation_model = self._config_mission['mission_generation_model']
         self._generation_model_args = self._config_mission['generation_model_args']
+        self._mission_position_model = self._config_mission['mission_position_model']
+        self._position_model_args= self._config_mission['position_model_args']
         self._distance_threshold=self._config_mission['distance_threshold']
         self._TA_distance_Veh = self._config_mission['TA_distance_Veh']
         self._TA_distance_UAV = self._config_mission['TA_distance_UAV']
         self._relay_probability = self._config_mission['relay_probability']
+        self._UAV_execution_probability = self._config_mission['UAV_execution_probability']
 
         self._sensor_type_num = config_sensing['sensor_type_num']
+
+        self._last_generation_time=self._start_simulation_time
 
     def reset(self):
         self._to_generate_missions_profile = []  # list: item is mission_profile dicts
@@ -51,6 +59,7 @@ class MissionManager:
         self._recently_fail_100_missions = deque(maxlen=100)
         self._recently_early_fail_100_missions = deque(maxlen=100)
         self._mission_id_counter = 0
+        self._last_generation_time = self._start_simulation_time
 
     def __getNewMissionId(self):
         self._mission_id_counter += 1
@@ -59,16 +68,29 @@ class MissionManager:
     def _generateBasicMissionProfile(self):
         new_mission_profile = {}
         new_mission_profile['mission_id'] = f'Mission_{self.__getNewMissionId()}'
-        x = random.uniform(self._x_range[0], self._x_range[1])
-        y = random.uniform(self._y_range[0], self._y_range[1])
+
+        if self._mission_position_model=="Uniform":
+            x = random.uniform(self._x_range[0], self._x_range[1])
+            y = random.uniform(self._y_range[0], self._y_range[1])
+        elif self._mission_position_model=="Normal":
+            norm_x_mu=self._position_model_args['Normal']['mean']
+            norm_y_mu=self._position_model_args['Normal']['mean']
+            norm_x_sigma=self._position_model_args['Normal']['std']
+            norm_y_sigma=self._position_model_args['Normal']['std']
+            norm_rho=self._position_model_args['Normal']['rho']
+            norm_x,norm_y=math_utils.generate_2d_normal_distribution(norm_x_mu, norm_y_mu, norm_x_sigma, norm_y_sigma,
+                                                           norm_rho, self._x_range,self._y_range)
+            x=(self._x_range[1]-self._x_range[0])*norm_x+self._x_range[0]
+            y=(self._y_range[1]-self._y_range[0])*norm_y+self._y_range[0]
+
         new_mission_profile['appointed_node_id'] = None
         new_mission_profile['appointed_sensor_id'] = None
         new_mission_profile['appointed_sensor_accuracy'] = None
         new_mission_profile['mission_routes'] = [[x, y, 0]]
         start, end = self._duration_range
-        new_mission_profile['mission_duration'] = [random.randint(start, end)]
+        new_mission_profile['mission_duration'] = [round(random.uniform(start, end), 2)]
         size_min, size_max = self._mission_size_range
-        new_mission_profile['mission_size'] = random.randint(size_min, size_max)
+        new_mission_profile['mission_size'] = round(random.uniform(size_min, size_max), 2)
         new_mission_profile['mission_sensor_type'] = 'sensor_type_' + str(random.randint(1, self._sensor_type_num))
         new_mission_profile['mission_accuracy'] = random.random()  # 随机生成0-1之间的精度
         new_mission_profile['mission_start_time'] = None
@@ -86,11 +108,10 @@ class MissionManager:
             int: New missions num.
         """
         # Generate new _to_generate_missions_profile, oblige to the mission generation model, simulation_interval, and predictable_seconds
-        todo_mission_num = 0
-        todo_mission_num += len(self._to_generate_missions_profile)
-        last_generation_time = cur_time if len(self._to_generate_missions_profile) == 0 else \
-        self._to_generate_missions_profile[-1].get('mission_arrival_time')
-        last_generation_time += simulation_interval
+        todo_mission_num = len(self._to_generate_missions_profile)
+        # last_generation_time = cur_time if len(self._to_generate_missions_profile) == 0 else \
+        # self._to_generate_missions_profile[-1].get('mission_arrival_time')
+        last_generation_time = self._last_generation_time
         while last_generation_time <= cur_time + self._predictable_seconds:
             if self._mission_generation_model == 'Poisson':
                 kwlambda = self._generation_model_args['Poisson']['lambda']
@@ -100,8 +121,7 @@ class MissionManager:
                 kwlow = self._generation_model_args['Uniform']['low']
                 kwhigh = self._generation_model_args['Uniform']['high']
                 mission_num = np.random.randint(kwlow * simulation_interval, kwhigh * simulation_interval + 1)
-                assert int(kwlow * simulation_interval) < int(
-                    kwhigh * simulation_interval), 'There is no task to generate.'
+                assert int(kwlow * simulation_interval) < int(kwhigh * simulation_interval), 'There is no task to generate.'
 
             elif self._mission_generation_model == 'Normal':
                 kwmean = self._generation_model_args['Normal']['mean']
@@ -133,6 +153,7 @@ class MissionManager:
                 todo_mission_num += 1
             last_generation_time += simulation_interval
 
+        self._last_generation_time=last_generation_time
         return todo_mission_num
 
     def generateMission(self, mission_profile):
@@ -187,6 +208,7 @@ class MissionManager:
                                 task_manager.addToComputeTask(task, node_id, current_time)
 
                 if mission.isFinished():
+                    mission.setMissionFinalStateCode(MissionFinalStateEnum.SUCCESS)
                     mission.setMissionFinishTime(current_time)  # set finish time (after returning all data)
                     success_missions_on_node = self._success_missions.get(node_id, [])
                     success_missions_on_node.append(mission)
@@ -208,6 +230,10 @@ class MissionManager:
             for mission in self._executing_missions[node_id]:
                 sensor_id = mission.getAppointedSensorId()
                 if mission.outOfDeadline(current_time):
+                    if mission.isSensingFinished():
+                        mission.setMissionFinalStateCode(MissionFinalStateEnum.TRANSMISSION_FAIL)
+                    else:
+                        mission.setMissionFinalStateCode(MissionFinalStateEnum.SENSING_FAIL)
                     mission.setMissionFinishTime(current_time)  # set finish time (when failed)
                     failed_missions_on_node = self._failed_missions.get(node_id, [])
                     failed_missions_on_node.append(mission)
@@ -224,6 +250,7 @@ class MissionManager:
         for mission_profile in self._to_generate_missions_profile:
             if mission_profile['mission_deadline']+mission_profile['mission_arrival_time'] < current_time:
                 dead_mission = Mission(mission_profile)
+                dead_mission.setMissionFinalStateCode(MissionFinalStateEnum.EARLY_FAIL)
                 dead_mission.setMissionFinishTime(current_time)
                 self._early_failed_missions.append(dead_mission)
                 self._recently_early_fail_100_missions.append(dead_mission)
@@ -458,6 +485,9 @@ class MissionManager:
         else:
             missions = self._executing_missions.get(node_id, [])
         return missions
+
+    def getToGenerateMissionsProfile(self):
+        return self._to_generate_missions_profile
 
     def getCurrentNodeId(self,mission_id):
         for node_id,mission in self._executing_missions:

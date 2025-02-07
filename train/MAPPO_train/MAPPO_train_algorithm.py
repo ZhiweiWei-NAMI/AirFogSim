@@ -42,8 +42,8 @@ def parseMAPPOTrainArgs():
 
 
 def parseMAPPODimArgs():
-    # [x, y, z]
-    dim_neighbor_UAV = 3
+    # [id, x, y, z]
+    dim_neighbor_UAV = 4
     m_neighbor_UAVs = 5
     # [left_sensing_time, left_return_size, x, y, z]
     dim_trans_mission = 5
@@ -196,7 +196,7 @@ class MAPPO_Train_AlgorithmModule(BaseAlgorithmModule):
             duration = mission_state[5] / self.max_simulation_time
             position_x = (mission_state[6] - self.min_position_x) / (self.max_position_x - self.min_position_x)
             position_y = (mission_state[7] - self.min_position_y) / (self.max_position_y - self.min_position_y)
-            position_z = (mission_state[8] - self.min_position_z) / (self.max_position_z - self.min_position_z)
+            position_z = (mission_state[8] - self.min_position_z) / (self.max_position_z - self.min_position_z)  if (self.max_position_z - self.min_position_z) > 0 else 1
             distance_threshold = mission_state[9] / (self.max_position_x - self.min_position_x)
 
             state = [sensor_type, accuracy, return_size, arrival_time, TTL, duration, position_x, position_y,
@@ -213,17 +213,18 @@ class MAPPO_Train_AlgorithmModule(BaseAlgorithmModule):
 
 
     def _encode_neighbor_UAV_states(self, UAV_states, max_UAV_num, dim_state):
-        # [x, y, z]
+        # [id, x, y, z]
         # [105.23, 568.15. 225.65]
-        # 选取[x, y, z]
+        # 选取[id, x, y, z]
 
         encode_states = []
         for UAV_state in UAV_states:
-            position_x = (UAV_state[0] - self.min_position_x) / (self.max_position_x - self.min_position_x)
-            position_y = (UAV_state[1] - self.min_position_y) / (self.max_position_y - self.min_position_y)
-            position_z = (UAV_state[2] - self.min_position_z) / (self.max_position_z - self.min_position_z)
+            id=UAV_state[0]
+            position_x = (UAV_state[1] - self.min_position_x) / (self.max_position_x - self.min_position_x)
+            position_y = (UAV_state[2] - self.min_position_y) / (self.max_position_y - self.min_position_y)
+            position_z = (UAV_state[3] - self.min_position_z) / (self.max_position_z - self.min_position_z)  if (self.max_position_z - self.min_position_z) > 0 else 1
 
-            state = [position_x, position_y, position_z]
+            state = [id, position_x, position_y, position_z]
             encode_states.append(state)
 
         # 补齐长度
@@ -245,7 +246,7 @@ class MAPPO_Train_AlgorithmModule(BaseAlgorithmModule):
             left_return_size = mission_state[1] / self.max_mission_size
             position_x = (mission_state[2] - self.min_position_x) / (self.max_position_x - self.min_position_x)
             position_y = (mission_state[3] - self.min_position_y) / (self.max_position_y - self.min_position_y)
-            position_z = (mission_state[4] - self.min_position_z) / (self.max_position_z - self.min_position_z)
+            position_z = (mission_state[4] - self.min_position_z) / (self.max_position_z - self.min_position_z)  if (self.max_position_z - self.min_position_z) > 0 else 1
 
             state = [left_sensing_time, left_return_size, position_x, position_y, position_z]
             encode_states.append(state)
@@ -265,7 +266,7 @@ class MAPPO_Train_AlgorithmModule(BaseAlgorithmModule):
 
         position_x = (self_UAV_states[0] - self.min_position_x) / (self.max_position_x - self.min_position_x)
         position_y = (self_UAV_states[1] - self.min_position_y) / (self.max_position_y - self.min_position_y)
-        position_z = (self_UAV_states[2] - self.min_position_z) / (self.max_position_z - self.min_position_z)
+        position_z = (self_UAV_states[2] - self.min_position_z) / (self.max_position_z - self.min_position_z)  if (self.max_position_z - self.min_position_z) > 0 else 1
         energy = self_UAV_states[3] / self.max_energy
         state = [position_x, position_y, position_z, energy]
 
@@ -433,7 +434,7 @@ class MAPPO_Train_AlgorithmModule(BaseAlgorithmModule):
                 energy_consumption = UAV_energy_consumptions[UAV_id]
                 trans_data = UAV_trans_datas[UAV_id]
                 sensing_data = UAV_sensing_datas[UAV_id]
-                reward = trans_data + sensing_data - energy_consumption
+                reward = trans_data*10 + sensing_data*500 - energy_consumption
                 exp = self.pp_buffer.completeAndPopExperience(UAV_id, reward)
             else:
                 reward = 0

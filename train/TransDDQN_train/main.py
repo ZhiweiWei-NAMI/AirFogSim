@@ -37,8 +37,9 @@ def load_config(path):
         return config
 
 
-last_episode = 44
-max_episode = 200
+last_episode = 0
+max_episode = 400
+checkpoint = 50
 
 # 启动全局性能监控
 # global_profiler = Profiler()
@@ -51,13 +52,11 @@ episode_profiler= Profiler()
 writer = SummaryWriter("./logs")
 
 # 1. Load the configuration file
-config_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join("../", 'config.yaml')
+config_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join("./", 'config.yaml')
 config = load_config(config_path)
 
 # 2. Get algorithm module
-# algorithm_module = GreedyAlgorithmModule()
 algorithm_module = TransDDQN_Train_AlgorithmModule()
-algorithm_tag = algorithm_module.getAlgorithmTag()
 
 # 3. Create the new environment
 env = AirFogSimEnv(config, interactive_mode=None)
@@ -67,7 +66,7 @@ env = AirFogSimEnv(config, interactive_mode=None)
 algorithm_module.initialize(env,last_episode=last_episode,final=True)
 
 # 5. Create the evaluation module
-evaluation_module = AirFogSimEvaluation(algorithm_tag)
+evaluation_module = AirFogSimEvaluation(env,algorithm_module)
 
 for episode in range(last_episode + 1, max_episode + 1):
     # 启动episode性能监控
@@ -82,7 +81,7 @@ for episode in range(last_episode + 1, max_episode + 1):
         loss=algorithm_module.train(env) # 训练模型
         if loss is not None:
             step_loss.append(loss) # 记录loss
-        evaluation_module.updateAndSaveStepRecords(env, algorithm_module) # 保存一步记录
+        evaluation_module.updateAndSaveStepRecords() # 保存一步记录
 
         acc_reward = evaluation_module.getAccReward()
         avg_reward = evaluation_module.getAvgReward()
@@ -92,7 +91,11 @@ for episode in range(last_episode + 1, max_episode + 1):
         print()
 
     algorithm_module.saveModel(episode,final=True) # 保存模型
+    if episode % checkpoint == 0:
+        algorithm_module.saveModel(episode,final=False)
+
     evaluation_module.updateAndSaveEpisodeRecords(episode) # 保存整个episode记录
+    evaluation_module.drawEpisodeRecordsByFile()
 
     # 记录训练效果
     if episode > 1 and len(step_loss)>0:
@@ -114,7 +117,7 @@ for episode in range(last_episode + 1, max_episode + 1):
     # 重置性能监控
     episode_profiler.reset()
 
-evaluation_module.drawEpisodeRecordsByFile() # 可视化训练过程（一个episode一条数据）
+# evaluation_module.drawEpisodeRecordsByFile() # 可视化训练过程（一个episode一条数据）
 env.close()
 writer.close()
 # 结束性能监控并打印报告

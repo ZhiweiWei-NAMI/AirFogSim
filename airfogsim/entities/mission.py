@@ -1,6 +1,7 @@
 import numpy as np
 
 
+
 class Mission:
     """Mission class to represent a mission in the simulation. The mission is a series of waypoints that the UAV/vehicle needs to visit and stay for a while. It also contains a set of tasks that need to be executed at each waypoint.
     """
@@ -45,6 +46,7 @@ class Mission:
         self._sensing_finish_time = 0
         self._mission_finish_time = 0  # The finish time of the mission (to be updated at the finish time, success or fail)
 
+        self._mission_final_state_code = None
 
         if self._appointed_node_id is not None:
             assert len(mission_profile['mission_routes']) == len(mission_profile['mission_task_sets']) == len(mission_profile['mission_duration']), "The length of mission_routes, mission_task_sets, and mission_duration should be the same."
@@ -97,6 +99,9 @@ class Mission:
                 if not task.isFinished():
                     task_flag = False
         return all(self._mission_stayed_time >= self._mission_duration) and task_flag
+
+    def setMissionFinalStateCode(self, mission_final_state_code):
+        self._mission_final_state_code = mission_final_state_code
 
     def isSensingFinished(self, index=None):
         if index is None:

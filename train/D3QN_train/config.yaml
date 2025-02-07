@@ -23,8 +23,8 @@ traffic:
   tripinfo: "../../sumo_wujiaochang/tripinfo_0.1_500s.csv" # The path to the SUMO tripinfo file
   start_traffic_time: 200 # Swipe to select the range to use the dataset
   traffic_interval: 0.1 # in seconds, for traffic simulation. Remember to set the same value in the SUMO configuration file; otherwise, the simulation will not work properly
-  UAV_z_range: [100, 200] # The range of z coordinates for UAVs
-  UAV_speed_range: [10,30] # The speed of UAV (distance unit per timeslot)
+  UAV_z_range: [100, 100] # The range of z coordinates for UAVs
+  UAV_speed_range: [15,15] # The speed of UAV (distance unit per timeslot)[10,30]
   uav_traffic_file: "path/to/uav_traffic_file.csv" # UAV traffic file
   max_n_vehicles: 100 # Number of vehicles to simulate
   max_n_UAVs: 15 # Number of UAVs to simulate. UAVs are randomly generated in the simulation area initially
@@ -140,19 +140,20 @@ sensing:
 
 mission:
   UAV_height: 100
-  TTL_range: [50,100]
-  duration_range: [5,10]
-  mission_size_range: [10,20]
+  TTL_range: [50,70]
+  duration_range: [5,10] # [5,10] [2,4]
+  mission_size_range: [30,50] # [10,20]
   sensor_accuracy_range: [0,1]
   distance_threshold: 150
   TA_distance_Veh: 300
   TA_distance_UAV: 600
   predictable_seconds: 2
-  relay_probability: 0.7
+  relay_probability: 1.0
+  UAV_execution_probability: 0.5 # only used in base_greedy algorithm
   mission_generation_model: "Poisson" # supported model:['Poisson', 'Uniform', 'Normal', 'Exponential']
   generation_model_args:
     Poisson:
-      lambda: 0.1
+      lambda: 0.5
     Uniform:
       low: 0
       high: 1
@@ -161,13 +162,19 @@ mission:
       std: 1
     Exponential:
       beta: 1
+  mission_position_model: "Normal" # supported model:['Uniform', 'Normal']
+  position_model_args:
+    Normal:
+      mean: 0.5 # Mean
+      std: 0.2 # Standard Deviation
+      rho: 0 # Related Coefficient
 
 energy:
   initial_energy_range: [48000,52000]
-  fly_unit_cost: 2.5
-  hover_unit_cost: 1.2
-  sensing_unit_cost: 0.5
-  receive_unit_cost: 0.1
-  send_unit_cost: 0.1
+  fly_unit_cost: 25
+  hover_unit_cost: 12
+  sensing_unit_cost: 5
+  receive_unit_cost: 1
+  send_unit_cost: 1
 
 

@@ -1,5 +1,6 @@
 
 import torch as T
+import torch.nn.functional as F
 from torch import nn
 
 # ----------------------------------- #
@@ -9,10 +10,11 @@ class Net(nn.Module):
     def __init__(self, dim_args):
         super(Net, self).__init__()
         self.dim_states=dim_args.dim_states
-        self.dim_hiddens=dim_args.dim_hiddens
+        self.dim_hiddens= dim_args.dim_hiddens
         self.dim_value=dim_args.dim_value
         self.dim_advantages=dim_args.dim_advantages
-        self.dim_actions=dim_args.dim_actions
+        self.dim_actions = dim_args.dim_actions
+
 
         # 有两个隐含层
         self.fc1 = nn.Linear(self.dim_states, self.dim_hiddens)
@@ -27,11 +29,11 @@ class Net(nn.Module):
 
     # 前向传播
     def forward(self, x):
-        x=T.gelu(self.fc1(x))
-        x=T.gelu(self.fc2(x))
+        x=F.gelu(self.fc1(x))
+        x=F.gelu(self.fc2(x))
 
-        V=T.gelu(self.fc_value(x))
-        A=T.gelu(self.fc_advantages(x))
+        V=F.gelu(self.fc_value(x))
+        A=F.gelu(self.fc_advantages(x))
 
         V=self.value_calculator(V)
         A=self.advantages_calculator(A)
