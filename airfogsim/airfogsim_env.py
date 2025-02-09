@@ -123,7 +123,7 @@ class AirFogSimEnv():
         self.traffic_manager = TrafficManager(config['traffic'], self.traci_connection, config['sumo']['sumo_net'])
         self._initRSUsAndCloudServers()
         # 2. Config the task manager
-        self.task_manager = TaskManager(config['task'], predictable_seconds=2)  # suppose tasks are generated every traffic interval
+        self.task_manager = TaskManager(config['task'], predictable_seconds=4)  # suppose tasks are generated every traffic interval
         self.channel_manager = ChannelManagerCP(config['channel'], 
                                               n_RSU=self.traffic_manager.getNumberOfRSUs(),
                                               n_UAV=self.traffic_manager.getNumberOfUAVs(),

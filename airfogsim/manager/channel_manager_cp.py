@@ -100,6 +100,10 @@ class ChannelManagerCP:
         self._initialize_Interference_and_active()
         self.resetActiveLinks()
 
+    def getNoisePower(self, is_dBm=False):
+        if is_dBm:
+            return self.sig2_dB
+        return self.sig2
     
     def transmissionTimeOut(self, last_transmission_time, simulation_time):
         assert last_transmission_time >= 0 and simulation_time >= 0
@@ -530,6 +534,71 @@ class ChannelManagerCP:
         self.I2U_Rate = avg_band * self.I2U_Rate
         self.I2V_Rate = avg_band * self.I2V_Rate
         self.I2I_Rate = avg_band * self.I2I_Rate
+
+    def getSignalPowerByType(self, tx_type, rx_type, is_dBm = False):
+        tx_type = tx_type.upper()
+        rx_type = rx_type.upper()
+        power_in_db = 0
+        if tx_type == 'V' and rx_type == 'V':
+            power_in_db = self.V2V_power_dB
+        elif tx_type == 'V' and rx_type == 'U':
+            power_in_db = self.V2U_power_dB
+        elif tx_type == 'V' and rx_type == 'I':
+            power_in_db = self.V2I_power_dB
+        elif tx_type == 'U' and rx_type == 'U':
+            power_in_db = self.U2U_power_dB
+        elif tx_type == 'U' and rx_type == 'V':
+            power_in_db = self.U2V_power_dB
+        elif tx_type == 'U' and rx_type == 'I':
+            power_in_db = self.U2I_power_dB
+        elif tx_type == 'I' and rx_type == 'U':
+            power_in_db = self.I2U_power_dB
+        elif tx_type == 'I' and rx_type == 'V':
+            power_in_db = self.I2V_power_dB
+        elif tx_type == 'I' and rx_type == 'I':
+            power_in_db = self.I2I_power_dB
+        else:
+            raise ValueError("The transmitter type or the receiver type is not correct.")
+        if is_dBm:
+            return power_in_db
+        else:
+            return 10**(power_in_db/10)
+
+    def getCSI(self, tx_idx, rx_idx, transmitter_type, receiver_type):
+        """Get the channel state information.
+
+        Args:
+            tx_idx (int): The index of the transmitter.
+            rx_idx (int): The index of the receiver.
+            transmitter_type (str): The type of the transmitter.
+            receiver_type (str): The type of the receiver.
+
+        Returns:
+            cp.ndarray: The channel state information.
+        """
+        transmitter_type = transmitter_type.upper()
+        receiver_type = receiver_type.upper()
+        assert receiver_type in ['V', 'U', 'I'] and transmitter_type in ['V', 'U', 'I']
+        if transmitter_type == 'V' and receiver_type == 'V': # V2V
+            return self.V2VChannel_with_fastfading[tx_idx, rx_idx]
+        elif transmitter_type == 'V' and receiver_type == 'U': # V2U
+            return self.V2UChannel_with_fastfading[tx_idx, rx_idx]
+        elif transmitter_type == 'V' and receiver_type == 'I': # V2I
+            return self.V2IChannel_with_fastfading[tx_idx, rx_idx]
+        elif transmitter_type == 'U' and receiver_type == 'U': # U2U
+            return self.U2UChannel_with_fastfading[tx_idx, rx_idx]
+        elif transmitter_type == 'U' and receiver_type == 'V': # U2V
+            return self.V2UChannel_with_fastfading[rx_idx, tx_idx]
+        elif transmitter_type == 'U' and receiver_type == 'I': # U2I
+            return self.U2IChannel_with_fastfading[tx_idx, rx_idx]
+        elif transmitter_type == 'I' and receiver_type == 'U': # I2U
+            return self.U2IChannel_with_fastfading[rx_idx, tx_idx]
+        elif transmitter_type == 'I' and receiver_type == 'V': # I2V
+            return self.V2IChannel_with_fastfading[rx_idx, tx_idx]
+        elif transmitter_type == 'I' and receiver_type == 'I': # I2I
+            return self.I2IChannel_with_fastfading[tx_idx, rx_idx]
+        else:
+            raise ValueError("The transmitter type or the receiver type is not correct.")
 
     def setThisTimeslotTransSize(self,send_size_dict:dict,receive_size_dict:dict):
         """Set send size and receive size of a node.

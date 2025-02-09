@@ -208,7 +208,43 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
             compute_node_mask[i] = 1
             compute_node_id_as_idx.append(compute_node[0])
         return compute_node_np, compute_node_id_as_idx, compute_node_mask
+    
+    def _extend_compute_node_mask_wrt_tasks(self, env, compute_node_mask, task_mask, compute_node_id_as_idx, task_node_id_as_idx, task_id_as_idx):
+        # 把compute_node_mask从m2扩展到 [m1*max_tasks, m2]
+        new_compute_node_mask = np.zeros((self.args.m1, self.args.max_tasks, self.args.m2))
+        # 遍历compute_node_id和task_node_id，获取对应的rate
+        task_compute_node_rate, wait_delay = self.commScheduler.getEstimatedRateBetweenNodeIds(env, task_node_id_as_idx, compute_node_id_as_idx)
+        current_time = env.simulation_time
+        for i in range(len(task_node_id_as_idx)):
+            task_node_id = task_node_id_as_idx[i]
+            for j in range(self.args.max_tasks):
+                if task_mask[i][j] == 1:
+                    new_compute_node_mask[i, j, :] = compute_node_mask
+                    task_id = task_id_as_idx[i * self.args.max_tasks + j]
+                    task_info = self.taskScheduler.getTaskInfoByTaskNodeAndTaskId(env, task_node_id, task_id)
+                    cpu = task_info.get('task_cpu', 0)
+                    data_size = task_info.get('task_size', 0)
+                    deadline = task_info.get('task_deadline', 0)
+                    arrival_time = task_info.get('task_arrival_time', 0)
+                    remained_delay = deadline + arrival_time - current_time
+                    if remained_delay <= 0:
+                        new_compute_node_mask[i, j, :] = np.zeros((self.args.m2))
+                        continue
+                    for k in range(len(compute_node_id_as_idx)):
+                        compute_node_id = compute_node_id_as_idx[k]
+                        rate = task_compute_node_rate[i][k]
+                        rate = max(rate, 0.1)
+                        comp_delay = self.compScheduler.getComputeDelayByNodeId(env, compute_node_id, cpu)
+                        trans_delay = data_size / rate
+                        total_delay = comp_delay + trans_delay + wait_delay
+                        if total_delay > remained_delay:
+                            new_compute_node_mask[i, j, k] = 0
+                else:
+                    new_compute_node_mask[i, j, :] = np.zeros((self.args.m2))
+        new_compute_node_mask = new_compute_node_mask.reshape((self.args.m1 * self.args.max_tasks, self.args.m2))
+        return new_compute_node_mask
 
+    
     def scheduleOffloading(self, env: AirFogSimEnv):
         # super().scheduleOffloading(env)
         all_tasks = self.taskScheduler.getAllToOffloadTasks(env, check_dependency=True)
@@ -219,8 +255,12 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
         # compute node
         compute_node = self.entityScheduler.getFogNodeStates(env)
         compute_node_np, compute_node_id_as_idx, compute_node_mask = self._reOrderComputeNode(compute_node)
+        # new_compute_node_mask = self._extend_compute_node_mask_wrt_tasks(env, compute_node_mask, task_mask, compute_node_id_as_idx, task_node_id_as_idx, task_id_as_idx)
+        # 把compute_node_mask从[m2]扩展到 [m1*max_tasks, m2]
+        new_compute_node_mask = np.tile(compute_node_mask, (self.args.m1 * self.args.max_tasks, 1))
+        # [m1 * max_tasks, m2]
         # action: [m1 * max_tasks]
-        action = self.DQN_Agent.select_action(task_node_np, task_data_np, compute_node_np, task_mask, compute_node_mask)
+        action = self.DQN_Agent.select_action(task_node_np, task_data_np, compute_node_np, task_mask, new_compute_node_mask)
         action = action.reshape((self.args.m1, self.args.max_tasks))
         # 遍历task_mask，仅当其为1，才进行offloading
         for i in range(self.args.m1):
@@ -249,18 +289,19 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
                                           self.state_dict['compute_node_mask'], 
                                           self.state_dict['action'], 
                                           self.state_dict['reward'], 
-                                          task_node_np, task_data_np, compute_node_np, task_mask, compute_node_mask, 
+                                          task_node_np, task_data_np, compute_node_np, task_mask, new_compute_node_mask, 
                                           self.state_dict['done'])
         self.state_dict['task_node'] = task_node_np
         self.state_dict['task_data'] = task_data_np
         self.state_dict['compute_node'] = compute_node_np
         self.state_dict['task_mask'] = task_mask
-        self.state_dict['compute_node_mask'] = compute_node_mask
+        self.state_dict['compute_node_mask'] = new_compute_node_mask
         self.state_dict['action'] = action
         self.state_dict['done'] = env.simulation_time >= env.config['simulation']['max_simulation_time'] - env.traffic_interval
 
     def scheduleCommunication(self, env: AirFogSimEnv):
         super().scheduleCommunication(env)
+
 
     def scheduleComputing(self, env: AirFogSimEnv):
         # alloc_cpu_callback function, 用于分配CPU资源的回调函数,输入为_computing_tasks (dict), simulation_interval (float), current_time (float)
@@ -272,7 +313,14 @@ class DQNOffloadingAlgorithm(BaseAlgorithmModule):
             # 本函数的目的是将所有的cpu分配给task
             appointed_fog_node = set()
             alloc_cpu_dict = {}
-            for tasks in computing_tasks.values():
+            task_list_list = computing_tasks.values()
+            sorted_task_list = []
+            for task_list in task_list_list:
+                sorted_task = sorted(task_list, key=lambda x: x.to_dict().get('compute_order', 100), reverse=False)
+                # 再根据先后顺序排序
+                sorted_task = sorted(sorted_task, key=lambda x: x.to_dict().get('task_arrival_time', 0), reverse=False)
+                sorted_task_list.append(sorted_task)
+            for tasks in sorted_task_list:
                 for task in tasks:
                     task_dict = task.to_dict()
                     assigned_node_id = task_dict['assigned_to']

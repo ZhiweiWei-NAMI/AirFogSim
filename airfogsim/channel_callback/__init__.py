@@ -14,8 +14,8 @@ def addMatrix(add_ma, value, add_mb, rb_nos, txidx, rxidx, inverse=False):
             increment = 10 ** ((value - add_mb[txidx, rxidx, :]) / 10) * rb_nos
         # 更新 add_ma
         add_ma[txidx, rxidx, :] += increment
-        if any(add_ma[txidx, rxidx, :] > 1):
-            print('increment:', increment)
+        # if any(add_ma[txidx, rxidx, :] > 1):
+        #     print('increment:', increment)
 
 # (interference_power_matrix_utx_x2v, self.U2V_power_dB, self.V2UChannel_with_fastfading, rb_nos, txidx, rxidx)
 def subMatrix(sub_ma, value, sub_mb, rb_nos, txidx, rxidx, inverse=False):
@@ -39,5 +39,5 @@ def addTwoMatrix(add_ma, value, add_mb, rb_nos, txidx, inverse=False):
         else:
             increment = 10 ** ((value - add_mb[txidx, :, :]) / 10) * rb_nos
         add_ma[txidx, :, :] += increment
-        if (add_ma[txidx, :, :] > 1).any():
-            print('increment:', increment)
+        # if (add_ma[txidx, :, :] > 1).any():
+        #     print('increment:', increment)

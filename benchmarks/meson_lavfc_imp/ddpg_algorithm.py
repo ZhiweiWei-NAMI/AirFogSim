@@ -1,11 +1,11 @@
 from airfogsim.airfogsim_env import AirFogSimEnv
-from airfogsim.airfogsim_algorithm import BaseAlgorithmModule
+from benchmarks.dqn_offloading.dqn_algorithm import DQNOffloadingAlgorithm as SimpleDQNOffloadingAlgorithm
 from airfogsim.algorithm.DDPG.ddpg import DDPG_Agent
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 from benchmarks.configs.parse_ddpg_args import parseDDPGArgs
 
-class DDPGOffloadingAlgorithm(BaseAlgorithmModule):
+class DDPGOffloadingAlgorithm(SimpleDQNOffloadingAlgorithm):
 
     def __init__(self):
         super().__init__()
@@ -218,10 +218,8 @@ class DDPGOffloadingAlgorithm(BaseAlgorithmModule):
         # compute node
         compute_node = self.entityScheduler.getFogNodeStates(env)
         compute_node_np, compute_node_id_as_idx, compute_node_mask = self._reOrderComputeNode(compute_node)
-        # action: [m1 * max_tasks]
-        pre_reward = self.getRewardByTask(env)
-        pre_reward = np.asarray([pre_reward], dtype=np.float32)
-        action, action_logits = self.DDPG_Agent.select_action(task_node_np, compute_node_np, compute_node_mask, pre_reward)
+        new_compute_node_mask = self._extend_compute_node_mask_wrt_tasks(env, compute_node_mask, task_mask, compute_node_id_as_idx, task_node_id_as_idx, task_id_as_idx)
+        action, action_logits = self.DDPG_Agent.select_action(task_node_np, task_data_np, compute_node_np, task_mask, new_compute_node_mask)
         action = action.reshape((self.args.m1, self.args.max_tasks))
         # 遍历task_mask，仅当其为1，才进行offloading
         for i in range(self.args.m1):
@@ -243,19 +241,20 @@ class DDPGOffloadingAlgorithm(BaseAlgorithmModule):
         # 如果self.state_dict不是None，那么可以获得上一个时隙的状态和reward，结合本时隙的状态，存储到replay buffer中
         if self.state_dict['task_node'] is not None:
             self.state_dict['reward'] = self.getRewardByTask(env)
-            self.DDPG_Agent.add_experience(self.state_dict['task_node'],
-                                          pre_reward,
+            self.DDPG_Agent.add_experience(self.state_dict['task_node'], 
+                                          self.state_dict['task_data'], 
                                           self.state_dict['compute_node'], 
                                           self.state_dict['task_mask'], 
                                           self.state_dict['compute_node_mask'], 
                                           self.state_dict['action'], 
                                           self.state_dict['reward'], 
-                                          task_node_np, task_data_np, compute_node_np, task_mask, compute_node_mask, 
+                                          task_node_np, task_data_np, compute_node_np, task_mask, new_compute_node_mask, 
                                           self.state_dict['done'])
         self.state_dict['task_node'] = task_node_np
+        self.state_dict['task_data'] = task_data_np
         self.state_dict['compute_node'] = compute_node_np
         self.state_dict['task_mask'] = task_mask
-        self.state_dict['compute_node_mask'] = compute_node_mask
+        self.state_dict['compute_node_mask'] = new_compute_node_mask
         self.state_dict['action'] = action_logits
         self.state_dict['done'] = env.simulation_time >= env.config['simulation']['max_simulation_time'] - env.traffic_interval
 

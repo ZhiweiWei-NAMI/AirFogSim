@@ -266,7 +266,7 @@ class MADDPGOffloadingAlgorithm(BaseAlgorithmModule):
         return compute_node_np, compute_node_id_as_idx, compute_node_mask
 
     def scheduleOffloading(self, env: AirFogSimEnv):
-        all_tasks = self.taskScheduler.getAllToOffloadTasks(env)
+        all_tasks = self.taskScheduler.getAllToOffloadTasks(env, check_dependency=True)
         task_node = self.entityScheduler.getTaskNodeStates(env)
         task_data = self.entityScheduler.getTaskStates(env, all_tasks)
         if len(task_data) == 0: # 没有任务

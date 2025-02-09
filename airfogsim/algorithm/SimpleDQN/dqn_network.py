@@ -63,7 +63,7 @@ class SimpleDQN(nn.Module):
 
         # Mask invalid compute nodes
         # only need to mask compute_score[:, :, 1:]
-        valid_compute_score = compute_score[:, :, 1:] * compute_node_mask.unsqueeze(1)  # [batch_size, m1 * max_tasks, m2]
+        valid_compute_score = compute_score[:, :, 1:] * compute_node_mask  # [batch_size, m1 * max_tasks, m2]
         # add the first column for local computation
         valid_compute_score = torch.cat([compute_score[:, :,:1], valid_compute_score], dim=2) 
         return valid_compute_score

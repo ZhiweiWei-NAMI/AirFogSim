@@ -180,7 +180,7 @@ class BaseAlgorithmModule:
         Args:
             env (AirFogSimEnv): The environment object.
         """
-        all_task_infos = self.taskScheduler.getAllToOffloadTaskInfos(env, check_dependency=True)
+        all_task_infos = self.taskScheduler.getAllToOffloadTaskInfos(env)
         for task_dict in all_task_infos:
             task_node_id = task_dict['task_node_id']
             task_id = task_dict['task_id']

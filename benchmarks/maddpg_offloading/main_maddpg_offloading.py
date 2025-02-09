@@ -40,7 +40,7 @@ algorithm_module.initialize(env, config)
 RewardScheduler.setModel(env, 'REWARD', 'task_priority/max(1e-3, task_delay)')
 np.random.seed(0)
 random.seed(0)
-EPOCH_NUM = 2000
+EPOCH_NUM = 1000
 for epoch in range(EPOCH_NUM):
     accumulated_reward = 0
     while not env.isDone():
@@ -53,10 +53,9 @@ for epoch in range(EPOCH_NUM):
         # veh_num = EntityScheduler.getNodeNumByType(env, 'vehicle')
         # uav_num = EntityScheduler.getNodeNumByType(env, 'uav')
         env.render()
-        print(f'Epoch: {epoch}, Simulation time: {env.simulation_time:.2f}, Ratio: {succ_ratio} = {task_num}/{total_task_num}, Reward: {accumulated_reward}', end='\r')
     algorithm_module.tensorboard_writer.add_scalar('Reward', accumulated_reward, env.simulation_time + epoch * env.max_simulation_time)
     algorithm_module.tensorboard_writer.add_scalar('Success ratio', succ_ratio, env.simulation_time + epoch * env.max_simulation_time)
-    print()
+    print(f'Epoch: {epoch}, Simulation time: {env.simulation_time:.2f}, Ratio: {succ_ratio:.2f} = {task_num}/{total_task_num}, Reward: {accumulated_reward:.2f}, TaskNodeNum: {len(env.task_node_ids)}, VNum: {len(env.vehicle_ids_as_index)}')
     env.reset()
     algorithm_module.reset()
 algorithm_module.saveModel()

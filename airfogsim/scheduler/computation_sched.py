@@ -15,6 +15,33 @@ class ComputationScheduler(BaseScheduler):
     #     env.compute_tasks_with_cpu[task_id] = allocated_cpu
 
     @staticmethod
+    def getComputeDelayByNodeId(env, node_id: str, added_task_cpu = 0):
+        """Get the computing delay by the node id.
+
+        Args:
+            env (AirFogSimEnv): The environment.
+            node_id (str): The node id.
+            added_cpu (float): The required compute task CPU.
+
+        Returns:
+            float: The computing delay.
+        """
+        to_compute_tasks = env.task_manager.getToComputeTasks(node_id)
+        total_remain_cpu = 0
+        for task in to_compute_tasks:
+            task_cpu = task.getTaskCPU()
+            computed_cpu = task.getComputedSize()
+            remain_cpu = task_cpu - computed_cpu
+            assert remain_cpu >= 0
+            total_remain_cpu += remain_cpu
+        comp_node = env._getNodeById(node_id)
+        cpu = comp_node.getFogProfile().get('cpu', 0)
+        cpu = max(0.1, cpu)
+        total_remain_cpu += added_task_cpu
+        assert total_remain_cpu >= 0
+        return total_remain_cpu / cpu
+
+    @staticmethod
     def setComputingCallBack(env, callback):
         """Set the computing callback.
 

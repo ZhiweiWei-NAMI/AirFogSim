@@ -114,7 +114,6 @@ class TaskManager:
         self._recently_failed_100_tasks = deque(maxlen=100)
         self._task_id = 0
 
-
     def getDoneTasks(self):
         """Get the done task info list.
 
@@ -197,6 +196,18 @@ class TaskManager:
             task_manager.getToComputeTasks('vehicle1')
         """
         return self._computing_tasks.get(node_id, [])
+    
+    def setToComputeTasks(self, node_id, task_list):
+        """Set the tasks to compute by the node id.
+
+        Args:
+            node_id (str): The node id.
+            task_list (list): The list of the tasks to compute.
+
+        Examples:
+            task_manager.setToComputeTasks('vehicle1', [task1, task2])
+        """
+        self._computing_tasks[node_id] = task_list
 
     def finishOffloadingTask(self, task:Task, current_time):
         """Remove the offloading task by the task id, and then move the task to the to_compute_tasks.
@@ -317,6 +328,32 @@ class TaskManager:
         """
         return self._waiting_to_offload_tasks
     
+    def getWaitingToOffloadTasksByNodeId(self, node_id):
+        """Get the tasks to offload by the node id.
+
+        Args:
+            node_id (str): The node id.
+
+        Returns:
+            list: The list of the tasks to offload.
+
+        Examples:
+            task_manager.getWaitingToOffloadTasksByNodeId('vehicle1')
+        """
+        return self._waiting_to_offload_tasks.get(node_id, [])
+    
+    def setWaitingToOffloadTasksByNodeId(self, node_id, task_list):
+        """Set the tasks to offload by the node id.
+
+        Args:
+            node_id (str): The node id.
+            task_list (list): The list of the tasks to offload.
+
+        Examples:
+            task_manager.setWaitingToOffloadTasksByNodeId('vehicle1', [task1, task2])
+        """
+        self._waiting_to_offload_tasks[node_id] = task_list
+    
     def getOffloadingTasks(self):
         offloading_tasks, num = self.getOffloadingTasksWithNumber()
         return offloading_tasks
@@ -351,6 +388,32 @@ class TaskManager:
             offloading_tasks[node_id] = to_offload_task
             total_num += len(offloading_tasks[node_id])
         return offloading_tasks, total_num
+    
+    def getOffloadingTasksByNodeId(self, node_id):
+        """Get the offloading tasks by the node id.
+
+        Args:
+            node_id (str): The node id.
+
+        Returns:
+            list: The list of the offloading tasks.
+
+        Examples:
+            task_manager.getOffloadingTasksByNodeId('vehicle1')
+        """
+        return self._offloading_tasks.get(node_id, [])
+    
+    def setOffloadingTasksByNodeId(self, node_id, task_list):
+        """Set the offloading tasks by the node id.
+
+        Args:
+            node_id (str): The node id.
+            task_list (list): The list of the offloading tasks.
+
+        Examples:
+            task_manager.setOffloadingTasksByNodeId('vehicle1', [task1, task2])
+        """
+        self._offloading_tasks[node_id] = task_list
 
     def removeTasksByNodeId(self, to_remove_node_id):
         """Remove the tasks by the node id.
@@ -762,16 +825,26 @@ class TaskManager:
         all_tasks = itertools.chain(self._waiting_to_offload_tasks.items(), self._offloading_tasks.items(), self._computing_tasks.items(), self._waiting_to_return_tasks.items(), self._returning_tasks.items(), self._to_generate_task_infos.items())
         for node_id, task_infos in all_tasks:
             for task_info in task_infos.copy():
+                task_node_id = task_info.getTaskNodeId()
+                task_id = task_info.getTaskId()
                 if cur_time - task_info.getTaskArrivalTime() > task_info.getTaskDeadline():
                 # self._config_task.get('hard_ddl', 2):
                     if task_info in self._to_generate_task_infos.get(task_info.getTaskNodeId(), []):
                         pass
                     task_info.setTaskFailueCode(EnumerateConstants.TASK_FAIL_OUT_OF_DDL)
                     task_infos.remove(task_info)
-                    task_node_id = task_info.getTaskNodeId()
                     self._out_of_ddl_tasks[task_node_id] = self._out_of_ddl_tasks.get(task_node_id, [])
                     self._out_of_ddl_tasks[task_node_id].append(task_info)
                     self._recently_failed_100_tasks.append(task_info)
+                else:
+                    flag = self.checkTaskDependency(task_node_id, task_id)
+                    if flag is not None:
+                        continue
+                    failed_task_list = self._out_of_ddl_tasks.get(task_node_id, [])
+                    failed_task_list.append(task_info)
+                    self._out_of_ddl_tasks[task_node_id] = failed_task_list
+                    task_infos.remove(task_info)
+                    task_info.setTaskFailueCode(EnumerateConstants.TASK_FAIL_PARENT_FAILED)
 
         # 5. Check the task DAG
         for task_node_id, task_dag in self._task_dependencies.items():
@@ -787,8 +860,8 @@ class TaskManager:
                         task_dag.remove_node(task_id)
                         remove_flag = True
             if len(removed_nodes) > 1:
-                a=3 #debug                    
-
+                a=3 #debug
+                
     def _getNotFinishedTasksByNode(self, task_node_id):
         not_finished_tasks = []
         for task_info in self._to_generate_task_infos.get(task_node_id, []):
@@ -797,12 +870,12 @@ class TaskManager:
             not_finished_tasks.append(task_info.getTaskId())
         for task_info in self._offloading_tasks.get(task_node_id, []):
             not_finished_tasks.append(task_info.getTaskId())
-        for task_info in self._computing_tasks.get(task_node_id, []):
-            not_finished_tasks.append(task_info.getTaskId())
-        for task_info in self._waiting_to_return_tasks.get(task_node_id, []):
-            not_finished_tasks.append(task_info.getTaskId())
-        for task_info in self._returning_tasks.get(task_node_id, []):
-            not_finished_tasks.append(task_info.getTaskId())
+
+        iter_chain = itertools.chain(self._computing_tasks.items(), self._waiting_to_return_tasks.items(), self._returning_tasks.items())
+        for node_id, task_infos in iter_chain:
+            for task_info in task_infos:
+                if task_info.getTaskNodeId() == task_node_id:
+                    not_finished_tasks.append(task_info.getTaskId())
         return not_finished_tasks
 
     def offloadTask(self, task_node_id, task_id, target_node_id, current_time, route = None):
@@ -834,7 +907,7 @@ class TaskManager:
                     self._waiting_to_offload_tasks[task_node_id].remove(task_info)
                     assert len(task_info.getToOffloadRoute())>0
                     # if execute locally
-                    if target_node_id == task_node_id:
+                    if target_node_id == task_node_id and task_info.getCurrentNodeId() == task_node_id:
                         self.addToComputeTask(task_info, task_node_id, current_time)
                         self._offloading_tasks[task_node_id].remove(task_info)
                     return True

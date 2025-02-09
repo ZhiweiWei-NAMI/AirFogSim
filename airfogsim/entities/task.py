@@ -57,6 +57,15 @@ class Task:
         else:
             self._to_return_node_id = task_node_id
 
+    def setAttribute(self, key, value):
+        """Set the attribute of the task.
+
+        Args:
+            key (str): The attribute key.
+            value (object): The attribute value.
+        """
+        setattr(self, key, value)
+
     def setGenerated(self):
         """Set the task as generated.
         """
@@ -276,8 +285,9 @@ class Task:
             self._routed_time.append(current_time)
             if not fast_return:
                 del self._to_offload_route[0]  # remove the first element
-            return True
-        return False
+            else:
+                self._to_offload_route = []
+        return len(self._to_offload_route) == 0
 
     def offloadTo(self, node_id, route, time):
         """Offload the task to the node. If node_id is the same as the task node ID, the task is executed locally.
@@ -298,6 +308,24 @@ class Task:
         self._executed_locally = node_id == self._task_node_id
         self._start_to_transmit_time = time
         self._last_transmission_time = time
+
+    def changeOffloadTo(self, new_node_id, new_route, time):
+        """Change the offload node and route based on existing route.
+
+        Args:
+            new_node_id (str): The new node ID.
+            new_route (list): The new route.
+            time (float): The time to offload the task.
+        """
+        # 1. 把to_offload_route没有完成的从_decided_route中删除
+        for i in range(len(self._to_offload_route)): 
+            self._decided_route.remove(self._to_offload_route[i])
+        # 2. 把新的route加入
+        self._decided_route += new_route
+        self._to_offload_route = new_route
+        self._assigned_to = new_node_id
+        self._executed_locally = new_node_id == self._task_node_id
+        self._changed_offload_time = time
 
     def isExecutedLocally(self):
         """Check if the task is executed locally.

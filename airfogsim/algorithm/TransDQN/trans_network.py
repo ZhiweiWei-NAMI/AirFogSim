@@ -57,10 +57,6 @@ class TransformerDQN(nn.Module):
 
         # Create combined mask
         task_mask_flat = task_mask.view(batch_size, -1)  # [batch_size, m1 * max_tasks]
-        combined_mask = torch.cat([
-            task_mask_flat,  # task mask
-            compute_node_mask  # Compute node mask
-        ], dim=1)  # [batch_size, m1 * max_tasks + m2]
 
         # Apply Transformer Encoder
         transformer_output = self.transformer(
@@ -75,9 +71,8 @@ class TransformerDQN(nn.Module):
         compute_score = self.compute_node_selector(final_outputs) # [batch_size, m1 * max_tasks, m2+1]
 
         # Mask invalid compute nodes
-        # compute_score: [batch_size, m1 * max_tasks, m2+1], compute_node_mask.unsqueeze(1): [batch_size, 1, m2]
         # only need to mask compute_score[:, :, 1:]
-        valid_compute_score = compute_score[:, :, 1:] * compute_node_mask.unsqueeze(1)  # [batch_size, m1 * max_tasks, m2]
+        valid_compute_score = compute_score[:, :, 1:] * compute_node_mask  # [batch_size, m1 * max_tasks, m2]
         # add the first column for local computation
         valid_compute_score = torch.cat([compute_score[:, :, :1], valid_compute_score], dim=2)
         return valid_compute_score
