@@ -1,0 +1,56 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Logs and temporary files
+*.log
+*.run
+**/runs/**
+tripinfo.xml
+tripinfo.csv
+
+# Data files
+*.csv
+*.json
+*.pkl
+*.h5
+*.npy
+*.npz
+*.pt
+*.pth
+data/*
+pyg_wheel/*
+
+# Model files
+models/*
+**/models/
+**/models2/
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Project specific
+paper_code/
+docs/build/
+data/
+pyg_wheel/
+runs/
+tmc_response/
+authen_vfc/
+log/
+
+# SUMO map data (large files)
+sumo_berlin/
+sumo_wujiaochang/
