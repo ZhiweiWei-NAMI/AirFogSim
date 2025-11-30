@@ -157,6 +157,14 @@ class TaskManager:
                 return task
         return None
 
+    def getTaskByTaskId(self, task_id):
+        """Get task by task_id, searching all task nodes."""
+        for task_node_id in self._generated_task_history:
+            task = self.getTaskByTaskNodeAndTaskId(task_node_id, task_id)
+            if task is not None:
+                return task
+        return None
+
     def setPredictableSeconds(self, predictable_seconds):
         """Set the predictable seconds for the task generation.
 

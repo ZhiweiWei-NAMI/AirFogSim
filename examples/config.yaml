@@ -166,4 +166,8 @@ energy:
   receive_unit_cost: 0.1
   send_unit_cost: 0.1
 
+wired:
+  edges: []  # 有线链路拓扑，例如: [{u: "RSU_1", v: "Cloud_1", capacity_mbps: 100, prop_ms: 1.0}]
 
+storage:
+  capacity_bytes: {}  # 各节点缓存容量，例如: {RSU_1: 10000000, Cloud_1: 100000000}

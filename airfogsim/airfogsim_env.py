@@ -5,6 +5,8 @@ from .manager.block_manager import BlockchainManager
 from .manager.sensor_manager import SensorManager
 from .manager.energy_manager import EnergyManager
 from .manager.state_info_manager import StateInfoManager
+from .manager.wired_manager import WiredNetworkManager
+from .manager.storage_manager import StorageManager
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'tmc_response', 'reviewer3_exp5'))
@@ -119,6 +121,8 @@ class AirFogSimEnv():
         self.blockchain_manager.reset()
         self.energy_manager.reset(self.traffic_manager.getUAVTrafficInfos().keys())
         self.node_state_manager.reset()
+        self.wired_manager.reset()
+        self.storage_manager.reset()
         self.simulation_time = 0
         self.force_quit = False
 
@@ -144,7 +148,12 @@ class AirFogSimEnv():
         # Initialize authentication manager
         auth_config = config.get('authentication', {})
         self.auth_manager = SimpleAuthManager(auth_config)
-        print("✓ Authentication manager initialized")
+
+        # Initialize wired network and storage managers
+        wired_config = config.get('wired', {})
+        self.wired_manager = WiredNetworkManager(wired_config)
+        storage_config = config.get('storage', {})
+        self.storage_manager = StorageManager(storage_config)
 
 
     def mountVisualizer(self, mode='graphic'):
@@ -667,10 +676,53 @@ class AirFogSimEnv():
 
     def _updateWiredCommunication(self):
         """Update the wired communication for the cloud computing network nodes.
-
-        @TODO: Implement the wired communication for the cloud computing network nodes. For example, the backhaul communication, the fronthaul communication, etc.
+        处理 RSU-RSU, RSU-Cloud, Cloud-Cloud 之间的有线回传通信。
         """
-        pass
+        # 获取正在卸载的任务
+        offloading_tasks, _ = self.task_manager.getOffloadingTasksWithNumber()
+        
+        for _, task_set in offloading_tasks.items():
+            for task in task_set:
+                path = task.getToOffloadRoute()
+                if len(path) == 0:
+                    continue
+                tx_id = task.getCurrentNodeId()
+                rx_id = path[0]
+                tx_type = self._getNodeTypeById(tx_id)
+                rx_type = self._getNodeTypeById(rx_id)
+                
+                # 仅处理 I/C 之间的有线通信
+                if tx_type not in ['I', 'C'] or rx_type not in ['I', 'C']:
+                    continue
+                
+                # 检查是否有有线链路
+                if not self.wired_manager.hasLink(tx_id, rx_id):
+                    continue
+                
+                task_id = task.getTaskId()
+                # 如果该任务尚未加入有线队列，则加入
+                if self.wired_manager.getFlowRemaining(task_id) == 0:
+                    remaining = task.getTaskSize() - task.getTransmittedSize()
+                    if task.isReturning():
+                        remaining = task.getReturnedSize() - task.getTransmittedSize()
+                    if remaining > 0:
+                        self.wired_manager.enqueue(task_id, tx_id, rx_id, remaining)
+        
+        # 执行一步有线传输
+        results = self.wired_manager.step(self.simulation_interval)
+        
+        # 更新任务传输状态
+        for task_id, transmitted_bytes in results.items():
+            task = self.task_manager.getTaskByTaskId(task_id)
+            if task is None:
+                continue
+            path = task.getToOffloadRoute()
+            if len(path) == 0:
+                continue
+            rx_id = path[0]
+            trans_flag = task.transmit_to_Node(rx_id, transmitted_bytes, self.simulation_time)
+            if trans_flag:
+                self.task_manager.finishOffloadingTask(task, self.simulation_time)
 
     def _updateComputation(self):
         """Update the computation for the entities.
@@ -680,10 +732,16 @@ class AirFogSimEnv():
 
     def _updateStorage(self):
         """Update the storage for the entities.
-
-        @TODO: Implement the storage update for the entities. For example, the cache update, the memory update, etc.
+        当任务在某节点完成计算后，可将结果缓存到该节点。
         """
-        pass
+        # 获取刚完成计算的任务，尝试缓存其结果
+        done_tasks = self.task_manager.getDoneTasks()
+        for node_id, tasks in done_tasks.items():
+            for task in tasks:
+                content_id = task.getTaskId()
+                size = task.getReturnedSize()
+                if size > 0:
+                    self.storage_manager.put(node_id, content_id, size)
 
     def _updateTask(self):
         """Update and generate the task for the entities. 

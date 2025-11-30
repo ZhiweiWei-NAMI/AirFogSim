@@ -2,7 +2,6 @@
 ## Abstract:
 Vehicular Fog Computing (VFC) is significantly enhancing the efficiency, safety, and computational capabilities of Intelligent Transportation Systems (ITS), and the integration of Unmanned Aerial Vehicles (UAVs) further elevates these advantages by incorporating flexible and auxiliary services. This evolving UAV-integrated VFC paradigm opens new doors while presenting unique complexities within the cooperative computation framework. Foremost among the challenges, modeling the intricate dynamics of aerial-ground interactive computing networks is a significant endeavor, and the absence of a comprehensive and flexible simulation platform may impede the exploration of this field. Inspired by the pressing need for a versatile tool, this paper provides a lightweight and modular aerial-ground collaborative simulation platform, termed AirFogSim. We present the design and implementation of AirFogSim, and demonstrate its versatility with five key missions in the domain of UAV-integrated VFC. A multifaceted use case is carried out to validate AirFogSim’s effectiveness, encompassing several integral aspects of the proposed AirFogSim, including UAV trajectory, task offloading, resource allocation, and blockchain. In general, AirFogSim is envisioned to set a new precedent in the UAV-integrated VFC simulation, bridge the gap between theoretical design and practical validation, and pave the way for future intelligent transportation domains. 
 
-![image](https://github.com/ZhiweiWei-NAMI/AirFogSim/assets/153070550/0e28ce03-8eed-40e7-8f9d-a85e067df575)
 
 ## Citation
 
@@ -19,6 +18,10 @@ If you use AirFogSim in your research, please cite our paper:
       url={https://arxiv.org/abs/2409.02518}, 
 }
 ```
+
+### IEEE TMC (accepted)
+
+Zhiwei Wei, Bing Li, Rongqing Zhang, Xiang Cheng, and Liuqing Yang. AirFogSim: A Light-Weight and Modular Simulator for UAV-Integrated Vehicular Fog Computing. IEEE Transactions on Mobile Computing, accepted.
 
 ## License
 
@@ -103,3 +106,5 @@ https://github.com/user-attachments/assets/f6d1b1ce-dfa7-4bef-b2ad-a0e1ccce91b1
 
 ## Benchmarks
 Refer to the `benchmarks` directory for more details.
+
+- AI algorithm development prompt: benchmarks/AI_DEV_PROMPT.md
